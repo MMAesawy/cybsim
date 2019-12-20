@@ -1,0 +1,9 @@
+1. add <PATH-TO-ANACONDA3>\Scripts to PATH
+2. open terminal anywhere as administrator
+3. cd to cybsim directory
+4. run the following commands
+
+conda create -n abm python==3.6
+activate abm
+pip install -r env.txt
+mesa runserver
