@@ -5,10 +5,10 @@ from mesa.datacollection import DataCollector
 import networkx as nx
 import random
 
-
 class AddressServer():
     def __init__(self, initial=0):
         self.next_address = initial
+
 
     def serve(self):
         self.next_address += 1
@@ -18,6 +18,7 @@ class AddressServer():
 class CybCim(Model):
 
     def __init__(self, num_devices=25, avg_node_degree=2):
+
         super().__init__()
 
         self.num_devices = num_devices
@@ -25,16 +26,19 @@ class CybCim(Model):
 
         self.G = nx.erdos_renyi_graph(n=self.num_devices, p=prob, directed=False)
         self.shortest_paths = dict(nx.all_pairs_shortest_path(self.G))
+
         # print([len(x) for x in self.shortest_paths.values()])
         self.grid = NetworkGrid(self.G)
         self.schedule = RandomActivation(self)
         self.total_packets_received = 0
         self.packet_count = 1
+
         self.datacollector = DataCollector(
             {"packets_received": "total_packets_received"},
         )
 
         self.address_server = AddressServer()
+
         self.packet_payloads = ["Just passing through!", "IDK anymore...", "Going with the flow!", "Leading the way.",
                                 "Taking the high road!", "I'm on the hiiiiiighway to hell!", "gg ez",
                                 "I want to go home ):", "It's funny how, in this journey of life, even though we may "
@@ -46,10 +50,13 @@ class CybCim(Model):
                                                                                               " for as long as i can "
                                                                                               "remember..."]
 
+
         self.devices = []
         for i, node in enumerate(self.G.nodes()):
             routing_table = self.shortest_paths[node]
+
             a = NetworkDevice(i,  # self.address_server.serve(),
+
                               self,
                               routing_table)
             self.devices.append(a)
@@ -59,11 +66,12 @@ class CybCim(Model):
             edge[2]["active"] = False
         self.running = True
         self.datacollector.collect(self)
+
         print(self.G.nodes)
+
 
     def step(self):
         self.schedule.step()
-
 
 class NetworkDevice(Agent):
 
@@ -74,6 +82,7 @@ class NetworkDevice(Agent):
         self.routing_table = routing_table
         self.packets_received = 0
         self.packets_sent = 0
+
         self.occupying_packets = []
 
     def route(self, packet):
@@ -113,3 +122,4 @@ class Packet():
         self.packet_id = packet_id
         self.destination = destination
         self.payload = payload
+

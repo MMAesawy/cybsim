@@ -5,6 +5,7 @@ from mesa.visualization.UserParam import UserSettableParameter
 from mesa.visualization.modules import ChartModule
 from mesa.visualization.modules import NetworkModule
 from mesa.visualization.ModularVisualization import VisualizationElement
+
 from mesa.visualization.modules import TextElement
 from model import CybCim, NetworkDevice
 
@@ -45,6 +46,7 @@ def network_portrayal(G):
 
 network = NetworkModule(network_portrayal, 500, 500, library='d3')
 text = VisualizationElement()
+
 
 
 
