@@ -36,6 +36,9 @@ def get_random_graph(num_nodes, avg_node_degree):
 def get_subnetwork_device_count():
     return random.randint(4, 50)
 
+def get_subnetwork_user_count(devices_count):
+    return random.randint(2, devices_count - int(devices_count/2))
+
 '''
     Controls and facilitates the conversion between a hierarchical address (e.g. 1.22.1.3) 
     and a numerical serial address. Needed for Mesa's visualization engine
@@ -174,6 +177,7 @@ class SubNetwork:
 
         self.local_gateway_address = self.network.graph['gateway']
 
+        self.children = []
         # create objects to be stored within the graph
         for i in range(len(self.network.nodes)):
             routing_table = self.shortest_paths[i]
@@ -185,10 +189,19 @@ class SubNetwork:
                                                                  of='devices',
                                                                  num_devices=get_subnetwork_device_count())
             elif of == 'devices': # if this is a subnetwork of devices
-                self.network.nodes[i]['subnetwork'] = NetworkDevice(address=self.address + i,
+                self.num_users = get_subnetwork_user_count(self.num_devices)
+                if (i <= self.num_users):
+                    active = random.random()
+                    self.network.nodes[i]['subnetwork'] = User(active, address=self.address + i,
                                                                     parent=self,
                                                                     model=model,
                                                                     routing_table=routing_table)
+                else:
+                    self.network.nodes[i]['subnetwork'] = NetworkDevice(address=self.address + i,
+                                                                    parent=self,
+                                                                    model=model,
+                                                                    routing_table=routing_table)
+                self.children.append(self.network.nodes[i]['subnetwork'])
 
         # add nodes to master graph
         self.merge_with_master_graph()
@@ -272,6 +285,9 @@ class SubNetwork:
             if not self.model.G.get_edge_data(ns_address, nd_address):
                 self.model.G.add_edge(ns_address, nd_address)
 
+    def get_device_count(self):
+        return self.num_devices
+
 
 
 class NetworkDevice(Agent):
@@ -352,15 +368,15 @@ class NetworkDevice(Agent):
         self.model.G.get_edge_data(self.master_address,
                                    other.master_address)["active"] = True
 
-    def step(self):
-        r = random.random()
-        # print(r)
-        if r < 0.001:
-            dest = random.choice(self.model.devices).address
-            packet = Packet(self.model.packet_count, dest, random.choice(self.model.packet_payloads))
-            self.model.packet_count = self.model.packet_count + 1
-            print("Device %s attempting to message %s" % (self.address, dest))
-            self.route(packet)
+    # def step(self):
+    #     r = random.random()
+    #     # print(r)
+    #     if r < 0.001:
+    #         dest = random.choice(self.model.devices).address
+    #         packet = Packet(self.model.packet_count, dest, random.choice(self.model.packet_payloads))
+    #         self.model.packet_count = self.model.packet_count + 1
+    #         print("Device %s attempting to message %s" % (self.address, dest))
+    #         self.route(packet)
 
 
 class Packet:
@@ -447,3 +463,42 @@ class Address:
 
     def __hash__(self):
         return hash(str(self))
+
+class User(NetworkDevice):
+    def __init__(self, active, address, parent, model, routing_table):
+        self.active = active
+        self.comm_table_in_size = random.randint(2, 10)
+        self.comm_table_out_size = random.randint(0, 5)
+        self.comm_table_size = self.comm_table_in_size + self.comm_table_out_size
+        self.communications_devices = []
+        self.communications_freq = []
+        self.parent = parent
+        self.address = address
+        super().__init__(address, parent, model, routing_table)
+
+
+
+    def step(self):
+        if(len(self.communications_devices) == 0):
+            for i in range(self.comm_table_in_size):
+                dest = random.choice(self.parent.children).address
+                freq = random.random()
+                self.communications_devices.append(dest)
+                self.communications_freq.append(freq)
+
+            for i in range(self.comm_table_out_size):
+                dest = random.choice(self.model.devices).address
+                if (not self.address.is_share_subnetwork(dest)):
+                    freq = random.random()
+                    self.communications_devices.append(dest)
+                    self.communications_freq.append(freq)
+                else: i -= 1
+
+        r = random.random()
+        if r < self.active: #TODO establish connection
+            dest = self.communications_devices[random.randint(0,len(self.communications_devices) - 1)]
+            packet = Packet(self.model.packet_count, dest, random.choice(self.model.packet_payloads))
+            self.model.packet_count = self.model.packet_count + 1
+            print("User %s attempting to message %s" % (self.address, dest))
+            self.route(packet)
+
