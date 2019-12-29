@@ -17,7 +17,7 @@ def network_portrayal(G):
         return '#0000FF'
 
     def edge_color(agent1, agent2):
-        e = G.get_edge_data(agent1.model_address, agent2.model_address)
+        e = G.get_edge_data(agent1.master_address, agent2.master_address)
         if e["active"]:
             return '#FF0000'
         # else:
@@ -28,7 +28,7 @@ def network_portrayal(G):
         return '#909090'
 
     def edge_width(agent1, agent2):
-        e = G.get_edge_data(agent1.model_address, agent2.model_address)
+        e = G.get_edge_data(agent1.master_address, agent2.master_address)
         if e["active"]:
             return 2
         else:

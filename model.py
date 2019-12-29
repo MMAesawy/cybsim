@@ -36,7 +36,10 @@ def get_random_graph(num_nodes, avg_node_degree):
 def get_subnetwork_device_count():
     return random.randint(4, 50)
 
-
+'''
+    Controls and facilitates the conversion between a hierarchical address (e.g. 1.22.1.3) 
+    and a numerical serial address. Needed for Mesa's visualization engine
+'''
 class AddressServer:
     def __init__(self, initial=0):
         self.next_address = initial
@@ -66,14 +69,16 @@ class CybCim(Model):
     def __init__(self):
         super().__init__()
 
-        self.G = nx.Graph()
+        self.G = nx.Graph() # master graph
         self.address_server = AddressServer()
 
         self.num_internet_devices = 100
         self.num_subnetworks = 15
         #avg_node_degree = 3
+        self.devices = []
 
-        self.network = get_random_graph(self.num_subnetworks, 2)
+        # create graph and compute pairwise shortest paths
+        self.network = get_random_graph(self.num_subnetworks, avg_node_degree=2)
         self.shortest_paths = dict(nx.all_pairs_shortest_path(self.network))
 
         self.packet_payloads = ["Just passing through!", "IDK anymore...", "Going with the flow!", "Leading the way.",
@@ -87,37 +92,34 @@ class CybCim(Model):
                                                                                               " for as long as i can "
                                                                                               "remember..."]
 
-        self.devices = []
-        for i, n in enumerate(self.network.nodes):
-            routing_table = self.shortest_paths[n]
-            if n == self.network.graph['gateway']:
-                a = SubNetwork(Address(self.network.graph['gateway']), self, self,
-                               routing_table, of='devices',
-                               num_devices=self.num_internet_devices,
-                               avg_node_degree=1)
+
+
+        # construct subnetworks that compose the main network
+        for i in range(len(self.network.nodes)):
+            routing_table = self.shortest_paths[i]
+            if i == self.network.graph['gateway']:
+                n = self.num_internet_devices
             else:
-                a = SubNetwork(Address(i), self, self,
-                           routing_table,
-                               avg_node_degree=1,
-                            of = 'devices'
-                           )
-            self.network.nodes[n]['subnetwork'] = a
-            # self.devices.append(a.gateway())
-            # self.grid.place_agent(a, node)
-            # self.schedule.add(a)
+                n = get_subnetwork_device_count()
 
-        for s, d in self.network.edges:
-            ns = self.network.nodes[s]['subnetwork'].gateway()
-            nd = self.network.nodes[d]['subnetwork'].gateway()
-            ns_address = self.address_server[ns.address]
-            nd_address = self.address_server[nd.address]
-            if not self.G.get_edge_data(ns_address, nd_address)\
-                and not self.G.get_edge_data(nd_address, ns_address):
-                self.G.add_edge(ns_address, nd_address)
+            self.network.nodes[i]['subnetwork']  =  SubNetwork(address=Address(i),
+                                                               parent=self,
+                                                               model=self,
+                                                               routing_table=routing_table,
+                                                               avg_node_degree=1,
+                                                               num_devices=n,
+                                                               of='devices'
+                                                 )
 
-        # print([len(x) for x in self.shortest_paths.values()])
+
+        # add nodes to master graph
+        self.merge_with_master_graph()
+
+        # initialize edge 'active' attribute
         for edge in self.G.edges(data=True):
             edge[2]["active"] = False
+
+        # initialize agents
         self.grid = NetworkGrid(self.G)
         self.schedule = RandomActivation(self)
         for d in self.devices:
@@ -133,11 +135,9 @@ class CybCim(Model):
         self.running = True
         self.datacollector.collect(self)
         print("Starting!")
-        # print(len(self.devices))
-        # print(self.G.nodes)
-        # print(EDGES)
-        # print(len(self.G.edges))
 
+    def get_subnetwork_at(self, at):
+        return self.network.nodes[at]['subnetwork']
 
     def step(self):
         # deactivate all edges
@@ -146,134 +146,211 @@ class CybCim(Model):
         # update agents
         self.schedule.step()
 
-class SubNetwork(Agent):
+    '''
+        Merges the abstract hierarchical graph with the 'master graph' for visualization purposes.
+    '''
+    def merge_with_master_graph(self):
+        # add nodes to master graph
+        for s, d in self.network.edges:
+            ns = self.get_subnetwork_at(s).gateway_device()
+            nd = self.get_subnetwork_at(d).gateway_device()
+            ns_address = self.address_server[ns.address]  # creates address entry if it does not exist
+            nd_address = self.address_server[nd.address]  # creates address entry if it does not exist
+            if not self.G.get_edge_data(ns_address, nd_address):
+                self.G.add_edge(ns_address, nd_address)
+
+class SubNetwork:
     def __init__(self, address, parent, model, routing_table, of='subnetworks', num_devices=25, avg_node_degree=2):
-        super().__init__(address, model)
-
-
         self.address = address
         self.parent = parent
+        self.model = model
         self.routing_table = routing_table
         self.of = of
-
         self.num_devices = num_devices
 
+        # create graph and compute pairwise shortest paths
         self.network = get_random_graph(self.num_devices, avg_node_degree)
         self.shortest_paths = dict(nx.all_pairs_shortest_path(self.network))
 
-        for i, n in enumerate(self.network.nodes):
-            routing_table = self.shortest_paths[n]
-            if of == 'subnetworks':
-                self.network.nodes[n]['subnetwork'] = SubNetwork(self.address + i, self, model, routing_table,
+        self.local_gateway_address = self.network.graph['gateway']
+
+        # create objects to be stored within the graph
+        for i in range(len(self.network.nodes)):
+            routing_table = self.shortest_paths[i]
+            if of == 'subnetworks': # if this is a subnetwork of subnetworks:
+                self.network.nodes[i]['subnetwork'] = SubNetwork(address=self.address + i,
+                                                                 parent=self,
+                                                                 model=model,
+                                                                 routing_table=routing_table,
                                                                  of='devices',
                                                                  num_devices=get_subnetwork_device_count())
-            elif of == 'devices':
-                self.network.nodes[n]['subnetwork'] = NetworkDevice(self.address + i, self, model, routing_table)
+            elif of == 'devices': # if this is a subnetwork of devices
+                self.network.nodes[i]['subnetwork'] = NetworkDevice(address=self.address + i,
+                                                                    parent=self,
+                                                                    model=model,
+                                                                    routing_table=routing_table)
 
-        for s, d in self.network.edges:
-            ns = self.network.nodes[s]['subnetwork'].gateway()
-            nd = self.network.nodes[d]['subnetwork'].gateway()
-            ns_address = model.address_server[ns.address]
-            nd_address = model.address_server[nd.address]
-            if not model.G.get_edge_data(ns_address, nd_address):
-                model.G.add_edge(ns_address, nd_address)
-
+        # add nodes to master graph
+        self.merge_with_master_graph()
 
     def route(self, packet):
-        # if destination is inside this network
+        # if destination is inside this network, consume the packet (progagate downwards)
         if self.address.is_supernetwork(packet.destination):
-            next_device = self.gateway()
-        # if destination is in this network's subnetwork
-        elif self.address.is_share_subnetwork(packet.destination):  # device is in the local network
-            next_device_address = self.routing_table[packet.destination[len(self.address) - 1]][1]
-            next_device = self.parent.network.nodes[next_device_address]['subnetwork']
+            self._propagate_downwards(packet)
+        else:
+            self._send(packet)
+
+    '''
+        Logic for 'receiving' and propagating a network packet downwards.
+    '''
+    def _propagate_downwards(self, packet):
+        self.gateway_device().route(packet)
+
+    '''
+        Logic for sending a network packet.
+    '''
+
+    def _send(self, packet):
+        if self.address.is_share_subnetwork(packet.destination): # device is in the local network
+            dest_local_address = packet.destination[len(self.address) - 1]
+            next_device_address = self.routing_table[dest_local_address][1]
+            next_device = self.parent.get_subnetwork_at(next_device_address)
         else:  # device is outside the local network, send to gateway:
+            gateway_address = self.parent.gateway_local_address()
+
             # if this is the gateway device:
-            if self.address[-1] == self.parent.network.graph['gateway']:
+            if self.address[-1] == gateway_address:
                 next_device = self.parent
             else:  # this is not the gateway device:
-                next_device_address = self.routing_table[self.parent.gateway().address[len(self.address) - 1]][1]
-                next_device = self.parent.network.nodes[next_device_address]['subnetwork']
+                dest_local_address = gateway_address
+                next_device_address = self.routing_table[dest_local_address][1]
+                next_device = self.parent.get_subnetwork_at(next_device_address)
 
-        # print(self.routing_table)
-        # if packet.destination not in self.routing_table:
-        #     print("Cannot connect to %d, packet discarded." % packet.destination)
-        #     self.model.packet_count = self.model.packet_count - 1
-        #     return
+        print("Subnetwork %s sending packet with destination %s to device %s" %
+              (self.address, packet.destination, next_device.address))
 
-
-
-        print("Subnetwork %s sending packet %s to device %s" % (self.address, packet.destination, next_device.address))
         # only color edge if not sending packet "upwards"
         if len(self.address) == len(next_device.address):
-            self.model.G.get_edge_data(self.model.address_server[self.gateway().address],
-                                       self.model.address_server[next_device.gateway().address])[
-                "active"] = True
+            self._activate_edge_to(next_device)
+
         next_device.route(packet)
 
     def step(self):
         for n in self.network.nodes:
             n['subnetwork'].step()
 
-    def gateway(self):
-        return self.network.nodes[self.network.graph['gateway']]['subnetwork'].gateway()
+    '''
+        Use this function to get the physical device at the gateway of this subnetwork.
+        Recursive. Will always return a NetworkDevice object.
+    '''
+    def gateway_device(self):
+        gateway_subnetwork = self.get_subnetwork_at(self.local_gateway_address)
+        return gateway_subnetwork.gateway_device()
+
+    '''
+        Convenience method for returning the local address of this network's gateway
+    '''
+    def gateway_local_address(self):
+        return self.network.graph['gateway']
+
+    def get_subnetwork_at(self, at):
+        return self.network.nodes[at]['subnetwork']
+
+    def _activate_edge_to(self, other):
+        self.model.G.get_edge_data(self.gateway_device().master_address,
+                                   other.gateway_device().master_address)["active"] = True
+
+    '''
+            Merges the abstract hierarchical graph with the 'master graph' for visualization purposes.
+    '''
+    def merge_with_master_graph(self):
+        for s, d in self.network.edges:
+            ns = self.network.nodes[s]['subnetwork'].gateway_device()
+            nd = self.network.nodes[d]['subnetwork'].gateway_device()
+            ns_address = self.model.address_server[ns.address]
+            nd_address = self.model.address_server[nd.address]
+            if not self.model.G.get_edge_data(ns_address, nd_address):
+                self.model.G.add_edge(ns_address, nd_address)
+
 
 
 class NetworkDevice(Agent):
 
     def __init__(self, address, parent, model, routing_table):
-        self.address = address
-        self.model_address = model.address_server[self.address]
         super().__init__(address, model)
 
         self.parent = parent
         self.routing_table = routing_table
         self.packets_received = 0
         self.packets_sent = 0
+        self.address = address
+
         self.occupying_packets = []
+
+        # retrieve master address
+        self.master_address = model.address_server[self.address]
+
+        # append to the main model's device list. For convenience.
         model.devices.append(self)
 
-        if self.model_address not in model.G.nodes:
-            model.G.add_node(self.model_address)
+        # append itself to the master graph
+        if self.master_address not in model.G.nodes:
+            model.G.add_node(self.master_address)
+
 
     def route(self, packet):
-        if self.address == packet.destination:
-            self.packets_received += 1
-            self.occupying_packets.append(packet)
-            self.model.total_packets_received += 1
-            print("Device %s received packet: %s" % (self.address, packet.payload))
-            return
-        elif self.address.is_share_subnetwork(packet.destination): # device is in the local network
-            next_device_address = self.routing_table[packet.destination[len(self.address) - 1]][1]
-            next_device = self.parent.network.nodes[next_device_address]['subnetwork']
-        else: # device is outside the local network, send to gateway:
-            # if this is the gateway device:
-            if self is self.parent.gateway():
-                next_device = self.parent
-            else: # this is not the gateway device:
-                next_device_address = self.routing_table[self.parent.gateway().address[len(self.address) - 1]][1]
-                next_device = self.parent.network.nodes[next_device_address]['subnetwork']
+        if self.address == packet.destination: # this device is the recipient
+            self._receive(packet)
+        else:
+            self._send(packet)
 
-
-        # print(self.routing_table)
-        # if packet.destination not in self.routing_table:
-        #     print("Cannot connect to %d, packet discarded." % packet.destination)
-        #     self.model.packet_count = self.model.packet_count - 1
-        #     return
-
-
-
-        print("Device %s sending packet %s to device %s" % (self.address, packet.destination, next_device.address))
-
-        self.packets_sent += 1
-        # only color edge if not sending packet "upwards"
-        if len(self.address) == len(next_device.address):
-            self.model.G.get_edge_data(self.model.address_server[self.address], self.model.address_server[next_device.address])["active"] = True
-        next_device.route(packet)
-
-    def gateway(self):
+    '''
+        Returns itself. This is the base condition of the SubNetwork.gateway_device() function.
+    '''
+    def gateway_device(self):
         return self
 
+    '''
+        Logic for receiving a network packet.
+    '''
+    def _receive(self, packet):
+        self.packets_received += 1
+        self.occupying_packets.append(packet)
+        self.model.total_packets_received += 1
+        print("Device %s received packet: %s" % (self.address, packet.payload))
+
+    '''
+        Logic for sending a network packet.
+    '''
+    def _send(self, packet):
+        if self.address.is_share_subnetwork(packet.destination):  # device is in the local network
+            dest_local_address = packet.destination[len(self.address) - 1]
+            next_device_address = self.routing_table[dest_local_address][1]
+            next_device = self.parent.get_subnetwork_at(next_device_address)
+        else:  # device is outside the local network, send to gateway:
+            gateway_address = self.parent.gateway_local_address()
+
+            if self.address[-1] == gateway_address: # if this is the gateway device:
+                # propagate message "upwards"
+                next_device = self.parent
+            else:  # this is not the gateway device:
+                dest_local_address = gateway_address
+                next_device_address = self.routing_table[dest_local_address][1]
+                next_device = self.parent.get_subnetwork_at(next_device_address)
+
+        print("Device %s sending packet with destination %s to device %s" %
+              (self.address, packet.destination, next_device.address))
+        self.packets_sent += 1
+
+        # only color edge if not sending packet "upwards"
+        if len(self.address) == len(next_device.address):
+            self._activate_edge_to(other=next_device)
+
+        next_device.route(packet)
+
+    def _activate_edge_to(self, other):
+        self.model.G.get_edge_data(self.master_address,
+                                   other.master_address)["active"] = True
 
     def step(self):
         r = random.random()
