@@ -4,7 +4,10 @@ from mesa.time import RandomActivation
 from mesa.datacollection import DataCollector
 from helpers import *
 from agents.devices import *
+from agents.constructs import *
 from agents.agents import *
+
+import numpy as np
 
 
 class CybCim(Model):
@@ -19,31 +22,24 @@ class CybCim(Model):
         self.num_subnetworks = 15
         #avg_node_degree = 3
         self.devices = []
+        self.active_correspondences = []
 
         # create graph and compute pairwise shortest paths
         self.network = get_random_graph(self.num_subnetworks, avg_node_degree=2)
+        # self.network = nx.barabasi_albert_graph(self.num_subnetworks, min(2, self.num_subnetworks - 1))
+        # self.network.graph['gateway'] = np.argmax([self.network.degree(i) for i in self.network.nodes])
+
         self.shortest_paths = dict(nx.all_pairs_shortest_path(self.network))
-
-        self.packet_payloads = ["Just passing through!", "IDK anymore...", "Going with the flow!", "Leading the way.",
-                                "Taking the high road!", "I'm on the hiiiiiighway to hell!", "gg ez",
-                                "I want to go home ):", "It's funny how, in this journey of life, even though we may "
-                                                        "begin at different times and places, our paths cross with "
-                                                        "others so that we may share our love, compassion, observations"
-                                                        ", and hope. This is a design of God that I appreciate and "
-                                                        "cherish.",
-                                "It's all ogre now.", "I need to go", "Seeing is believing!", "I've been on these roads"
-                                                                                              " for as long as i can "
-                                                                                              "remember..."]
-
-
 
         # construct subnetworks that compose the main network
         for i in range(len(self.network.nodes)):
             routing_table = self.shortest_paths[i]
             if i == self.network.graph['gateway']:
                 n = self.num_internet_devices
+                of = 'devices'
             else:
                 n = get_subnetwork_device_count()
+                of = 'devices'
 
             self.network.nodes[i]['subnetwork']  =  SubNetwork(address=Address(i),
                                                                parent=self,
@@ -51,7 +47,7 @@ class CybCim(Model):
                                                                routing_table=routing_table,
                                                                avg_node_degree=1,
                                                                num_devices=n,
-                                                               of='devices'
+                                                               of=of
                                                  )
 
 
@@ -78,6 +74,7 @@ class CybCim(Model):
         self.running = True
         self.datacollector.collect(self)
         print("Starting!")
+        print("Number of devices: %d" % len(self.devices))
 
     def get_subnetwork_at(self, at):
         return self.network.nodes[at]['subnetwork']
@@ -88,6 +85,18 @@ class CybCim(Model):
             edge[2]["active"] = False
         # update agents
         self.schedule.step()
+
+        # update correspondences
+        i = 0
+        while True:
+            c = self.active_correspondences[i]
+            if not c.active:
+                self.active_correspondences.pop(i)
+            else:
+                c.step()
+                i += 1
+            if i >= len(self.active_correspondences):
+                break
 
     def merge_with_master_graph(self):
         """Merges the abstract hierarchical graph with the 'master graph' for visualization purposes."""
@@ -113,6 +122,8 @@ class SubNetwork:
 
         # create graph and compute pairwise shortest paths
         self.network = get_random_graph(self.num_devices, avg_node_degree)
+        # self.network = nx.barabasi_albert_graph(self.num_devices, min(1, self.num_devices-1))
+        # self.network.graph['gateway'] = np.argmax([self.network.degree(i) for i in self.network.nodes])
         self.shortest_paths = dict(nx.all_pairs_shortest_path(self.network))
 
         self.local_gateway_address = self.network.graph['gateway']
@@ -131,11 +142,12 @@ class SubNetwork:
             elif of == 'devices': # if this is a subnetwork of devices
                 self.num_users = get_subnetwork_user_count(self.num_devices)
                 if (i <= self.num_users):
-                    active = random.random()
-                    self.network.nodes[i]['subnetwork'] = User(active, address=self.address + i,
-                                                                    parent=self,
-                                                                    model=model,
-                                                                    routing_table=routing_table)
+                    activity = random.random() / 10
+                    self.network.nodes[i]['subnetwork'] = User(activity=activity,
+                                                                address=self.address + i,
+                                                                parent=self,
+                                                                model=model,
+                                                                routing_table=routing_table)
                 else:
                     self.network.nodes[i]['subnetwork'] = NetworkDevice(address=self.address + i,
                                                                     parent=self,
@@ -145,6 +157,7 @@ class SubNetwork:
 
         # add nodes to master graph
         self.merge_with_master_graph()
+
     def route(self, packet):
         # if destination is inside this network, consume the packet (propagate downwards)
         if self.address.is_supernetwork(packet.destination):
@@ -176,7 +189,7 @@ class SubNetwork:
                 packet.step += 1
             else:  # device is outside the local network, send to gateway:
                 gateway_address = self.parent.gateway_local_address()
-                 # if this is the gateway device:
+                 # if this is the gateway device: (propagate upwards)
                 if self.address[-1] == gateway_address:
                     next_device = self.parent
                 else:  # this is not the gateway device:
