@@ -3,39 +3,47 @@ from agents.constructs import *
 import random
 
 class User(NetworkDevice):
-    def __init__(self, active, address, parent, model, routing_table):
-        self.active = active
+    def __init__(self, activity, address, parent, model, routing_table):
+        self.activity = activity
         self.comm_table_in_size = random.randint(2, 10)
         self.comm_table_out_size = random.randint(0, 5)
         self.comm_table_size = self.comm_table_in_size + self.comm_table_out_size
         self.communications_devices = []
         self.communications_freq = []
-        self.parent = parent
-        self.address = address
         super().__init__(address, parent, model, routing_table)
 
-
-
     def step(self):
-        if(len(self.communications_devices) == 0):
-            for i in range(self.comm_table_in_size):
-                dest = random.choice(self.parent.children).address
+        if len(self.communications_devices) == 0: # communications table is uninitialized, lazy initialization
+            self._generate_communications_table()
+
+        r = random.random()
+        if r < self.activity:
+            dest = random.choice(self.communications_devices)
+            Correspondence(self, dest, self.model)
+            print("User %s establishing correspondence with %s" % (self.address, dest.address))
+
+    def _generate_communications_table(self):
+        # ensure the tables are empty
+        self.communications_devices.clear()
+        self.communications_freq.clear()
+
+        # initialize devices inside the local network
+        for i in range(self.comm_table_in_size):
+            dest = random.choice(self.parent.children)
+            freq = random.random()
+            self.communications_devices.append(dest)
+            self.communications_freq.append(freq)
+
+        # initialize devices outside the local network
+        for i in range(self.comm_table_out_size):
+            dest = random.choice(self.model.devices)
+            if not self.address.is_share_subnetwork(dest.address):  # only add if the device is outside the local network
                 freq = random.random()
                 self.communications_devices.append(dest)
                 self.communications_freq.append(freq)
+            else:
+                i -= 1
 
-            for i in range(self.comm_table_out_size):
-                dest = random.choice(self.model.devices).address
-                if (not self.address.is_share_subnetwork(dest)):
-                    freq = random.random()
-                    self.communications_devices.append(dest)
-                    self.communications_freq.append(freq)
-                else: i -= 1
-
-        r = random.random()
-        if r < self.active: #TODO establish connection
-            dest = self.communications_devices[random.randint(0,len(self.communications_devices) - 1)]
-            packet = Packet(self.model.packet_count, dest, random.choice(self.model.packet_payloads))
-            self.model.packet_count = self.model.packet_count + 1
-            print("User %s attempting to message %s" % (self.address, dest))
-            self.route(packet)
+        s = sum(self.communications_freq)
+        for i in range(len(self.communications_freq)):
+            self.communications_freq[i] /= s

@@ -1,6 +1,100 @@
 import re
 import random
 
+
+class Correspondence:
+    def __init__(self, party_a, party_b, model, fails_to_end=None, sequence_length=None):
+        self.party_a = party_a
+        self.party_b = party_b
+        self.fails_to_end = fails_to_end
+        self.model = model
+
+        self.sequence = self._generate_sequence(sequence_length)
+        self.failure_count = 0
+        self.pointer = 0
+        self.total_failure_count = 0
+        self.ready_state = True
+        self.active = True
+
+        self.model.active_correspondences.append(self)
+
+    def _generate_sequence(self, sequence_length=None):
+        if sequence_length is None:
+            sequence_length = random.randint(5, 15)
+        return [random.choice((0, 1, 2)) for _ in range(sequence_length)]
+
+    def __len__(self):
+        return len(self.sequence)
+
+    def step(self):
+        if self.ready_state and self.active:
+            next_action = self.sequence[self.pointer]
+            if next_action == 0:
+                self.pointer += 1
+                return
+
+            if next_action == 1:
+                packet = Packet(self.party_b.address, self)
+                self.party_a.route(packet)
+            elif next_action == 2:
+                packet = Packet(self.party_a.address, self)
+                self.party_b.route(packet)
+            self.ready_state = False
+
+
+    def packet_success(self):
+        self.pointer += 1
+        self.failure_count = 0
+        self.ready_state = True
+
+        if self.pointer >= len(self):
+            self.end_correspondence(True)
+
+    def packet_failed(self):
+        self.failure_count += 1
+        self.total_failure_count += 1
+        self.ready_state = True
+
+        if self.fails_to_end and self.failure_count >= self.fails_to_end:
+            self.end_correspondence(False)
+
+    def end_correspondence(self, success):
+        self.ready_state = False
+        self.active = False
+
+        if success: # if correspondence ended successfully
+            pass
+        else:
+            pass
+
+
+class Packet:
+    total_packet_count = 0
+    packet_payloads = ["Just passing through!", "IDK anymore...", "Going with the flow!", "Leading the way.",
+                       "Taking the high road!", "I'm on the hiiiiiighway to hell!", "gg ez",
+                       "I want to go home ):", "It's funny how, in this journey of life, even though we may "
+                                               "begin at different times and places, our paths cross with "
+                                               "others so that we may share our love, compassion, observations"
+                                               ", and hope. This is a design of God that I appreciate and "
+                                               "cherish.",
+                       "It's all ogre now.", "I need to go", "Seeing is believing!", "I've been on these roads"
+                                                                                     " for as long as i can "
+                                                                                     "remember..."]
+
+    def __init__(self, destination, correspondence, payload=None):
+        self.packet_id = Packet.total_packet_count
+        Packet.total_packet_count += 1
+        self.destination = destination
+        self.payload = payload if payload else random.choice(Packet.packet_payloads)
+        self.correspondence = correspondence
+
+    def drop(self):
+        self.correspondence.packet_failed()
+
+    def received(self):
+        self.correspondence.packet_success()
+
+
 class AddressServer:
     """
         Controls and facilitates the conversion between a hierarchical address (e.g. 1.22.1.3)
@@ -27,13 +121,6 @@ class AddressServer:
             if v == address:
                 return k
         return None
-
-
-class Packet:
-    def __init__(self, packet_id, destination, payload):
-        self.packet_id = packet_id
-        self.destination = destination
-        self.payload = payload
 
 
 class Address:
