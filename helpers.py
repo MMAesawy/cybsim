@@ -66,11 +66,13 @@ class AddressServer:
 
 
 class Packet:
-    def __init__(self, packet_id, destination, payload):
+    def __init__(self, packet_id, destination, payload, max_hops, stop_step=None, step=0):
         self.packet_id = packet_id
         self.destination = destination
         self.payload = payload
-
+        self.max_hops = max_hops
+        self.step = step
+        self.stop_step = stop_step
 
 class Address:
     def __init__(self, address):

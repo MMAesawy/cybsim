@@ -10,6 +10,8 @@ class NetworkDevice(Agent):
         self.packets_received = 0
         self.packets_sent = 0
         self.address = address
+        self.current_packets = []
+        self.model = model
 
         self.occupying_packets = []
 
@@ -31,6 +33,7 @@ class NetworkDevice(Agent):
             self._send(packet)
 
 
+
     def gateway_device(self):
         """Returns itself. This is the base condition of the SubNetwork.gateway_device() function."""
         return self
@@ -39,7 +42,7 @@ class NetworkDevice(Agent):
     def _receive(self, packet):
         """
         Logic for receiving a network packet.
-        :param packet: the packet to be recieved
+        :param packet: the packet to be received
         """
         self.packets_received += 1
         self.occupying_packets.append(packet)
@@ -52,41 +55,50 @@ class NetworkDevice(Agent):
         Logic for sending a network packet.
         :param packet: packet to send
         """
-        if self.address.is_share_subnetwork(packet.destination):  # device is in the local network
-            dest_local_address = packet.destination[len(self.address) - 1]
-            next_device_address = self.routing_table[dest_local_address][1]
-            next_device = self.parent.get_subnetwork_at(next_device_address)
-        else:  # device is outside the local network, send to gateway:
-            gateway_address = self.parent.gateway_local_address()
+        if packet not in self.current_packets:
+            self.current_packets.append(packet)
 
-            if self.address[-1] == gateway_address: # if this is the gateway device:
-                # propagate message "upwards"
-                next_device = self.parent
-            else:  # this is not the gateway device:
-                dest_local_address = gateway_address
+        if(packet.step < packet.max_hops):
+            if self.address.is_share_subnetwork(packet.destination): # device is in the local network
+                dest_local_address = packet.destination[len(self.address) - 1]
                 next_device_address = self.routing_table[dest_local_address][1]
                 next_device = self.parent.get_subnetwork_at(next_device_address)
+                packet.step += 1
+            else:  # device is outside the local network, send to gateway:
+                gateway_address = self.parent.gateway_local_address()
 
-        print("Device %s sending packet with destination %s to device %s" %
-              (self.address, packet.destination, next_device.address))
-        self.packets_sent += 1
+                if self.address[-1] == gateway_address: # if this is the gateway device:
+                    # propagate message "upwards"
+                    next_device = self.parent
+                else:  # this is not the gateway device:
+                    dest_local_address = gateway_address
+                    next_device_address = self.routing_table[dest_local_address][1]
+                    next_device = self.parent.get_subnetwork_at(next_device_address)
+                    packet.step += 1
 
-        # only color edge if not sending packet "upwards"
-        if len(self.address) == len(next_device.address):
-            self._activate_edge_to(other=next_device)
+            print("Device %s sending packet with destination %s to device %s" %
+                  (self.address, packet.destination, next_device.address))
+            self.packets_sent += 1
 
-        next_device.route(packet)
+            # only color edge if not sending packet "upwards"
+            if len(self.address) == len(next_device.address):
+                self._activate_edge_to(other=next_device)
+
+            self.current_packets.remove(packet)
+            next_device.route(packet)
+        else:
+            packet.stop_step = self.model.schedule.steps
+            print("Packet %s going to device %s has reached maximum number of %d hops in %d steps and stopped at device %s" %
+                (packet.packet_id, packet.destination, packet.max_hops, packet.step, self.address))
 
     def _activate_edge_to(self, other):
         self.model.G.get_edge_data(self.master_address,
                                    other.master_address)["active"] = True
 
-    # def step(self):
-    #     r = random.random()
-    #     # print(r)
-    #     if r < 0.001:
-    #         dest = random.choice(self.model.devices).address
-    #         packet = Packet(self.model.packet_count, dest, random.choice(self.model.packet_payloads))
-    #         self.model.packet_count = self.model.packet_count + 1
-    #         print("Device %s attempting to message %s" % (self.address, dest))
-    #         self.route(packet)
+    def step(self):
+        if(len(self.current_packets) != 0):
+            for packet in self.current_packets:
+                if(packet.stop_step < self.model.schedule.steps):
+                    packet.step = 0
+                    print("Device %s contains packet %s .. continue routing.." % (self.address, packet.packet_id))
+                    self.route(packet)

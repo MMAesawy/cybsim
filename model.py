@@ -109,6 +109,7 @@ class SubNetwork:
         self.routing_table = routing_table
         self.of = of
         self.num_devices = num_devices
+        self.current_packets = []
 
         # create graph and compute pairwise shortest paths
         self.network = get_random_graph(self.num_devices, avg_node_degree)
@@ -144,11 +145,10 @@ class SubNetwork:
 
         # add nodes to master graph
         self.merge_with_master_graph()
-
     def route(self, packet):
-        # if destination is inside this network, consume the packet (progagate downwards)
+        # if destination is inside this network, consume the packet (propagate downwards)
         if self.address.is_supernetwork(packet.destination):
-            self._propagate_downwards(packet)
+         self._propagate_downwards(packet)
         else:
             self._send(packet)
 
@@ -165,29 +165,40 @@ class SubNetwork:
         Logic for sending a network packet.
         :param packet: the packet to send
         """
-        if self.address.is_share_subnetwork(packet.destination): # device is in the local network
-            dest_local_address = packet.destination[len(self.address) - 1]
-            next_device_address = self.routing_table[dest_local_address][1]
-            next_device = self.parent.get_subnetwork_at(next_device_address)
-        else:  # device is outside the local network, send to gateway:
-            gateway_address = self.parent.gateway_local_address()
+        if packet not in self.current_packets:
+            self.current_packets.append(packet)
 
-            # if this is the gateway device:
-            if self.address[-1] == gateway_address:
-                next_device = self.parent
-            else:  # this is not the gateway device:
-                dest_local_address = gateway_address
+        if(packet.step < packet.max_hops):
+            if self.address.is_share_subnetwork(packet.destination): # device is in the local network
+                dest_local_address = packet.destination[len(self.address) - 1]
                 next_device_address = self.routing_table[dest_local_address][1]
                 next_device = self.parent.get_subnetwork_at(next_device_address)
+                packet.step += 1
+            else:  # device is outside the local network, send to gateway:
+                gateway_address = self.parent.gateway_local_address()
+                 # if this is the gateway device:
+                if self.address[-1] == gateway_address:
+                    next_device = self.parent
+                else:  # this is not the gateway device:
+                    dest_local_address = gateway_address
+                    next_device_address = self.routing_table[dest_local_address][1]
+                    next_device = self.parent.get_subnetwork_at(next_device_address)
+                    packet.step += 1
 
-        print("Subnetwork %s sending packet with destination %s to device %s" %
-              (self.address, packet.destination, next_device.address))
+            print("Subnetwork %s sending packet with destination %s to device %s" %
+                  (self.address, packet.destination, next_device.address))
+            # only color edge if not sending packet "upwards"
+            if len(self.address) == len(next_device.address):
+                self._activate_edge_to(next_device)
 
-        # only color edge if not sending packet "upwards"
-        if len(self.address) == len(next_device.address):
-            self._activate_edge_to(next_device)
+            self.current_packets.remove(packet)
+            next_device.route(packet)
 
-        next_device.route(packet)
+        else:
+            packet.stop_step = self.model.schedule.steps
+            print("Packet %s going to device %s has reached maximum number of %d hops in %d steps and stopped at device %s" %
+              (packet.packet_id, packet.destination, packet.max_hops, packet.step, self.address))
+
 
     def step(self):
         for n in self.network.nodes:

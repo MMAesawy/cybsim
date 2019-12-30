@@ -35,7 +35,11 @@ class User(NetworkDevice):
         r = random.random()
         if r < self.active: #TODO establish connection
             dest = self.communications_devices[random.randint(0,len(self.communications_devices) - 1)]
-            packet = Packet(self.model.packet_count, dest, random.choice(self.model.packet_payloads))
+            max_hops = 3
+            packet = Packet(packet_id=self.model.packet_count, destination=dest,
+                            payload=random.choice(self.model.packet_payloads),
+                            max_hops=max_hops, step=0)
             self.model.packet_count = self.model.packet_count + 1
             print("User %s attempting to message %s" % (self.address, dest))
-            self.route(packet)
+            self.route(packet=packet)
+
