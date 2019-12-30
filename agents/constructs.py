@@ -81,12 +81,14 @@ class Packet:
                                                                                      " for as long as i can "
                                                                                      "remember..."]
 
-    def __init__(self, destination, correspondence, payload=None):
+    def __init__(self, destination, correspondence, payload=None, step=0, max_hops=2):
         self.packet_id = Packet.total_packet_count
         Packet.total_packet_count += 1
         self.destination = destination
         self.payload = payload if payload else random.choice(Packet.packet_payloads)
         self.correspondence = correspondence
+        self.step = step
+        self.max_hops = max_hops
 
     def drop(self):
         self.correspondence.packet_failed()
