@@ -167,7 +167,8 @@ class SubNetwork:
         self.routing_table = routing_table
         self.of = of
         self.num_devices = num_devices
-
+        self.passing_packets = 0
+        self.capacity = random.randint(3, 13)
         # create graph and compute pairwise shortest paths
         self.network = get_random_graph(self.num_devices, avg_node_degree)
         self.shortest_paths = dict(nx.all_pairs_shortest_path(self.network))
@@ -195,10 +196,14 @@ class SubNetwork:
 
     def route(self, packet):
         # if destination is inside this network, consume the packet (progagate downwards)
-        if self.address.is_supernetwork(packet.destination):
-            self._propagate_downwards(packet)
-        else:
-            self._send(packet)
+        self.passing_packets += 1
+        if self.capacity > self.passing_packets:
+            if self.address.is_supernetwork(packet.destination):
+                self._propagate_downwards(packet)
+                self.passing_packets -= 1
+            else:
+                self._send(packet)
+                self.passing_packets -= 1
 
     '''
         Logic for 'receiving' and propagating a network packet downwards.
@@ -284,6 +289,8 @@ class NetworkDevice(Agent):
         self.packets_received = 0
         self.packets_sent = 0
         self.address = address
+        self.passing_packets = 0
+        self.capacity = random.randint(3, 13)
 
         self.occupying_packets = []
 
@@ -299,10 +306,13 @@ class NetworkDevice(Agent):
 
 
     def route(self, packet):
+        self.passing_packets += 1
         if self.address == packet.destination: # this device is the recipient
             self._receive(packet)
         else:
-            self._send(packet)
+            if self.capacity > self.passing_packets:
+                self._send(packet)
+                self.passing_packets -= 1
 
     '''
         Returns itself. This is the base condition of the SubNetwork.gateway_device() function.
