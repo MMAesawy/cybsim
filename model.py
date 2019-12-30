@@ -161,7 +161,7 @@ class SubNetwork:
     def route(self, packet):
         # if destination is inside this network, consume the packet (propagate downwards)
         if self.address.is_supernetwork(packet.destination):
-         self._propagate_downwards(packet)
+            self._propagate_downwards(packet)
         else:
             self._send(packet)
 
@@ -178,10 +178,7 @@ class SubNetwork:
         Logic for sending a network packet.
         :param packet: the packet to send
         """
-        if packet not in self.current_packets:
-            self.current_packets.append(packet)
-
-        if(packet.step < packet.max_hops):
+        if packet.step < packet.max_hops:
             if self.address.is_share_subnetwork(packet.destination): # device is in the local network
                 dest_local_address = packet.destination[len(self.address) - 1]
                 next_device_address = self.routing_table[dest_local_address][1]
@@ -204,11 +201,11 @@ class SubNetwork:
             if len(self.address) == len(next_device.address):
                 self._activate_edge_to(next_device)
 
-            self.current_packets.remove(packet)
             next_device.route(packet)
 
         else:
             packet.stop_step = self.model.schedule.steps
+            self.current_packets.append(packet)
             print("Packet %s going to device %s has reached maximum number of %d hops in %d steps and stopped at device %s" %
               (packet.packet_id, packet.destination, packet.max_hops, packet.step, self.address))
 
@@ -216,6 +213,17 @@ class SubNetwork:
     def step(self):
         for n in self.network.nodes:
             n['subnetwork'].step()
+
+        i = 0
+        while i < len(self.current_packets):
+            packet = self.current_packets[i]
+            if packet.stop_step < self.model.schedule.steps:
+                self.current_packets.pop(i)
+                packet.step = 0
+                print("Device %s contains packet %s .. continue routing.." % (self.address, packet.packet_id))
+                self.route(packet)
+            else:
+                i += 1
 
     def gateway_device(self):
         """

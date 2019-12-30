@@ -21,7 +21,7 @@ class Correspondence:
     def _generate_sequence(self, sequence_length=None):
         if sequence_length is None:
             sequence_length = random.randint(5, 15)
-        return [random.choice((0, 1, 2)) for _ in range(sequence_length)]
+        return random.choices((0,1,2), weights=None, k=sequence_length)
 
     def __len__(self):
         return len(self.sequence)
@@ -30,17 +30,15 @@ class Correspondence:
         if self.ready_state and self.active:
             next_action = self.sequence[self.pointer]
             if next_action == 0:
-                self.pointer += 1
+                self.packet_success()
                 return
-
             if next_action == 1:
                 packet = Packet(self.party_b.address, self)
                 self.party_a.route(packet)
             elif next_action == 2:
                 packet = Packet(self.party_a.address, self)
                 self.party_b.route(packet)
-            self.ready_state = False
-
+        self.ready_state = False
 
     def packet_success(self):
         self.pointer += 1

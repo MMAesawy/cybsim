@@ -18,7 +18,7 @@ class User(NetworkDevice):
 
         r = random.random()
         if r < self.activity:
-            dest = random.choice(self.communications_devices)
+            dest = random.choices(self.communications_devices, weights=self.communications_freq, k=1)[0]
             Correspondence(self, dest, self.model)
             print("User %s establishing correspondence with %s" % (self.address, dest.address))
 
