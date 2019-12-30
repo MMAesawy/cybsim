@@ -1,5 +1,5 @@
 from agents.devices import NetworkDevice
-from helpers import *
+from agents.constructs import *
 import random
 
 class User(NetworkDevice):

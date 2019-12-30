@@ -4,7 +4,10 @@ from mesa.time import RandomActivation
 from mesa.datacollection import DataCollector
 from helpers import *
 from agents.devices import *
+from agents.constructs import *
 from agents.agents import *
+
+import numpy as np
 
 
 class CybCim(Model):
@@ -22,6 +25,9 @@ class CybCim(Model):
 
         # create graph and compute pairwise shortest paths
         self.network = get_random_graph(self.num_subnetworks, avg_node_degree=2)
+        # self.network = nx.barabasi_albert_graph(self.num_subnetworks, min(2, self.num_subnetworks - 1))
+        # self.network.graph['gateway'] = np.argmax([self.network.degree(i) for i in self.network.nodes])
+
         self.shortest_paths = dict(nx.all_pairs_shortest_path(self.network))
 
         self.packet_payloads = ["Just passing through!", "IDK anymore...", "Going with the flow!", "Leading the way.",
@@ -42,8 +48,10 @@ class CybCim(Model):
             routing_table = self.shortest_paths[i]
             if i == self.network.graph['gateway']:
                 n = self.num_internet_devices
+                of = 'devices'
             else:
                 n = get_subnetwork_device_count()
+                of = 'devices'
 
             self.network.nodes[i]['subnetwork']  =  SubNetwork(address=Address(i),
                                                                parent=self,
@@ -51,7 +59,7 @@ class CybCim(Model):
                                                                routing_table=routing_table,
                                                                avg_node_degree=1,
                                                                num_devices=n,
-                                                               of='devices'
+                                                               of=of
                                                  )
 
 
@@ -78,6 +86,7 @@ class CybCim(Model):
         self.running = True
         self.datacollector.collect(self)
         print("Starting!")
+        print("Number of devices: %d" % len(self.devices))
 
     def get_subnetwork_at(self, at):
         return self.network.nodes[at]['subnetwork']
@@ -112,6 +121,8 @@ class SubNetwork:
 
         # create graph and compute pairwise shortest paths
         self.network = get_random_graph(self.num_devices, avg_node_degree)
+        # self.network = nx.barabasi_albert_graph(self.num_devices, min(1, self.num_devices-1))
+        # self.network.graph['gateway'] = np.argmax([self.network.degree(i) for i in self.network.nodes])
         self.shortest_paths = dict(nx.all_pairs_shortest_path(self.network))
 
         self.local_gateway_address = self.network.graph['gateway']
