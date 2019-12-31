@@ -18,10 +18,12 @@ class Correspondence:
 
         self.model.active_correspondences.append(self)
 
+        self.importance_level = random.randint(0, 10)
+
     def _generate_sequence(self, sequence_length=None):
         if sequence_length is None:
             sequence_length = random.randint(5, 15)
-        return random.choices((0,1,2), weights=None, k=sequence_length)
+        return random.choices((0, 1, 2), weights=None, k=sequence_length)
 
     def __len__(self):
         return len(self.sequence)
@@ -60,8 +62,18 @@ class Correspondence:
         self.ready_state = False
         self.active = False
 
-        if success: # if correspondence ended successfully
-            pass
+        if success:  # if correspondence ended successfully
+            if len(set(self.sequence)) == 1 and self.sequence[0] == 0:
+                pass
+            elif len(set(self.sequence)) == 1 and self.sequence[0] == 1:
+                self.party_a.add_to_work_done(self.importance_level)
+            elif len(set(self.sequence)) == 1 and self.sequence[0] == 2:
+                if type(self.party_b) == type(self.party_a):
+                    self.party_b.add_to_work_done(self.importance_level)
+            else:
+                self.party_a.add_to_work_done(self.importance_level)
+                if type(self.party_b) == type(self.party_a):
+                    self.party_b.add_to_work_done(self.importance_level)
         else:
             pass
 

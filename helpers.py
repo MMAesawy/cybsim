@@ -30,7 +30,7 @@ def get_random_graph(num_nodes, avg_node_degree):
 
 
 def get_subnetwork_device_count():
-    return random.randint(4, 50)
+    return random.randint(5, 50)
 
 
 def get_subnetwork_user_count(devices_count):
