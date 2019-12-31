@@ -9,6 +9,7 @@ from agents.agents import *
 
 import numpy as np
 
+VERBOSE = True
 
 class CybCim(Model):
 
@@ -73,8 +74,9 @@ class CybCim(Model):
 
         self.running = True
         self.datacollector.collect(self)
-        print("Starting!")
-        print("Number of devices: %d" % len(self.devices))
+        if VERBOSE:
+            print("Starting!")
+            print("Number of devices: %d" % len(self.devices))
 
     def get_subnetwork_at(self, at):
         return self.network.nodes[at]['subnetwork']
