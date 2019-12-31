@@ -31,13 +31,13 @@ class NetworkDevice(Agent):
 
     def route(self, packet):
         if self.passing_packets < self.capacity:
-            #self.passing_packets += 1
+            self.passing_packets += 1
             if self.address == packet.destination:  # this device is the recipient
                 self._receive(packet)
             else:
                 self._send(packet)
         else:
-            print("Subnetwork %s reached its capacity of %d, dropping packet %d..." %
+            print("Device %s reached its capacity of %d, dropping packet %d..." %
                   (self.address, self.capacity, packet.packet_id))
             packet.drop()
 
@@ -69,31 +69,23 @@ class NetworkDevice(Agent):
                 dest_local_address = packet.destination[len(self.address) - 1]
                 next_device_address = self.routing_table[dest_local_address][1]
                 next_device = self.parent.get_subnetwork_at(next_device_address)
-
-                packet.step += 1
-                self.passing_packets += 1
             else:  # device is outside the local network, send to gateway:
                 gateway_address = self.parent.gateway_local_address()
 
                 if self.address[-1] == gateway_address: # if this is the gateway device:
                     # propagate message "upwards"
-                    next_device = self.parent
+                    next_device = self.parent.get_next_gateway(packet)
                 else:  # this is not the gateway device:
                     dest_local_address = gateway_address
                     next_device_address = self.routing_table[dest_local_address][1]
                     next_device = self.parent.get_subnetwork_at(next_device_address)
 
-                    packet.step += 1
-                    self.passing_packets += 1
-
             print("Device %s sending packet with destination %s to device %s" %
                   (self.address, packet.destination, next_device.address))
             self.packets_sent += 1
 
-            # only color edge if not sending packet "upwards"
-            if len(self.address) == len(next_device.address):
-                self._activate_edge_to(other=next_device)
-
+            self._activate_edge_to(other=next_device)
+            packet.step += 1
             next_device.route(packet)
         else:
             packet.stop_step = self.model.schedule.steps
