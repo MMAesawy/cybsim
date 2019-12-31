@@ -13,6 +13,9 @@ class User(NetworkDevice):
         super().__init__(address, parent, model, routing_table)
 
     def step(self):
+        pass
+
+    def advance(self):
         if len(self.communications_devices) == 0: # communications table is uninitialized, lazy initialization
             self._generate_communications_table()
 

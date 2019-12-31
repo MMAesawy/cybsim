@@ -1,6 +1,6 @@
 from mesa import Agent, Model
 from mesa.space import NetworkGrid
-from mesa.time import RandomActivation
+from mesa.time import SimultaneousActivation
 from mesa.datacollection import DataCollector
 from helpers import *
 from agents.devices import *
@@ -60,7 +60,7 @@ class CybCim(Model):
 
         # initialize agents
         self.grid = NetworkGrid(self.G)
-        self.schedule = RandomActivation(self)
+        self.schedule = SimultaneousActivation(self)
         for d in self.devices:
             self.grid.place_agent(d, self.address_server[d.address])
             self.schedule.add(d)
@@ -119,6 +119,8 @@ class SubNetwork:
         self.of = of
         self.num_devices = num_devices
         self.current_packets = []
+        self.passing_packets = 0
+        self.capacity = random.randint(2,4)
 
         # create graph and compute pairwise shortest paths
         self.network = get_random_graph(self.num_devices, avg_node_degree)
@@ -159,11 +161,18 @@ class SubNetwork:
         self.merge_with_master_graph()
 
     def route(self, packet):
-        # if destination is inside this network, consume the packet (propagate downwards)
-        if self.address.is_supernetwork(packet.destination):
-            self._propagate_downwards(packet)
+        if self.passing_packets <= self.capacity:
+            #self.passing_packets += 1
+            # if destination is inside this network, consume the packet (progagate downwards)
+            if self.address.is_supernetwork(packet.destination):
+                self._propagate_downwards(packet)
+            else:
+                self._send(packet)
         else:
-            self._send(packet)
+            print("Device %s reached its capacity of %d, dropping packet %d..." %
+                  (self.address, self.capacity, packet.packet_id))
+            packet.drop()
+
 
     def _propagate_downwards(self, packet):
         """
@@ -183,7 +192,9 @@ class SubNetwork:
                 dest_local_address = packet.destination[len(self.address) - 1]
                 next_device_address = self.routing_table[dest_local_address][1]
                 next_device = self.parent.get_subnetwork_at(next_device_address)
+
                 packet.step += 1
+                self.passing_packets += 1
             else:  # device is outside the local network, send to gateway:
                 gateway_address = self.parent.gateway_local_address()
                  # if this is the gateway device: (propagate upwards)
@@ -193,7 +204,9 @@ class SubNetwork:
                     dest_local_address = gateway_address
                     next_device_address = self.routing_table[dest_local_address][1]
                     next_device = self.parent.get_subnetwork_at(next_device_address)
+
                     packet.step += 1
+                    self.passing_packets += 1
 
             print("Subnetwork %s sending packet with destination %s to device %s" %
                   (self.address, packet.destination, next_device.address))
@@ -209,11 +222,10 @@ class SubNetwork:
             print("Packet %s going to device %s has reached maximum number of %d hops in %d steps and stopped at device %s" %
               (packet.packet_id, packet.destination, packet.max_hops, packet.step, self.address))
 
-
     def step(self):
-        for n in self.network.nodes:
-            n['subnetwork'].step()
+        self.passing_packets = 0
 
+    def advance(self):
         i = 0
         while i < len(self.current_packets):
             packet = self.current_packets[i]
@@ -260,6 +272,3 @@ class SubNetwork:
 
     def get_device_count(self):
         return self.num_devices
-
-
-

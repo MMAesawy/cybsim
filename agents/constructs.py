@@ -79,7 +79,7 @@ class Packet:
                                                                                      " for as long as i can "
                                                                                      "remember..."]
 
-    def __init__(self, destination, correspondence, payload=None, step=0, max_hops=2):
+    def __init__(self, destination, correspondence, payload=None, step=0, max_hops=10):
         self.packet_id = Packet.total_packet_count
         Packet.total_packet_count += 1
         self.destination = destination

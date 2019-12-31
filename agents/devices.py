@@ -1,4 +1,5 @@
 from mesa.agent import Agent
+import random
 
 class NetworkDevice(Agent):
 
@@ -13,6 +14,8 @@ class NetworkDevice(Agent):
         self.current_packets = []
         self.model = model
 
+        self.passing_packets = 0
+        self.capacity = random.randint(2,4)
         self.occupying_packets = []
 
         # retrieve master address
@@ -27,11 +30,16 @@ class NetworkDevice(Agent):
 
 
     def route(self, packet):
-        if self.address == packet.destination: # this device is the recipient
-            self._receive(packet)
+        if self.passing_packets < self.capacity:
+            #self.passing_packets += 1
+            if self.address == packet.destination:  # this device is the recipient
+                self._receive(packet)
+            else:
+                self._send(packet)
         else:
-            self._send(packet)
-
+            print("Subnetwork %s reached its capacity of %d, dropping packet %d..." %
+                  (self.address, self.capacity, packet.packet_id))
+            packet.drop()
 
 
     def gateway_device(self):
@@ -61,7 +69,9 @@ class NetworkDevice(Agent):
                 dest_local_address = packet.destination[len(self.address) - 1]
                 next_device_address = self.routing_table[dest_local_address][1]
                 next_device = self.parent.get_subnetwork_at(next_device_address)
+
                 packet.step += 1
+                self.passing_packets += 1
             else:  # device is outside the local network, send to gateway:
                 gateway_address = self.parent.gateway_local_address()
 
@@ -72,7 +82,9 @@ class NetworkDevice(Agent):
                     dest_local_address = gateway_address
                     next_device_address = self.routing_table[dest_local_address][1]
                     next_device = self.parent.get_subnetwork_at(next_device_address)
+
                     packet.step += 1
+                    self.passing_packets += 1
 
             print("Device %s sending packet with destination %s to device %s" %
                   (self.address, packet.destination, next_device.address))
@@ -94,6 +106,9 @@ class NetworkDevice(Agent):
                                    other.master_address)["active"] = True
 
     def step(self):
+        self.passing_packets = 0
+
+    def advance(self):
         i = 0
         while i < len(self.current_packets):
             packet = self.current_packets[i]
