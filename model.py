@@ -10,16 +10,23 @@ from agents.agents import *
 import numpy as np
 
 
+def get_total_packets_received(model):
+    return model.total_packets_received
+
+def get_total_packets_failed(model):
+    return model.total_failure_count
+
 class CybCim(Model):
 
-    def __init__(self):
+    def __init__(self,num_internet_devices= 100, num_subnetworks= 15, max_hops=3):
         super().__init__()
 
         self.G = nx.Graph() # master graph
         self.address_server = AddressServer()
 
-        self.num_internet_devices = 100
-        self.num_subnetworks = 15
+        self.num_internet_devices = num_internet_devices
+        self.num_subnetworks = num_subnetworks
+        self.max_hops = max_hops
         #avg_node_degree = 3
         self.devices = []
         self.active_correspondences = []
@@ -65,10 +72,12 @@ class CybCim(Model):
             self.grid.place_agent(d, self.address_server[d.address])
             self.schedule.add(d)
         self.total_packets_received = 0
+        self.total_failure_count = 0
         self.packet_count = 1
 
         self.datacollector = DataCollector(
-            {"packets_received": "total_packets_received"},
+            {"Packets Received": get_total_packets_received,
+            "Packets Dropped": get_total_packets_failed,}
         )
 
         self.running = True
@@ -97,6 +106,7 @@ class CybCim(Model):
                 i += 1
             if i >= len(self.active_correspondences):
                 break
+        self.datacollector.collect(self)
 
     def merge_with_master_graph(self):
         """Merges the abstract hierarchical graph with the 'master graph' for visualization purposes."""

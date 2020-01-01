@@ -12,7 +12,7 @@ class Correspondence:
         self.sequence = self._generate_sequence(sequence_length)
         self.failure_count = 0
         self.pointer = 0
-        self.total_failure_count = 0
+        # self.total_failure_count = 0
         self.ready_state = True
         self.active = True
 
@@ -34,10 +34,10 @@ class Correspondence:
                 return
 
             if next_action == 1:
-                packet = Packet(self.party_b.address, self)
+                packet = Packet(self.model, self.party_b.address, self)
                 self.party_a.route(packet)
             elif next_action == 2:
-                packet = Packet(self.party_a.address, self)
+                packet = Packet(self.model, self.party_a.address, self)
                 self.party_b.route(packet)
             self.ready_state = False
 
@@ -52,7 +52,7 @@ class Correspondence:
 
     def packet_failed(self):
         self.failure_count += 1
-        self.total_failure_count += 1
+        self.model.total_failure_count += 1
         self.ready_state = True
 
         if self.fails_to_end and self.failure_count >= self.fails_to_end:
@@ -81,14 +81,15 @@ class Packet:
                                                                                      " for as long as i can "
                                                                                      "remember..."]
 
-    def __init__(self, destination, correspondence, payload=None, step=0, max_hops=2):
+    def __init__(self, model, destination, correspondence, payload=None, step=0):
         self.packet_id = Packet.total_packet_count
         Packet.total_packet_count += 1
         self.destination = destination
         self.payload = payload if payload else random.choice(Packet.packet_payloads)
         self.correspondence = correspondence
         self.step = step
-        self.max_hops = max_hops
+        self.model = model
+        self.max_hops = self.model.max_hops
 
     def drop(self):
         self.correspondence.packet_failed()

@@ -52,11 +52,25 @@ def network_portrayal(G):
                           for (source, target) in G.edges]
     return portrayal
 
+chart = ChartModule([{'Label': 'Packets Received', 'Color': '#008000'},
+                     {'Label': 'Packets Dropped', 'Color': '#FF0000'}])
+class MyTextElement(TextElement):
+    def render(self, model):
+        return "Number of devices: {}".format(len(model.devices))
 
-network = NetworkModule(network_portrayal, 500, 500, library='d3')
+model_params = {
+    'num_internet_devices': UserSettableParameter(param_type='slider', name='Number of internet devices', value=100, min_value=50, max_value=100, step=1,
+                                                  description='Choose how many internet devices to have'),
+    'num_subnetworks': UserSettableParameter(param_type='slider', name='Number of subnetworks', value=15, min_value=5, max_value=30, step=1,
+                                                  description='Choose how many subnetworks to have'),
+    'max_hops': UserSettableParameter(param_type='slider', name='Max hops for packets', value=1, min_value=1, max_value=5, step=1,
+                                                  description='Choose the maximum hop length for packets'),
+
+}
+network = NetworkModule(network_portrayal, 500, 730, library='d3')
 text = VisualizationElement()
 
 
 
 
-server = ModularServer(CybCim, [network], 'Computer Network')
+server = ModularServer(CybCim, [network, MyTextElement(), chart], 'Computer Network',   model_params)
