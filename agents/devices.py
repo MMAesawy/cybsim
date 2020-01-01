@@ -1,4 +1,5 @@
 from mesa.agent import Agent
+import random
 
 class NetworkDevice(Agent):
 
@@ -13,6 +14,7 @@ class NetworkDevice(Agent):
         self.current_packets = []
         self.model = model
 
+        # a list to store packet payloads in the device
         self.occupying_packets = []
 
         # retrieve master address
@@ -44,6 +46,7 @@ class NetworkDevice(Agent):
         Logic for receiving a network packet.
         :param packet: the packet to be received
         """
+        packet.received()
         self.packets_received += 1
         self.occupying_packets.append(packet)
         self.model.total_packets_received += 1
@@ -55,10 +58,7 @@ class NetworkDevice(Agent):
         Logic for sending a network packet.
         :param packet: packet to send
         """
-        if packet not in self.current_packets:
-            self.current_packets.append(packet)
-
-        if(packet.step < packet.max_hops):
+        if packet.step < packet.max_hops:
             if self.address.is_share_subnetwork(packet.destination): # device is in the local network
                 dest_local_address = packet.destination[len(self.address) - 1]
                 next_device_address = self.routing_table[dest_local_address][1]
@@ -84,10 +84,10 @@ class NetworkDevice(Agent):
             if len(self.address) == len(next_device.address):
                 self._activate_edge_to(other=next_device)
 
-            self.current_packets.remove(packet)
             next_device.route(packet)
         else:
             packet.stop_step = self.model.schedule.steps
+            self.current_packets.append(packet)
             print("Packet %s going to device %s has reached maximum number of %d hops in %d steps and stopped at device %s" %
                 (packet.packet_id, packet.destination, packet.max_hops, packet.step, self.address))
 
@@ -96,9 +96,14 @@ class NetworkDevice(Agent):
                                    other.master_address)["active"] = True
 
     def step(self):
-        if(len(self.current_packets) != 0):
-            for packet in self.current_packets:
-                if(packet.stop_step < self.model.schedule.steps):
-                    packet.step = 0
-                    print("Device %s contains packet %s .. continue routing.." % (self.address, packet.packet_id))
-                    self.route(packet)
+        i = 0
+        while i < len(self.current_packets):
+            packet = self.current_packets[i]
+            if packet.stop_step < self.model.schedule.steps:
+                self.current_packets.pop(i)
+                packet.step = 0
+                print("Device %s contains packet %s .. continue routing.." % (self.address, packet.packet_id))
+                self.route(packet)
+            else:
+                i += 1
+

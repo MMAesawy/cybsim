@@ -121,7 +121,7 @@ class CybCim(Model):
 
 
 class SubNetwork:
-    def __init__(self, address, parent, model, routing_table, of='subnetworks', num_devices=25, avg_node_degree=2):
+    def __init__(self, address, parent, model, routing_table, of='subnetworks', num_devices=get_subnetwork_device_count(), avg_node_degree=2):
         self.address = address
         self.parent = parent
         self.model = model
@@ -130,6 +130,11 @@ class SubNetwork:
         self.num_devices = num_devices
         self.current_packets = []
 
+        # does not play into anything currently
+        if of == 'devices':
+            self.type = self.get_subnetwork_type()
+            self.success_percentage = 0
+
         # create graph and compute pairwise shortest paths
         self.network = get_random_graph(self.num_devices, avg_node_degree)
         # self.network = nx.barabasi_albert_graph(self.num_devices, min(1, self.num_devices-1))
@@ -137,6 +142,7 @@ class SubNetwork:
         self.shortest_paths = dict(nx.all_pairs_shortest_path(self.network))
 
         self.local_gateway_address = self.network.graph['gateway']
+
 
         self.children = []
         # create objects to be stored within the graph
@@ -171,7 +177,7 @@ class SubNetwork:
     def route(self, packet):
         # if destination is inside this network, consume the packet (propagate downwards)
         if self.address.is_supernetwork(packet.destination):
-         self._propagate_downwards(packet)
+            self._propagate_downwards(packet)
         else:
             self._send(packet)
 
@@ -188,10 +194,7 @@ class SubNetwork:
         Logic for sending a network packet.
         :param packet: the packet to send
         """
-        if packet not in self.current_packets:
-            self.current_packets.append(packet)
-
-        if(packet.step < packet.max_hops):
+        if packet.step < packet.max_hops:
             if self.address.is_share_subnetwork(packet.destination): # device is in the local network
                 dest_local_address = packet.destination[len(self.address) - 1]
                 next_device_address = self.routing_table[dest_local_address][1]
@@ -214,18 +217,38 @@ class SubNetwork:
             if len(self.address) == len(next_device.address):
                 self._activate_edge_to(next_device)
 
-            self.current_packets.remove(packet)
             next_device.route(packet)
 
         else:
             packet.stop_step = self.model.schedule.steps
+            self.current_packets.append(packet)
             print("Packet %s going to device %s has reached maximum number of %d hops in %d steps and stopped at device %s" %
               (packet.packet_id, packet.destination, packet.max_hops, packet.step, self.address))
 
-
+    # THIS NEVER GETS CALLED #
+    # THIS NEVER GETS CALLED #
+    # THIS NEVER GETS CALLED #
+    # THIS NEVER GETS CALLED #
     def step(self):
+        total_percent = 0
         for n in self.network.nodes:
             n['subnetwork'].step()
+            # calculate success percentage
+            if isinstance(n, User):
+                total_percent = total_percent + n.get_work_done()
+        self.success_percentage = total_percent/get_subnetwork_user_count()
+        print(self.success_percentage)
+
+        i = 0
+        while i < len(self.current_packets):
+            packet = self.current_packets[i]
+            if packet.stop_step < self.model.schedule.steps:
+                self.current_packets.pop(i)
+                packet.step = 0
+                print("Device %s contains packet %s .. continue routing.." % (self.address, packet.packet_id))
+                self.route(packet)
+            else:
+                i += 1
 
     def gateway_device(self):
         """
@@ -262,6 +285,17 @@ class SubNetwork:
 
     def get_device_count(self):
         return self.num_devices
+
+    # can be changed later
+    def get_subnetwork_type(self):
+        if 5 <= self.num_devices <= 15:
+            return 'private_network'
+        elif 16 <= self.num_devices <= 25:
+            return 'startup'
+        elif 26 <= self.num_devices <= 35:
+            return 'small_company'
+        elif 36 <= self.num_devices <= 50:
+            return 'large_company'
 
 
 
