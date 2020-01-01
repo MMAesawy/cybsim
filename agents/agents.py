@@ -1,7 +1,8 @@
 from agents.constructs import Correspondence
 from agents.devices import NetworkDevice
+from agents.constructs import *
+import model
 import random
-
 
 class User(NetworkDevice):
     def __init__(self, activity, address, parent, model, routing_table, work_done=0):
@@ -23,7 +24,8 @@ class User(NetworkDevice):
         if r < self.activity:
             dest = random.choices(self.communications_devices, weights=self.communications_freq, k=1)[0]
             Correspondence(self, dest, self.model)
-            print("User %s establishing correspondence with %s" % (self.address, dest.address))
+            if model.VERBOSE:
+                print("User %s establishing correspondence with %s" % (self.address, dest.address))
 
     def _generate_communications_table(self):
         # ensure the tables are empty
