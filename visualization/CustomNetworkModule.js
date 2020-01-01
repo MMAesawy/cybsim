@@ -97,15 +97,15 @@ var NetworkModule = function(svg_width, svg_height) {
     };
 
     this.render = function(data) {
-        current_graph = JSON.parse(JSON.stringify(data));
+        var current_graph = JSON.parse(JSON.stringify(data));
         if (graph == null){
             this.createGraph(data);
         }
 
-        current_graph.edges.forEach(function(d) {
-            d3.select('[line-id="' + d.id + '"]').style("stroke", d.color)
-        });
-
+        var lines = $("line");
+        for (var i = 0; i < lines.length; i++){
+            lines[i].setAttribute("stroke", current_graph.edges[i].color);
+        }
     };
 
     this.reset = function() {

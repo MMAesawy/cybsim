@@ -63,9 +63,9 @@ class MyTextElement(TextElement):
 model_params = {
     'num_internet_devices': UserSettableParameter(param_type='slider', name='Number of internet devices', value=100, min_value=50, max_value=100, step=1,
                                                   description='Choose how many internet devices to have'),
-    'num_subnetworks': UserSettableParameter(param_type='slider', name='Number of subnetworks', value=15, min_value=5, max_value=30, step=1,
+    'num_subnetworks': UserSettableParameter(param_type='slider', name='Number of subnetworks', value=50, min_value=5, max_value=100, step=1,
                                                   description='Choose how many subnetworks to have'),
-    'max_hops': UserSettableParameter(param_type='slider', name='Max hops for packets', value=1, min_value=1, max_value=5, step=1,
+    'max_hops': UserSettableParameter(param_type='slider', name='Max hops for packets', value=5, min_value=1, max_value=20, step=1,
                                                   description='Choose the maximum hop length for packets'),
 
 }
