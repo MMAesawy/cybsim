@@ -7,16 +7,16 @@ class NetworkDevice(Agent):
     def __init__(self, address, parent, model, routing_table):
         super().__init__(address, model)
 
+        self.address = address
         self.parent = parent
+        self.model = model
         self.routing_table = routing_table
         self.packets_received = 0
         self.packets_sent = 0
-        self.address = address
         self.current_packets = []
-        self.model = model
-
+        self.type = self.parent.type
         self.passing_packets = 0
-        self.capacity = random.randint(2,4)
+        self.capacity = random.randint(self.model.min_capacity,self.model.max_capacity)
 
         # a list to store packet payloads in the device
         self.occupying_packets = []

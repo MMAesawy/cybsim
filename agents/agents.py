@@ -7,6 +7,7 @@ import random
 class User(NetworkDevice):
     def __init__(self, activity, address, parent, model, routing_table, work_done=0):
         self.activity = activity
+        self.parent = parent
         self.comm_table_in_size = random.randint(2, 10)
         self.comm_table_out_size = random.randint(0, 5)
         self.comm_table_size = self.comm_table_in_size + self.comm_table_out_size

@@ -19,7 +19,7 @@ def get_total_packets_failed(model):
 
 class CybCim(Model):
 
-    def __init__(self,num_internet_devices= 100, num_subnetworks= 15, max_hops=3):
+    def __init__(self, num_internet_devices= 100, num_subnetworks= 15, max_hops=3, min_capacity=10, max_capacity=20, min_device_count = 5,  max_device_count = 50):
         super().__init__()
 
         self.G = nx.Graph() # master graph
@@ -28,6 +28,11 @@ class CybCim(Model):
         self.num_internet_devices = num_internet_devices
         self.num_subnetworks = num_subnetworks
         self.max_hops = max_hops
+        self.min_capacity = min_capacity
+        self.max_capacity = max_capacity
+        self.num_users = 0
+        self.min_device_count = min_device_count
+        self.max_device_count = max_device_count
         #avg_node_degree = 3
         self.devices = []
         self.active_correspondences = []
@@ -46,7 +51,7 @@ class CybCim(Model):
                 n = self.num_internet_devices
                 of = 'devices'
             else:
-                n = get_subnetwork_device_count()
+                n = get_subnetwork_device_count(self)
                 of = 'devices'
 
             self.network.nodes[i]['subnetwork']  =  SubNetwork(address=Address(i),
@@ -123,7 +128,7 @@ class CybCim(Model):
 
 
 class SubNetwork:
-    def __init__(self, address, parent, model, routing_table, of='subnetworks', num_devices=get_subnetwork_device_count(), avg_node_degree=2):
+    def __init__(self, address, parent, model, routing_table, num_devices, of='subnetworks', avg_node_degree=2):
         self.address = address
         self.parent = parent
         self.model = model
@@ -154,8 +159,8 @@ class SubNetwork:
                                                                  parent=self,
                                                                  model=model,
                                                                  routing_table=routing_table,
-                                                                 of='devices',
-                                                                 num_devices=get_subnetwork_device_count())
+                                                                 num_devices=get_subnetwork_device_count(self.model),
+                                                                 of='devices')
             elif of == 'devices': # if this is a subnetwork of devices
                 self.num_users = get_subnetwork_user_count(self.num_devices)
                 if (i <= self.num_users):
@@ -171,6 +176,8 @@ class SubNetwork:
                                                                     model=model,
                                                                     routing_table=routing_table)
                 self.children.append(self.network.nodes[i]['subnetwork'])
+
+        self.model.num_users += self.num_users
 
         # add nodes to master graph
         self.merge_with_master_graph()
@@ -242,6 +249,8 @@ class SubNetwork:
             return 'small_company'
         elif 36 <= self.num_devices <= 50:
             return 'large_company'
+        else:
+            return 'internet_device'
 
 
 
