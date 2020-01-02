@@ -5,5 +5,5 @@
 
 conda create -n abm python==3.6
 activate abm
-pip install -r env.txt
+pip install -r requirements.txt
 mesa runserver
