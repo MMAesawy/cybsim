@@ -12,16 +12,35 @@ var NetworkModule = function (svg_width, svg_height) {
         width = +svg.attr("width"),
         height = +svg.attr("height"),
         g = svg.append("g")
-            .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+            .attr("transform", "translate(" + width / 2 + "," + height / 2 + ") scale(1)");
 
     var tooltip = d3.select("body").append("div")
         .attr("class", "tooltip")
         .style("opacity", 0);
 
+    var fisheye = d3.fisheye.circular()
+    .radius(200)
+    .distortion(2);
+
     svg.call(d3.zoom()
         .on("zoom", function () {
             g.attr("transform", d3.event.transform);
         }));
+
+    svg.on("mousemove", fish);
+
+    var fish = function() {
+        fisheye.focus(d3.zoomTransform(g.node()).invert(d3.mouse(this)));
+      nodes.each(function(d) { d.fisheye = fisheye(d); })
+          .attr("cx", function(d) { return d.fisheye.x; })
+          .attr("cy", function(d) { return d.fisheye.y; })
+          .attr("r", function(d) { return d.fisheye.z * 4.5; });
+
+      links.attr("x1", function(d) { return d.source.fisheye.x; })
+          .attr("y1", function(d) { return d.source.fisheye.y; })
+          .attr("x2", function(d) { return d.target.fisheye.x; })
+          .attr("y2", function(d) { return d.target.fisheye.y; });
+    };
 
     var graph = null;
     var simulation = null;
@@ -108,15 +127,14 @@ var NetworkModule = function (svg_width, svg_height) {
 
 
         simulation.on("tick", () => {
-            links
-                .attr("x1", d => d.source.x)
-                .attr("y1", d => d.source.y)
-                .attr("x2", d => d.target.x)
-                .attr("y2", d => d.target.y);
+            nodes.each(function(d) { d.fisheye = fisheye(d); })
+          .attr("cx", function(d) { return d.fisheye.x; })
+          .attr("cy", function(d) { return d.fisheye.y; });
 
-            nodes
-                .attr("cx", d => d.x)
-                .attr("cy", d => d.y);
+      links.attr("x1", function(d) { return d.source.fisheye.x; })
+          .attr("y1", function(d) { return d.source.fisheye.y; })
+          .attr("x2", function(d) { return d.target.fisheye.x; })
+          .attr("y2", function(d) { return d.target.fisheye.y; });
         });
 
     };
@@ -129,9 +147,17 @@ var NetworkModule = function (svg_width, svg_height) {
         }
 
         var lines = $("line");
-        for (var i = 0; i < lines.length; i++) {
+        var i;
+        //console.log(lines);
+        for (i = 0; i < lines.length; i++) {
             lines[i].setAttribute("stroke", current_graph.edges[i].color);
         }
+
+        // var circles = $("circle");
+        // //console.log(circles.length);
+        // for (i = 0; i < circles.length; i++) {
+        //     circles[i].setAttribute("fill", current_graph.nodes[i].color);
+        // }
     };
 
     drag = simulation => {
@@ -187,5 +213,7 @@ var NetworkModule = function (svg_width, svg_height) {
             .on("zoom", function () {
                 g.attr("transform", d3.event.transform);
             }));
+
+        svg.on("mousemove", fish);
     }
 };

@@ -15,7 +15,11 @@ def network_portrayal(G):
     # The model ensures there is always 1 agent per node
 
     def node_color(agent):
-        return '#0000FF'
+        # p = min(255, int(agent.passing_packets / 10 * 255))
+        # r = "#%s00%s" % (hex(p)[2:].zfill(2).upper(), hex(255-p)[2:].zfill(2).upper())
+        # #print(r)
+        # return r
+        return "#0000FF"
 
     def edge_color(agent1, agent2):
         e = G.get_edge_data(agent1.master_address, agent2.master_address)
