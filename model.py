@@ -19,10 +19,27 @@ def get_total_packets_failed(model):
 
 class CybCim(Model):
 
-    def __init__(self, num_internet_devices= 100, num_subnetworks= 15, max_hops=3, min_capacity=10, max_capacity=20, min_device_count = 5,  max_device_count = 50):
+    def __init__(self,
+                 num_internet_devices= 100,
+                 num_subnetworks= 15,
+                 max_hops=3,
+                 min_capacity=10,
+                 max_capacity=20,
+                 min_device_count = 5,
+                 max_device_count = 50,
+                 interactive=True,
+                 fisheye=True,
+                 subgraph_type=True,
+                 visualize=True,
+                 verbose=True):
+        global VERBOSE
         super().__init__()
 
         self.G = nx.Graph() # master graph
+        self.G.graph['interactive'] = interactive
+        self.G.graph['fisheye'] = fisheye
+        self.G.graph['visualize'] = visualize
+
         self.address_server = AddressServer()
 
         self.num_internet_devices = num_internet_devices
@@ -33,6 +50,9 @@ class CybCim(Model):
         self.num_users = 0
         self.min_device_count = min_device_count
         self.max_device_count = max_device_count
+        self.verbose = verbose
+        VERBOSE = verbose
+
         #avg_node_degree = 3
         self.devices = []
         self.active_correspondences = []
@@ -52,7 +72,7 @@ class CybCim(Model):
                 of = 'devices'
             else:
                 n = get_subnetwork_device_count(self)
-                of = 'devices'
+                of = 'devices' if subgraph_type else 'subnetworks'
 
             self.network.nodes[i]['subnetwork']  =  SubNetwork(address=Address(i),
                                                                parent=self,
@@ -151,16 +171,19 @@ class SubNetwork:
         self.local_gateway_address = self.network.graph['gateway']
 
         self.children = []
+        self.num_users = 0
         # create objects to be stored within the graph
         for i in range(len(self.network.nodes)):
             routing_table = self.shortest_paths[i]
             if of == 'subnetworks': # if this is a subnetwork of subnetworks:
-                self.network.nodes[i]['subnetwork'] = SubNetwork(address=self.address + i,
-                                                                 parent=self,
-                                                                 model=model,
-                                                                 routing_table=routing_table,
-                                                                 num_devices=get_subnetwork_device_count(self.model),
-                                                                 of='devices')
+                n = SubNetwork(address=self.address + i,
+                                 parent=self,
+                                 model=model,
+                                 routing_table=routing_table,
+                                 num_devices=get_subnetwork_device_count(self.model),
+                                 of='devices')
+                self.num_users += n.num_users
+                self.network.nodes[i]['subnetwork'] = n
             elif of == 'devices': # if this is a subnetwork of devices
                 self.num_users = get_subnetwork_user_count(self.num_devices)
                 if (i <= self.num_users):

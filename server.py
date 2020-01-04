@@ -43,23 +43,26 @@ def network_portrayal(G):
         return G.node[source]['agent'][0], G.node[target]['agent'][0]
 
     portrayal = dict()
-    portrayal['nodes'] = [{'size': 6,
-                           'color': node_color(agents[0]),
-                           'tooltip': "address: %s, packets sent: %d, packets received: %d type: %s" % (agents[0].address,
-                                                                                               agents[0].packets_sent,
-                                                                                               agents[0].packets_received,
-                                                                                               agents[0].type),
-                           'id': i,
-                           }
-                          for i, (_, agents) in enumerate(G.nodes.data('agent'))]
+    if G.graph['visualize']:
+        portrayal['nodes'] = [{'size': 6,
+                               'color': node_color(agents[0]),
+                               'tooltip': "address: %s, packets sent: %d, packets received: %d type: %s" % (agents[0].address,
+                                                                                                   agents[0].packets_sent,
+                                                                                                   agents[0].packets_received,
+                                                                                                   agents[0].type),
+                               'id': i,
+                               }
+                              for i, (_, agents) in enumerate(G.nodes.data('agent'))]
 
-    portrayal['edges'] = [{'source': source,
-                           'target': target,
-                           'color': edge_color(*get_agents(source, target)),
-                           'width': edge_width(*get_agents(source, target)),
-                           'id':i,
-                           }
-                          for i, (source, target) in enumerate(G.edges)]
+        portrayal['edges'] = [{'source': source,
+                               'target': target,
+                               'color': edge_color(*get_agents(source, target)),
+                               'width': edge_width(*get_agents(source, target)),
+                               'id':i,
+                               }
+                              for i, (source, target) in enumerate(G.edges)]
+        portrayal['interactive'] = 1 if G.graph["interactive"] else 0
+        portrayal['fisheye'] = 1 if G.graph["fisheye"] else 0
     return portrayal
 
 chart = ChartModule([{'Label': 'Packets Received', 'Color': '#008000'},
@@ -74,6 +77,16 @@ class MyTextElement(TextElement):
         return "Number of devices: {}  Number of users: {}" .format(len(model.devices), model.num_users)
 
 model_params = {
+    'visualize': UserSettableParameter(param_type='checkbox', name='Enable visualization', value=True,
+                                                  description='Choose whether to visualize the graph'),
+    'verbose': UserSettableParameter(param_type='checkbox', name='Verbose', value=True,
+                                       description='Choose whether the model is verbose (in the terminal)'),
+    'interactive': UserSettableParameter(param_type='checkbox', name='Interactive graph', value=True,
+                                                  description='Choose whether the graph is interactive'),
+    'fisheye': UserSettableParameter(param_type='checkbox', name='Fisheye effect', value=True,
+                                                      description='Choose whether a fisheye effect is enabled'),
+    'subgraph_type': UserSettableParameter(param_type='checkbox', name='Subgraph of devices?', value=True,
+                                                      description='Choose whether the first level of subgraphs is of devices'),
     'num_internet_devices': UserSettableParameter(param_type='slider', name='Number of internet devices', value=100, min_value=50, max_value=100, step=1,
                                                   description='Choose how many internet devices to have'),
     'num_subnetworks': UserSettableParameter(param_type='slider', name='Number of subnetworks', value=50, min_value=5, max_value=100, step=1,
@@ -88,6 +101,7 @@ model_params = {
                                                   description='Choose the minimum number of devices for a subnetwork'),
     'max_device_count': UserSettableParameter(param_type='slider', name='Maximum subnetwork device count', value=50, min_value=25, max_value=50, step=1,
                                                   description='Choose the maximum number of devices for a subnetwork'),
+
 
 }
 network = NetworkModule(network_portrayal, 500, 730)

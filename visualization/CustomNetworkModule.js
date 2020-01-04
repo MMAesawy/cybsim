@@ -18,9 +18,7 @@ var NetworkModule = function (svg_width, svg_height) {
         .attr("class", "tooltip")
         .style("opacity", 0);
 
-    var fisheye = d3.fisheye.circular()
-    .radius(200)
-    .distortion(2);
+
 
     svg.call(d3.zoom()
         .on("zoom", function () {
@@ -47,9 +45,21 @@ var NetworkModule = function (svg_width, svg_height) {
     var links = null;
     var nodes = null;
     var quadtree = null;
+    var fisheye = null;
 
     this.createGraph = function (data) {
         graph = JSON.parse(JSON.stringify(data));
+        if (graph.fisheye === 1){
+            fisheye = d3.fisheye.circular()
+            .radius(300)
+            .distortion(1.5);
+        }
+        else {
+            fisheye = d3.fisheye.circular()
+            .radius(0)
+            .distortion(0);
+        }
+
         if (simulation == null)
             simulation = d3.forceSimulation(graph.nodes)
                 .force("charge", d3.forceManyBody()
@@ -59,9 +69,12 @@ var NetworkModule = function (svg_width, svg_height) {
                 .force("center", d3.forceCenter());
         // .stop();
 
-        // for (var i = 0, n = Math.ceil(Math.log(simulation.alphaMin()) / Math.log(1 - simulation.alphaDecay())); i < n; ++i) {
-        //         simulation.tick();
-        //     }
+        if (graph.interactive === 0){
+            simulation.stop();
+            for (var i = 0, n = Math.ceil(Math.log(simulation.alphaMin()) / Math.log(1 - simulation.alphaDecay())); i < n; ++i) {
+                    simulation.tick();
+                }
+        }
 
 
         links = g.append("g")
@@ -122,8 +135,10 @@ var NetworkModule = function (svg_width, svg_height) {
                 tooltip.transition()
                     .duration(500)
                     .style("opacity", 0);
-            })
-            .call(drag(simulation));
+            });
+
+        if (graph.interactive === 1)
+            nodes.call(drag(simulation));
 
 
         simulation.on("tick", () => {
@@ -136,6 +151,7 @@ var NetworkModule = function (svg_width, svg_height) {
           .attr("x2", function(d) { return d.target.fisheye.x; })
           .attr("y2", function(d) { return d.target.fisheye.y; });
         });
+
 
     };
 
@@ -203,6 +219,7 @@ var NetworkModule = function (svg_width, svg_height) {
         links = null;
         nodes = null;
         quadtree = null;
+        fisheye = null;
 
         svg.selectAll("g")
             .remove();
