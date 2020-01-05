@@ -12,25 +12,54 @@ var NetworkModule = function (svg_width, svg_height) {
         width = +svg.attr("width"),
         height = +svg.attr("height"),
         g = svg.append("g")
-            .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+            .attr("transform", "translate(" + width / 2 + "," + height / 2 + ") scale(1)");
 
     var tooltip = d3.select("body").append("div")
         .attr("class", "tooltip")
         .style("opacity", 0);
+
+
 
     svg.call(d3.zoom()
         .on("zoom", function () {
             g.attr("transform", d3.event.transform);
         }));
 
+    svg.on("mousemove", fish);
+
+    var fish = function() {
+        fisheye.focus(d3.zoomTransform(g.node()).invert(d3.mouse(this)));
+      nodes.each(function(d) { d.fisheye = fisheye(d); })
+          .attr("cx", function(d) { return d.fisheye.x; })
+          .attr("cy", function(d) { return d.fisheye.y; })
+          .attr("r", function(d) { return d.fisheye.z * 4.5; });
+
+      links.attr("x1", function(d) { return d.source.fisheye.x; })
+          .attr("y1", function(d) { return d.source.fisheye.y; })
+          .attr("x2", function(d) { return d.target.fisheye.x; })
+          .attr("y2", function(d) { return d.target.fisheye.y; });
+    };
+
     var graph = null;
     var simulation = null;
     var links = null;
     var nodes = null;
     var quadtree = null;
+    var fisheye = null;
 
     this.createGraph = function (data) {
         graph = JSON.parse(JSON.stringify(data));
+        if (graph.fisheye === 1){
+            fisheye = d3.fisheye.circular()
+            .radius(300)
+            .distortion(1.5);
+        }
+        else {
+            fisheye = d3.fisheye.circular()
+            .radius(0)
+            .distortion(0);
+        }
+
         if (simulation == null)
             simulation = d3.forceSimulation(graph.nodes)
                 .force("charge", d3.forceManyBody()
@@ -40,9 +69,12 @@ var NetworkModule = function (svg_width, svg_height) {
                 .force("center", d3.forceCenter());
         // .stop();
 
-        // for (var i = 0, n = Math.ceil(Math.log(simulation.alphaMin()) / Math.log(1 - simulation.alphaDecay())); i < n; ++i) {
-        //         simulation.tick();
-        //     }
+        if (graph.interactive === 0){
+            simulation.stop();
+            for (var i = 0, n = Math.ceil(Math.log(simulation.alphaMin()) / Math.log(1 - simulation.alphaDecay())); i < n; ++i) {
+                    simulation.tick();
+                }
+        }
 
 
         links = g.append("g")
@@ -103,21 +135,23 @@ var NetworkModule = function (svg_width, svg_height) {
                 tooltip.transition()
                     .duration(500)
                     .style("opacity", 0);
-            })
-            .call(drag(simulation));
+            });
+
+        if (graph.interactive === 1)
+            nodes.call(drag(simulation));
 
 
         simulation.on("tick", () => {
-            links
-                .attr("x1", d => d.source.x)
-                .attr("y1", d => d.source.y)
-                .attr("x2", d => d.target.x)
-                .attr("y2", d => d.target.y);
+            nodes.each(function(d) { d.fisheye = fisheye(d); })
+          .attr("cx", function(d) { return d.fisheye.x; })
+          .attr("cy", function(d) { return d.fisheye.y; });
 
-            nodes
-                .attr("cx", d => d.x)
-                .attr("cy", d => d.y);
+      links.attr("x1", function(d) { return d.source.fisheye.x; })
+          .attr("y1", function(d) { return d.source.fisheye.y; })
+          .attr("x2", function(d) { return d.target.fisheye.x; })
+          .attr("y2", function(d) { return d.target.fisheye.y; });
         });
+
 
     };
 
@@ -129,9 +163,17 @@ var NetworkModule = function (svg_width, svg_height) {
         }
 
         var lines = $("line");
-        for (var i = 0; i < lines.length; i++) {
+        var i;
+        //console.log(lines);
+        for (i = 0; i < lines.length; i++) {
             lines[i].setAttribute("stroke", current_graph.edges[i].color);
         }
+
+        // var circles = $("circle");
+        // //console.log(circles.length);
+        // for (i = 0; i < circles.length; i++) {
+        //     circles[i].setAttribute("fill", current_graph.nodes[i].color);
+        // }
     };
 
     drag = simulation => {
@@ -177,6 +219,7 @@ var NetworkModule = function (svg_width, svg_height) {
         links = null;
         nodes = null;
         quadtree = null;
+        fisheye = null;
 
         svg.selectAll("g")
             .remove();
@@ -187,5 +230,7 @@ var NetworkModule = function (svg_width, svg_height) {
             .on("zoom", function () {
                 g.attr("transform", d3.event.transform);
             }));
+
+        svg.on("mousemove", fish);
     }
 };

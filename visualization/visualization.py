@@ -2,7 +2,9 @@ from mesa.visualization.ModularVisualization import VisualizationElement
 
 
 class NetworkModule(VisualizationElement):
-    local_includes = ["./visualization/CustomNetworkModule.js", "./visualization/d3.v5.min.js"]
+    local_includes = ["./visualization/CustomNetworkModule.js",
+                      "./visualization/d3.v5.min.js",
+                      "./visualization/fisheye.js"]
 
     def __init__(self, portrayal_method, canvas_height=500, canvas_width=500):
         super().__init__()
