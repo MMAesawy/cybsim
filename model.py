@@ -188,12 +188,30 @@ class SubNetwork:
                 self.num_users = get_subnetwork_user_count(self.num_devices)
                 if (i <= self.num_users):
                     activity = random.random() / 10
+                    type = random.randint(1,4) #assign a user type for each user
+                    account_type = { 1: "Front Office" ,
+                                     2: "Back Office",
+                                     3: "Security Team",
+                                     4: "Developers" }
+                    if (type == 1): #assign a set of initial privileges based on each user type
+                        privilege = ["customer interaction", "read-only data"]
+                    elif (type == 2):
+                        privilege = ["read financial data", "edit financial data", "install software from safe sources",
+                                     "edit software from trusted sources", "download large datasets"]
+                    elif (type == 3):
+                        privilege = ["configure server", "change system settings", "install system updates", "test new software solutions"
+                                     "create user accounts", "change user account password", "delete user accounts"]
+                    else:
+                        privilege = ["download large datasets", "view program source code", "write new software", "edit data"]
+
                     self.network.nodes[i]['subnetwork'] = User(activity=activity,
                                                                 address=self.address + i,
                                                                 parent=self,
                                                                 model=model,
-                                                                routing_table=routing_table)
-                else:
+                                                                routing_table=routing_table,
+                                                               account_type=account_type[type],
+                                                               privilege=privilege)
+                else: #TODO make sure device is not a leaf node
                     self.network.nodes[i]['subnetwork'] = NetworkDevice(address=self.address + i,
                                                                     parent=self,
                                                                     model=model,
@@ -274,6 +292,3 @@ class SubNetwork:
             return 'large_company'
         else:
             return 'internet_device'
-
-
-

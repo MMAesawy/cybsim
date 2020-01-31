@@ -5,7 +5,7 @@ import model
 import random
 
 class User(NetworkDevice):
-    def __init__(self, activity, address, parent, model, routing_table, work_done=0):
+    def __init__(self, activity, address, parent, model, routing_table, account_type, privilege, work_done=0):
         self.activity = activity
         self.parent = parent
         self.comm_table_in_size = random.randint(2, 10)
@@ -13,6 +13,8 @@ class User(NetworkDevice):
         self.comm_table_size = self.comm_table_in_size + self.comm_table_out_size
         self.communications_devices = []
         self.communications_freq = []
+        self.account_type = account_type #for determining the type of user account
+        self.privilege = privilege #for determining the set of privileges said user has
         # for measuring the success of a user
         self.work_done = work_done
         super().__init__(address, parent, model, routing_table)
