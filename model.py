@@ -6,6 +6,7 @@ from helpers import *
 from agents.devices import *
 from agents.constructs import *
 from agents.agents import *
+from agents.AttackTeam import AttackClient
 
 import numpy as np
 
@@ -48,6 +49,8 @@ class CybCim(Model):
         self.min_capacity = min_capacity
         self.max_capacity = max_capacity
         self.num_users = 0
+        # self.num_attackers = get_subnetwork_attacker_count()  # For now it always initializes from 2 to 10 attackers.
+        self.num_attackers = 0
         self.min_device_count = min_device_count
         self.max_device_count = max_device_count
         self.verbose = verbose
@@ -186,7 +189,22 @@ class SubNetwork:
                 self.network.nodes[i]['subnetwork'] = n
             elif of == 'devices': # if this is a subnetwork of devices
                 self.num_users = get_subnetwork_user_count(self.num_devices)
-                if (i <= self.num_users):
+                if (i <= self.model.num_attackers):  #initializing attackers in small networks.
+                    if self.num_devices <= 15:
+                        activity = random.random() / 10
+                        self.network.nodes[i]['subnetwork'] = AttackClient(activity=activity,
+                                                                            address=self.address + i,
+                                                                            parent=self,
+                                                                            model=model,
+                                                                            routing_table=routing_table)
+                    else:
+                        activity = random.random() / 10
+                        self.network.nodes[i]['subnetwork'] = User(activity=activity,
+                                                                   address=self.address + i,
+                                                                   parent=self,
+                                                                   model=model,
+                                                                   routing_table=routing_table)
+                elif (i <= self.num_users):
                     activity = random.random() / 10
                     self.network.nodes[i]['subnetwork'] = User(activity=activity,
                                                                 address=self.address + i,

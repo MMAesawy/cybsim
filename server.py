@@ -9,6 +9,8 @@ from mesa.visualization.ModularVisualization import VisualizationElement
 
 from mesa.visualization.modules import TextElement
 from model import CybCim
+from agents.AttackTeam import AttackClient
+from agents.devices import NetworkDevice
 
 
 def network_portrayal(G):
@@ -19,12 +21,21 @@ def network_portrayal(G):
         # r = "#%s00%s" % (hex(p)[2:].zfill(2).upper(), hex(255-p)[2:].zfill(2).upper())
         # #print(r)
         # return r
-        return "#0000FF"
+        if type(agent) is AttackClient:
+            return "#a83232"
+        elif type(agent) is NetworkDevice:
+            return "#000000"
+        else:
+            return "#0000FF"
 
     def edge_color(agent1, agent2):
         e = G.get_edge_data(agent1.master_address, agent2.master_address)
-        if e["active"]:
-            return '#FF0000'
+        if type(agent1) is AttackClient:
+            if e["active"]:
+                return '#a83232'
+        else:
+            if e["active"]:
+                return '#0000FF'
         # else:
         #     e = G.get_edge_data(agent2.model_address, agent1.model_address)
         #     if e["active"]:
@@ -46,7 +57,7 @@ def network_portrayal(G):
     if G.graph['visualize']:
         portrayal['nodes'] = [{'size': 6,
                                'color': node_color(agents[0]),
-                               'tooltip': "address: %s, packets sent: %d, packets received: %d type: %s" % (agents[0].address,
+                               'tooltip': "address: %s, packets sent: %d, packets received: %d Network type: %s" % (agents[0].address,
                                                                                                    agents[0].packets_sent,
                                                                                                    agents[0].packets_received,
                                                                                                    agents[0].type),

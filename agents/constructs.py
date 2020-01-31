@@ -1,3 +1,4 @@
+from __future__ import annotations
 import re
 import random
 
@@ -22,8 +23,13 @@ class Correspondence:
 
     def _generate_sequence(self, sequence_length=None):
         if sequence_length is None:
-            sequence_length = random.randint(5, 15)
-        return random.choices((0, 1, 2), weights=None, k=sequence_length)
+            if self.party_a.intention == "attack":  # <-- rudimentary code for initializing the sequence of an attack
+                sequence_length = random.randint(1, 4)
+                sequence = random.choices([1], weights=None, k=sequence_length)
+                return sequence
+            else:
+                sequence_length = random.randint(5, 15)
+                return random.choices((0, 1, 2), weights=None, k=sequence_length)
 
     def __len__(self):
         return len(self.sequence)
@@ -34,12 +40,28 @@ class Correspondence:
             if next_action == 0:
                 self.packet_success()
                 return
-            if next_action == 1:
-                packet = Packet(self.model, self.party_b.address, self)
-                self.party_a.route(packet)
-            elif next_action == 2:
-                packet = Packet(self.model, self.party_a.address, self)
-                self.party_b.route(packet)
+
+            if self.party_a.intention == "attack":  # If the correspondence is initiated by an attacker
+                if next_action == 1:
+                    packet = PhishingPacket(self.model, self.party_b.address, self)  # Note: i think packets should be initialized from a Client or User object, unrealistic to be initialized from correspondence. (for setting effectiveness for example)
+                    rand = random.random()
+                    chance_of_responding = packet.effectiveness  # Set to 1 for testing. This should be changed into a function of party_b's security awareness and the effectiveness of the attack packet.
+                    if rand < chance_of_responding:  # If lower than chance of responding, a 2 is inserted into the sequence after the current position to signify a user responding.
+                        self.sequence.insert(random.randint(self.pointer+1, len(self.sequence)), 2)
+                    self.party_a.route(packet)
+
+                elif next_action == 2:
+                    packet = InfoPacket(self.model, self.party_a.address, self)  # Note: Should compute the vital or not parameter later. (for now it's always True for testing)
+                    self.party_b.route(packet)
+
+            else:
+                if next_action == 1:
+                    packet = Packet(self.model, self.party_b.address, self)
+                    self.party_a.route(packet)
+                elif next_action == 2:
+                    packet = Packet(self.model, self.party_a.address, self)
+                    self.party_b.route(packet)
+
         self.ready_state = False
 
     def packet_success(self):
@@ -100,6 +122,43 @@ class Packet:
         self.step = step
         self.model = model
         self.max_hops = self.model.max_hops
+
+    def drop(self):
+        self.correspondence.packet_failed()
+
+    def received(self):
+        self.correspondence.packet_success()
+
+
+# A child class for the packet that the attacker would send to the victim hoping that they would retrieve info.
+class PhishingPacket(Packet):
+    packet_payloads = ["You've just won an iphone 11 pro extreme xl !!!!", "This is the real google and someone is "
+                                                                           "trying to hack you! Reset your password "
+                                                                           "by typing yor old one in NAW!!!",
+                       "This is IT, i totally forgot what was your machine's password, can you remind me please?"]
+
+    def __init__(self, model, destination, correspondence, effectiveness=1, payload=None, step=0):
+        super().__init__(model, destination, correspondence, payload=None, step=0)
+        self.effectiveness = effectiveness
+        self.payload = payload if payload else random.choice(PhishingPacket.packet_payloads)
+        self.step = step
+
+    def drop(self):
+        self.correspondence.packet_failed()
+
+    def received(self):
+        self.correspondence.packet_success()
+
+
+#  A child class for the packet that the victim would send back if phishing is successful for example.
+class InfoPacket(Packet):
+    packet_payloads = ["Here is my info (;", "YEYEYEYEYEYEYEY", "Oh wow! okay okay, here is my password :)"]
+
+    def __init__(self, model, destination, correspondence, vital=True, payload=None, step=0):  # The vital flag is to signify that this information will allow the attacker to escalate privilege once. (set to True for testing)
+        super().__init__(model, destination, correspondence, payload=None, step=0)
+        self.vital = vital
+        self.payload = payload if payload else random.choice(InfoPacket.packet_payloads)
+        self.step = step
 
     def drop(self):
         self.correspondence.packet_failed()

@@ -36,3 +36,7 @@ def get_subnetwork_device_count(model):
 def get_subnetwork_user_count(devices_count):
     return random.randint(2, devices_count - int(devices_count/2))
 
+
+def get_subnetwork_attacker_count():
+    return random.randint(2, 10)
+
