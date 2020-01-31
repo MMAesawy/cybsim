@@ -36,6 +36,7 @@ class Correspondence:
 
     def step(self):
         if self.ready_state and self.active:
+            self.ready_state = False
             next_action = self.sequence[self.pointer]
             if next_action == 0:
                 self.packet_success()
@@ -62,7 +63,6 @@ class Correspondence:
                     packet = Packet(self.model, self.party_a.address, self)
                     self.party_b.route(packet)
 
-        self.ready_state = False
 
     def packet_success(self):
         self.pointer += 1
