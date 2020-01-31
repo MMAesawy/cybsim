@@ -29,20 +29,19 @@ class Correspondence:
         return len(self.sequence)
 
     def step(self):
-        packet, next_party = None, None
         if self.ready_state and self.active:
+            self.ready_state = False
             next_action = self.sequence[self.pointer]
             if next_action == 0:
                 self.packet_success()
                 return
             if next_action == 1:
                 packet = Packet(self.model, self.party_b.address, self)
-                next_party = self.party_a
+                self.party_a.route(packet)
             elif next_action == 2:
                 packet = Packet(self.model, self.party_a.address, self)
-                next_party = self.party_b
-        self.ready_state = False
-        next_party.route(packet)
+                self.party_b.route(packet)
+
 
     def packet_success(self):
         self.pointer += 1
