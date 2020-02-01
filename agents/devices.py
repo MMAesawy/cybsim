@@ -16,7 +16,8 @@ class NetworkDevice(Agent):
         self.current_packets = []
         self.type = self.parent.type
         self.passing_packets = 0
-        self.capacity = random.randint(self.model.min_capacity,self.model.max_capacity)
+        # self.capacity = random.randint(self.model.min_capacity,self.model.max_capacity)
+        self.capacity = 10000  # For testing
 
         # a list to store packet payloads in the device
         self.occupying_packets = []

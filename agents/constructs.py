@@ -4,13 +4,18 @@ import random
 
 
 class Correspondence:
-    def __init__(self, party_a, party_b, model, fails_to_end=None, sequence_length=None):
+    def __init__(self, party_a, party_b, model, fails_to_end=None, sequence_length=None, sequence=None):
         self.party_a = party_a
         self.party_b = party_b
         self.fails_to_end = fails_to_end
         self.model = model
 
-        self.sequence = self._generate_sequence(sequence_length)
+        if sequence is None:
+            self.sequence = self._generate_sequence(sequence_length)
+
+        else:
+            self.sequence = sequence
+
         self.failure_count = 0
         self.pointer = 0
         # self.total_failure_count = 0
@@ -23,7 +28,7 @@ class Correspondence:
 
     def _generate_sequence(self, sequence_length=None):
         if sequence_length is None:
-            if self.party_a.intention == "attack":  # <-- rudimentary code for initializing the sequence of an attack
+            if self.party_a.intention == "phishing":  # <-- rudimentary code for initializing the sequence of an attack
                 sequence_length = random.randint(1, 4)
                 sequence = random.choices([1], weights=None, k=sequence_length)
                 return sequence
@@ -42,17 +47,31 @@ class Correspondence:
                 self.packet_success()
                 return
 
-            if self.party_a.intention == "attack":  # If the correspondence is initiated by an attacker
+            if self.party_a.intention == "phishing":  # If the correspondence is initiated by an attacker
                 if next_action == 1:
-                    packet = PhishingPacket(self.model, self.party_b.address, self)  # Note: i think packets should be initialized from a Client or User object, unrealistic to be initialized from correspondence. (for setting effectiveness for example)
+                    packet = PhishingPacket(self.model, self.party_b.address,
+                                            self)  # Note: i think packets should be initialized from a Client or User object, unrealistic to be initialized from correspondence. (for setting effectiveness for example)
                     rand = random.random()
                     chance_of_responding = packet.effectiveness  # Set to 1 for testing. This should be changed into a function of party_b's security awareness and the effectiveness of the attack packet.
                     if rand < chance_of_responding:  # If lower than chance of responding, a 2 is inserted into the sequence after the current position to signify a user responding.
-                        self.sequence.insert(random.randint(self.pointer+1, len(self.sequence)), 2)
+                        self.sequence.insert(random.randint(self.pointer + 1, len(self.sequence)), 2)
                     self.party_a.route(packet)
 
                 elif next_action == 2:
-                    packet = InfoPacket(self.model, self.party_a.address, self)  # Note: Should compute the vital or not parameter later. (for now it's always True for testing)
+                    packet = InfoPacket(self.model, self.party_a.address,
+                                        self)  # Note: Should compute the vital or not parameter later. (for now it's always True for testing)
+                    self.party_b.route(packet)
+
+            elif self.party_a.intention == "escalate":  # If the correspondence is initiated by an attacker to escalate privilege.
+                if next_action == 1:
+                    packet = ControlPacket(self.model, self.party_b.address, self)
+                    self.sequence.append(random.choice((1, 2)))
+                    self.party_a.route(packet)
+
+                elif next_action == 2:
+                    packet = InfoPacket(self.model, self.party_a.address,
+                                        self)  # Note: Should compute the vital or not parameter later. (for now it's always True for testing)
+                    self.sequence.append(random.choice((1, 2)))
                     self.party_b.route(packet)
 
             else:
@@ -62,7 +81,6 @@ class Correspondence:
                 elif next_action == 2:
                     packet = Packet(self.model, self.party_a.address, self)
                     self.party_b.route(packet)
-
 
     def packet_success(self):
         self.pointer += 1
@@ -85,6 +103,8 @@ class Correspondence:
         self.active = False
 
         if success:  # if correspondence ended successfully
+            if self.party_a.intention == "phishing":
+                self.party_a.intention = "escalate"  # Changing the attacker's intention here.
             if len(set(self.sequence)) == 1 and self.sequence[0] == 0:
                 pass
             elif len(set(self.sequence)) == 1 and self.sequence[0] == 1:
@@ -154,10 +174,32 @@ class PhishingPacket(Packet):
 class InfoPacket(Packet):
     packet_payloads = ["Here is my info (;", "YEYEYEYEYEYEYEY", "Oh wow! okay okay, here is my password :)"]
 
-    def __init__(self, model, destination, correspondence, vital=True, payload=None, step=0):  # The vital flag is to signify that this information will allow the attacker to escalate privilege once. (set to True for testing)
+    def __init__(self, model, destination, correspondence, vital=True, payload=None,
+                 step=0):  # The vital flag is to signify that this information will allow the attacker to escalate privilege once. (set to True for testing)
         super().__init__(model, destination, correspondence, payload=None, step=0)
         self.vital = vital
         self.payload = payload if payload else random.choice(InfoPacket.packet_payloads)
+        self.step = step
+
+    def drop(self):
+        self.correspondence.packet_failed()
+
+    def received(self):
+        self.correspondence.packet_success()
+        if self.vital is True:
+            for i in range(len(self.correspondence.party_a.captured)):
+                if self.correspondence.party_b.address.__eq__(self.correspondence.party_a.captured[i].address):
+                    return
+            self.correspondence.party_a.captured.append(self.correspondence.party_b)
+
+
+#  A child class for the packets that are sent from an attacker to control a captured device
+class ControlPacket(Packet):
+    packet_payloads = ["MOOORE! BRING ME MOOOOOORE!!!", "Do this and do that.", "GO MY MINION!"]
+
+    def __init__(self, model, destination, correspondence, payload=None, step=0):
+        super().__init__(model, destination, correspondence, payload=None, step=0)
+        self.payload = payload if payload else random.choice(ControlPacket.packet_payloads)
         self.step = step
 
     def drop(self):
