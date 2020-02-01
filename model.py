@@ -186,8 +186,11 @@ class SubNetwork:
                 self.network.nodes[i]['subnetwork'] = n
             elif of == 'devices': # if this is a subnetwork of devices
                 self.num_users = get_subnetwork_user_count(self.num_devices)
-                if (i <= self.num_users):
+                company_security = random.random() #percentage of efficient network security on company level
+                if (i <= self.num_users): #creating users
                     activity = random.random() / 10
+                    personal_security = random.random() #percentage of users pre-existing security knowledge
+                    media_presence = random.random() #percentage susceptable to spear phising attacks
                     type = random.randint(1,4) #assign a user type for each user
                     account_type = { 1: "Front Office" ,
                                      2: "Back Office",
@@ -210,7 +213,10 @@ class SubNetwork:
                                                                 model=model,
                                                                 routing_table=routing_table,
                                                                account_type=account_type[type],
-                                                               privilege=privilege)
+                                                               privilege=privilege,
+                                                               company_security=company_security,
+                                                               personal_security=personal_security,
+                                                               media_presence=media_presence)
                 else: #TODO make sure device is not a leaf node
                     self.network.nodes[i]['subnetwork'] = NetworkDevice(address=self.address + i,
                                                                     parent=self,

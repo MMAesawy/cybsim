@@ -5,7 +5,7 @@ import model
 import random
 
 class User(NetworkDevice):
-    def __init__(self, activity, address, parent, model, routing_table, account_type, privilege, work_done=0):
+    def __init__(self, activity, address, parent, model, routing_table, account_type, privilege, company_security, personal_security, media_presence, work_done=0):
         self.activity = activity
         self.parent = parent
         self.comm_table_in_size = random.randint(2, 10)
@@ -15,6 +15,8 @@ class User(NetworkDevice):
         self.communications_freq = []
         self.account_type = account_type #for determining the type of user account
         self.privilege = privilege #for determining the set of privileges said user has
+        self.media_presence = media_presence
+        self.user_security = self.weighted_user_security_level(s1=company_security,s2=personal_security,w1=0.3,w2=0.7)
         # for measuring the success of a user
         self.work_done = work_done
         super().__init__(address, parent, model, routing_table)
@@ -29,6 +31,9 @@ class User(NetworkDevice):
             Correspondence(self, dest, self.model)
             if model.VERBOSE:
                 print("User %s establishing correspondence with %s" % (self.address, dest.address))
+
+    def weighted_user_security_level(self,s1, s2, w1, w2):
+        return (s1 * w1 + s2 * w2)/2
 
     def _generate_communications_table(self):
         # ensure the tables are empty
