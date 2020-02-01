@@ -198,33 +198,30 @@ class SubNetwork:
                                                                             model=model,
                                                                             routing_table=routing_table)
                     else:
+                        company_security = random.random()  # percentage of efficient network security on company level
                         activity = random.random() / 10
+                        personal_security = random.random()  # percentage of users pre-existing security knowledge
+                        media_presence = random.random()  # percentage susceptable to spear phishing attacks
+                        type = random.randint(1, 4)  # assign a user type for each user
+                        account_type, privilege = self.define_privileges(type)
                         self.network.nodes[i]['subnetwork'] = User(activity=activity,
                                                                    address=self.address + i,
                                                                    parent=self,
                                                                    model=model,
-                                                                   routing_table=routing_table)
-                elif (i <= self.num_users):
-                company_security = random.random() #percentage of efficient network security on company level
-                if (i <= self.num_users): #creating users
+                                                                   routing_table=routing_table,
+                                                                   account_type=account_type[type],
+                                                                   privilege=privilege,
+                                                                   company_security=company_security,
+                                                                   personal_security=personal_security,
+                                                                   media_presence=media_presence
+                                                                   )
+                elif (i <= self.num_users):  #creating users
+                    company_security = random.random() #percentage of efficient network security on company level
                     activity = random.random() / 10
                     personal_security = random.random() #percentage of users pre-existing security knowledge
-                    media_presence = random.random() #percentage susceptable to spear phising attacks
+                    media_presence = random.random() #percentage susceptable to spear phishing attacks
                     type = random.randint(1,4) #assign a user type for each user
-                    account_type = { 1: "Front Office" ,
-                                     2: "Back Office",
-                                     3: "Security Team",
-                                     4: "Developers" }
-                    if (type == 1): #assign a set of initial privileges based on each user type
-                        privilege = ["customer interaction", "read-only data"]
-                    elif (type == 2):
-                        privilege = ["read financial data", "edit financial data", "install software from safe sources",
-                                     "edit software from trusted sources", "download large datasets"]
-                    elif (type == 3):
-                        privilege = ["configure server", "change system settings", "install system updates", "test new software solutions"
-                                     "create user accounts", "change user account password", "delete user accounts"]
-                    else:
-                        privilege = ["download large datasets", "view program source code", "write new software", "edit data"]
+                    account_type, privilege = self.define_privileges(type)
 
                     self.network.nodes[i]['subnetwork'] = User(activity=activity,
                                                                 address=self.address + i,
@@ -247,6 +244,27 @@ class SubNetwork:
 
         # add nodes to master graph
         self.merge_with_master_graph()
+
+    def define_privileges(self,type):
+
+        account_type = {1: "Front Office",
+                        2: "Back Office",
+                        3: "Security Team",
+                        4: "Developers"}
+        # assign a set of initial privileges based on each user type
+        if (type == 1):
+            privilege = ["customer interaction", "read-only data"]
+        elif (type == 2):
+            privilege = ["read financial data", "edit financial data", "install software from safe sources",
+                         "edit software from trusted sources", "download large datasets"]
+        elif (type == 3):
+            privilege = ["configure server", "change system settings", "install system updates",
+                         "test new software solutions", "create user accounts",
+                         "change user account password", "delete user accounts"]
+        else:
+            privilege = ["download large datasets", "view program source code", "write new software", "edit data"]
+
+        return account_type, privilege
 
     def get_next_gateway(self, packet):
         """

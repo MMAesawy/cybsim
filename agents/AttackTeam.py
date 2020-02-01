@@ -6,21 +6,21 @@ import model
 class AttackClient(User):
     def __init__(self, activity, address, parent, model, routing_table, captured=None, intention="phishing"):
         super().__init__(activity, address, parent, model, routing_table)
-        if captured is None:
+        if captured is None: #list of devices that can be controlled
             captured = []
         self.intention = intention
         self.captured = captured
-        self.control_cor_list = []
+        self.control_cor_list = [] #actively controlled devices
 
     def step(self):
         if len(self.communications_devices) == 0:  # communications table is uninitialized, lazy initialization
-            self.comm_table_out_size = random.randint(20, 300)
+            self.comm_table_out_size = random.randint(3, 6)
             self.comm_table_in_size = 0
             self._generate_communications_table()
 
         r = random.random()
         if r < self.activity:
-            if len(self.captured) == 0:
+            if len(self.captured) == 0: #TODO target specific users for phishing
                 dest = random.choices(self.communications_devices, weights=self.communications_freq, k=1)[0]
                 # Initiating the phishing correspondence.
                 Correspondence(self, dest, self.model)

@@ -51,7 +51,7 @@ class Correspondence:
                 if next_action == 1:
                     packet = PhishingPacket(self.model, self.party_b.address,
                                             self)  # Note: i think packets should be initialized from a Client or User object, unrealistic to be initialized from correspondence. (for setting effectiveness for example)
-                    rand = random.random()
+                    rand = random.random() #TODO 1 - security awareness
                     chance_of_responding = packet.effectiveness  # Set to 1 for testing. This should be changed into a function of party_b's security awareness and the effectiveness of the attack packet.
                     if rand < chance_of_responding:  # If lower than chance of responding, a 2 is inserted into the sequence after the current position to signify a user responding.
                         self.sequence.insert(random.randint(self.pointer + 1, len(self.sequence)), 2)
