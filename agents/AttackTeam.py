@@ -1,15 +1,18 @@
 from agents.agents import User
 from agents.constructs import *
+from agents.agents import Employee
 import model
 
 
 class AttackClient(User):
-    def __init__(self, activity, address, parent, model, routing_table, captured=None, intention="phishing"):
+    def __init__(self, activity, address, parent, model, routing_table, captured=None, intention="phishing", state="Inactive"):
         super().__init__(activity, address, parent, model, routing_table)
         if captured is None: #list of devices that can be controlled
             captured = []
         self.intention = intention
         self.captured = captured
+        self.state = state
+        self.model = model
         self.control_cor_list = [] #actively controlled devices
 
     def step(self):
@@ -42,16 +45,15 @@ class AttackClient(User):
 
         # initialize devices inside the local network
         for i in range(self.comm_table_in_size):
-            dest = random.choice(self.parent.children)
+            dest = random.choices(self.parent.users_on_subnetwork, weights=[x.media_presence for x in self.parent.users_on_subnetwork], k=1)[0]
             freq = random.random()
             self.communications_devices.append(dest)
             self.communications_freq.append(freq)
 
         # initialize devices outside the local network
         for i in range(self.comm_table_out_size):
-            dest = random.choice(self.model.devices)
-            if not self.address.is_share_subnetwork(
-                    dest.address):  # only add if the device is outside the local network
+            dest = random.choices(self.model.users, weights=[x.media_presence for x in self.model.users], k=1)[0]
+            if not self.address.is_share_subnetwork(dest.address):  # only add if the device is outside the local network
                 freq = random.random()
                 self.communications_devices.append(dest)
                 self.communications_freq.append(freq)

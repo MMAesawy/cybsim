@@ -7,6 +7,7 @@ from agents.devices import *
 from agents.constructs import *
 from agents.agents import *
 from agents.AttackTeam import AttackClient
+from agents.agents import Employee
 
 import numpy as np
 
@@ -17,6 +18,12 @@ def get_total_packets_received(model):
 
 def get_total_packets_failed(model):
     return model.total_failure_count
+
+def get_total_compromised(model):
+    return model.total_compromised
+
+def get_total_safe(model):
+    return model.num_users - model.total_compromised
 
 class CybCim(Model):
 
@@ -58,6 +65,7 @@ class CybCim(Model):
 
         #avg_node_degree = 3
         self.devices = []
+        self.users = [] #keeping track of human users in all networks
         self.active_correspondences = []
 
         # create graph and compute pairwise shortest paths
@@ -83,8 +91,7 @@ class CybCim(Model):
                                                                routing_table=routing_table,
                                                                avg_node_degree=1,
                                                                num_devices=n,
-                                                               of=of
-                                                 )
+                                                               of=of)
 
 
         # add nodes to master graph
@@ -102,11 +109,14 @@ class CybCim(Model):
             self.schedule.add(d)
         self.total_packets_received = 0
         self.total_failure_count = 0
+        self.total_compromised = 0
         self.packet_count = 1
 
         self.datacollector = DataCollector(
             {"Packets Received": get_total_packets_received,
-            "Packets Dropped": get_total_packets_failed,}
+            "Packets Dropped": get_total_packets_failed,
+             "Compromised Devices": get_total_compromised,
+             "Safe Devices": get_total_safe,}
         )
 
         self.running = True
@@ -174,6 +184,7 @@ class SubNetwork:
         self.local_gateway_address = self.network.graph['gateway']
 
         self.children = []
+        self.users_on_subnetwork = [] #keeping track of human users on subnetwork
         self.num_users = 0
         # create objects to be stored within the graph
         for i in range(len(self.network.nodes)):
@@ -189,6 +200,7 @@ class SubNetwork:
                 self.network.nodes[i]['subnetwork'] = n
             elif of == 'devices': # if this is a subnetwork of devices
                 self.num_users = get_subnetwork_user_count(self.num_devices)
+                company_security = get_company_security(self.num_devices)  # percentage of efficient network security on company level
                 if (i <= self.model.num_attackers):  #initializing attackers in small networks.
                     if self.num_devices <= 15:
                         activity = random.random() / 10
@@ -198,13 +210,12 @@ class SubNetwork:
                                                                             model=model,
                                                                             routing_table=routing_table)
                     else:
-                        company_security = random.random()  # percentage of efficient network security on company level
                         activity = random.random() / 10
-                        personal_security = random.random()  # percentage of users pre-existing security knowledge
                         media_presence = random.random()  # percentage susceptable to spear phishing attacks
                         type = random.randint(1, 4)  # assign a user type for each user
-                        account_type, privilege = self.define_privileges(type)
-                        self.network.nodes[i]['subnetwork'] = User(activity=activity,
+
+                        account_type, privilege, personal_security = self.define_privilege_security(type)
+                        self.network.nodes[i]['subnetwork'] = Employee(activity=activity,
                                                                    address=self.address + i,
                                                                    parent=self,
                                                                    model=model,
@@ -213,17 +224,15 @@ class SubNetwork:
                                                                    privilege=privilege,
                                                                    company_security=company_security,
                                                                    personal_security=personal_security,
-                                                                   media_presence=media_presence
-                                                                   )
+                                                                   media_presence=media_presence)
                 elif (i <= self.num_users):  #creating users
-                    company_security = random.random() #percentage of efficient network security on company level
                     activity = random.random() / 10
-                    personal_security = random.random() #percentage of users pre-existing security knowledge
                     media_presence = random.random() #percentage susceptable to spear phishing attacks
-                    type = random.randint(1,4) #assign a user type for each user
-                    account_type, privilege = self.define_privileges(type)
+                    type = random.randint(1,4) #assign a user type for each user #TODO define certain range for each type os employee
+                    # based on type of employee, define privileges and  percentage of users pre-existing security knowledge
+                    account_type, privilege, personal_security = self.define_privilege_security(type)
 
-                    self.network.nodes[i]['subnetwork'] = User(activity=activity,
+                    self.network.nodes[i]['subnetwork'] = Employee(activity=activity,
                                                                 address=self.address + i,
                                                                 parent=self,
                                                                 model=model,
@@ -233,6 +242,7 @@ class SubNetwork:
                                                                company_security=company_security,
                                                                personal_security=personal_security,
                                                                media_presence=media_presence)
+                    self.users_on_subnetwork.append(self.network.nodes[i]['subnetwork'])
                 else: #TODO make sure device is not a leaf node
                     self.network.nodes[i]['subnetwork'] = NetworkDevice(address=self.address + i,
                                                                     parent=self,
@@ -240,12 +250,13 @@ class SubNetwork:
                                                                     routing_table=routing_table)
                 self.children.append(self.network.nodes[i]['subnetwork'])
 
+
         self.model.num_users += self.num_users
 
         # add nodes to master graph
         self.merge_with_master_graph()
 
-    def define_privileges(self,type):
+    def define_privilege_security(self,type):
 
         account_type = {1: "Front Office",
                         2: "Back Office",
@@ -254,17 +265,21 @@ class SubNetwork:
         # assign a set of initial privileges based on each user type
         if (type == 1):
             privilege = ["customer interaction", "read-only data"]
+            security = random.random() * 0.3
         elif (type == 2):
             privilege = ["read financial data", "edit financial data", "install software from safe sources",
                          "edit software from trusted sources", "download large datasets"]
+            security = 0.3 + random.random() * (0.5 - 0.3)
         elif (type == 3):
             privilege = ["configure server", "change system settings", "install system updates",
                          "test new software solutions", "create user accounts",
                          "change user account password", "delete user accounts"]
+            security = 0.8 + random.random() * (1 - 0.8)
         else:
             privilege = ["download large datasets", "view program source code", "write new software", "edit data"]
+            security = 0.5 + random.random() + (0.8 - 0.5)
 
-        return account_type, privilege
+        return account_type, privilege, security
 
     def get_next_gateway(self, packet):
         """

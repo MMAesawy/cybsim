@@ -36,6 +36,18 @@ def get_subnetwork_device_count(model):
 def get_subnetwork_user_count(devices_count):
     return random.randint(2, devices_count - int(devices_count/2))
 
+def get_company_security(device_count): #TODO change security ranges to be realistic
+
+    if 5 <= device_count <= 15:
+        return random.random() * 0.25
+    elif 16 <= device_count <= 25:
+        return 0.25 + random.random() * (0.35 - 0.25)
+    elif 26 <= device_count  <= 35:
+        return 0.35 + random.random() * (0.5 - 0.35)
+    elif 36 <= device_count  <= 50:
+        return 0.85 + random.random() * (0.85 - 0.5)
+    else:
+        return 0.4 + random.random() * (0.6 - 0.4)
 
 def get_subnetwork_attacker_count():
     return random.randint(2, 10)

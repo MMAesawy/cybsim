@@ -11,6 +11,7 @@ from mesa.visualization.modules import TextElement
 from model import CybCim
 from agents.AttackTeam import AttackClient
 from agents.devices import NetworkDevice
+from agents.agents import Employee
 
 
 def network_portrayal(G):
@@ -22,17 +23,22 @@ def network_portrayal(G):
         # #print(r)
         # return r
         if type(agent) is AttackClient:
-            return "#a83232"
-        elif type(agent) is NetworkDevice:
-            return "#000000"
+                return "#A83232"
+        elif type(agent) is Employee:
+            if (agent.state == "Safe"):
+                return "#0000FF"
+            else:
+                return "#FFC0CB"
         else:
-            return "#0000FF"
+            return "#000000"
+
+
 
     def edge_color(agent1, agent2):
         e = G.get_edge_data(agent1.master_address, agent2.master_address)
         if type(agent1) is AttackClient:
             if e["active"]:
-                return '#a83232'
+                return '#A83232'
         else:
             if e["active"]:
                 return '#0000FF'
@@ -79,8 +85,10 @@ def network_portrayal(G):
 chart = ChartModule([{'Label': 'Packets Received', 'Color': '#008000'},
                      {'Label': 'Packets Dropped', 'Color': '#FF0000'}])
 
-pie = PieChartModule([{'Label': 'Packets Received', 'Color': '#4ca64c'},
-                     {'Label': 'Packets Dropped', 'Color': '#ff4c4c'}],
+chart2 = ChartModule([{'Label': 'Compromised Devices', 'Color': '#ff4c4c'}])
+
+pie = PieChartModule([{'Label': 'Safe Devices', 'Color': '#4ca64c'},
+                     {'Label': 'Compromised Devices', 'Color': '#ff4c4c'}],
                      canvas_width=730)
 
 class MyTextElement(TextElement):
@@ -121,4 +129,4 @@ text = VisualizationElement()
 
 
 
-server = ModularServer(CybCim, [network, MyTextElement(), chart, pie], 'Computer Network',   model_params)
+server = ModularServer(CybCim, [network, MyTextElement(), chart, chart2, pie], 'Computer Network',   model_params)

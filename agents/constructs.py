@@ -49,17 +49,15 @@ class Correspondence:
 
             if self.party_a.intention == "phishing":  # If the correspondence is initiated by an attacker
                 if next_action == 1:
-                    packet = PhishingPacket(self.model, self.party_b.address,
-                                            self)  # Note: i think packets should be initialized from a Client or User object, unrealistic to be initialized from correspondence. (for setting effectiveness for example)
-                    rand = random.random() #TODO 1 - security awareness
-                    chance_of_responding = packet.effectiveness  # Set to 1 for testing. This should be changed into a function of party_b's security awareness and the effectiveness of the attack packet.
-                    if rand < chance_of_responding:  # If lower than chance of responding, a 2 is inserted into the sequence after the current position to signify a user responding.
+                    packet = PhishingPacket(self.model, self.party_b.address, self)  # Note: i think packets should be initialized from a Client or User object, unrealistic to be initialized from correspondence. (for setting effectiveness for example)
+
+                    security_awareness = self.party_b.security
+                    if packet.effectiveness > security_awareness:  # If lower than chance of responding, a 2 is inserted into the sequence after the current position to signify a user responding.
                         self.sequence.insert(random.randint(self.pointer + 1, len(self.sequence)), 2)
                     self.party_a.route(packet)
 
                 elif next_action == 2:
-                    packet = InfoPacket(self.model, self.party_a.address,
-                                        self)  # Note: Should compute the vital or not parameter later. (for now it's always True for testing)
+                    packet = InfoPacket(self.model, self.party_a.address, self)  # Note: Should compute the vital or not parameter later. (for now it's always True for testing)
                     self.party_b.route(packet)
 
             elif self.party_a.intention == "escalate":  # If the correspondence is initiated by an attacker to escalate privilege.
@@ -69,8 +67,7 @@ class Correspondence:
                     self.party_a.route(packet)
 
                 elif next_action == 2:
-                    packet = InfoPacket(self.model, self.party_a.address,
-                                        self)  # Note: Should compute the vital or not parameter later. (for now it's always True for testing)
+                    packet = InfoPacket(self.model, self.party_a.address, self)  # Note: Should compute the vital or not parameter later. (for now it's always True for testing)
                     self.sequence.append(random.choice((1, 2)))
                     self.party_b.route(packet)
 
@@ -159,7 +156,7 @@ class PhishingPacket(Packet):
 
     def __init__(self, model, destination, correspondence, effectiveness=1, payload=None, step=0):
         super().__init__(model, destination, correspondence, payload=None, step=0)
-        self.effectiveness = effectiveness
+        self.effectiveness = effectiveness #TODO function to determine effectiveness of attack
         self.payload = payload if payload else random.choice(PhishingPacket.packet_payloads)
         self.step = step
 
@@ -191,6 +188,8 @@ class InfoPacket(Packet):
                 if self.correspondence.party_b.address.__eq__(self.correspondence.party_a.captured[i].address):
                     return
             self.correspondence.party_a.captured.append(self.correspondence.party_b)
+            self.correspondence.party_b.state = "Compromised"
+            self.model.total_compromised += 1
 
 
 #  A child class for the packets that are sent from an attacker to control a captured device
