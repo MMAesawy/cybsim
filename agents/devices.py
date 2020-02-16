@@ -14,7 +14,7 @@ class NetworkDevice(Agent):
         self.packets_received = 0
         self.packets_sent = 0
         self.current_packets = []
-        self.type = self.parent.type
+        # self.type = self.parent.type
         self.passing_packets = 0
         self.capacity = random.randint(self.model.min_capacity,self.model.max_capacity)
 

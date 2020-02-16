@@ -46,10 +46,9 @@ def network_portrayal(G):
     if G.graph['visualize']:
         portrayal['nodes'] = [{'size': 6,
                                'color': node_color(agents[0]),
-                               'tooltip': "address: %s, packets sent: %d, packets received: %d type: %s" % (agents[0].address,
+                               'tooltip': "address: %s, packets sent: %d, packets received: %d" % (agents[0].address,
                                                                                                    agents[0].packets_sent,
-                                                                                                   agents[0].packets_received,
-                                                                                                   agents[0].type),
+                                                                                                   agents[0].packets_received),
                                'id': i,
                                }
                               for i, (_, agents) in enumerate(G.nodes.data('agent'))]
