@@ -23,9 +23,9 @@ class CybCim(Model):
     def __init__(self,
                  num_internet_devices= 100,
                  num_subnetworks= 15,
-                 max_hops=3,
-                 min_capacity=10,
-                 max_capacity=20,
+                 # max_hops=3,
+                 # min_capacity=10,
+                 # max_capacity=20,
                  min_device_count = 5,
                  max_device_count = 50,
                  interactive=True,
@@ -45,9 +45,9 @@ class CybCim(Model):
 
         self.num_internet_devices = num_internet_devices
         self.num_subnetworks = num_subnetworks
-        self.max_hops = max_hops
-        self.min_capacity = min_capacity
-        self.max_capacity = max_capacity
+        # self.max_hops = max_hops
+        # self.min_capacity = min_capacity
+        # self.max_capacity = max_capacity
         self.num_users = 0
         self.min_device_count = min_device_count
         self.max_device_count = max_device_count

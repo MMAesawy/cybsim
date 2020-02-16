@@ -100,7 +100,7 @@ class Packet:
         self.correspondence = correspondence
         self.step = step
         self.model = model
-        self.max_hops = self.model.max_hops
+        self.max_hops = -1 # -1 == no maximum hops
 
     def drop(self):
         self.correspondence.packet_failed()

@@ -16,7 +16,7 @@ class SubNetwork(ABC):
 
     @abstractmethod
     def _create_devices(self):
-        of = 'devices'
+        of = self.of #'devices'
         self.children = []
         self.num_users = 0
         # create objects to be stored within the graph
