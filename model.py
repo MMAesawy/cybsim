@@ -124,8 +124,7 @@ class CybCim(Model):
                                                                model=self,
                                                                routing_table=routing_table,
                                                                num_devices=n,
-                                                               of=of
-                                                 )
+                                                               of=of)
 
     def get_subnetwork_at(self, at):
         return self.network.nodes[at]['subnetwork']

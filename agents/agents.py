@@ -66,15 +66,13 @@ class User(NetworkDevice):
 
 class Employee(User):
     def __init__(self, activity, address, parent, model, routing_table,
-                 account_type, privilege, company_security, personal_security,
-                 media_presence, intention="None", state="Safe"):
+                 account_type, company_security, personal_security,
+                 media_presence, state="Safe"):
         super().__init__(activity, address, parent, model, routing_table)
         # self.intention = intention
 
         self.account_type = account_type  # for determining the type of user account
-        self.privilege = privilege  # for determining the set of privileges said user has
         self.media_presence = media_presence
-        self.intention = intention
         self.state = state
         self.security = self.weighted_user_security_level(s1=company_security, s2=personal_security, w1=0.3, w2=0.7)
 
