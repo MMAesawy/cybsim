@@ -45,20 +45,25 @@ class AttackClient(User):
 
         # initialize devices inside the local network
         for i in range(self.comm_table_in_size):
-            dest = random.choices(self.parent.users_on_subnetwork, weights=[x.media_presence for x in self.parent.users_on_subnetwork], k=1)[0]
+            dest = random.choice(self.parent.children)
             freq = random.random()
             self.communications_devices.append(dest)
             self.communications_freq.append(freq)
 
         # initialize devices outside the local network
         for i in range(self.comm_table_out_size):
-            dest = random.choices(self.model.users, weights=[x.media_presence for x in self.model.users], k=1)[0]
-            if not self.address.is_share_subnetwork(dest.address):  # only add if the device is outside the local network
+            dest = random.choice(self.model.devices)
+            if not self.address.is_share_subnetwork(
+                    dest.address):  # only add if the device is outside the local network
                 freq = random.random()
                 self.communications_devices.append(dest)
                 self.communications_freq.append(freq)
             else:
                 i -= 1
+
+        s = sum(self.communications_freq)
+        for i in range(len(self.communications_freq)):
+            self.communications_freq[i] /= s
 
     #  A function for Initiating correspondence with the captured devices.
     def _escalate_if_captured(self):

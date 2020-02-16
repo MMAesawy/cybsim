@@ -4,6 +4,7 @@ from agents.constructs import *
 import model
 import random
 
+
 class User(NetworkDevice):
     def __init__(self, activity, address, parent, model, routing_table, work_done=0):
         super().__init__(address, parent, model, routing_table)
@@ -64,23 +65,21 @@ class User(NetworkDevice):
     def get_work_done(self):
         return self.work_done
 
+
 class Employee(User):
     def __init__(self, activity, address, parent, model, routing_table,
-                 account_type, privilege, company_security, personal_security,
-                 media_presence, intention="None", state="Safe"):
+                 account_type, company_security, personal_security,
+                 media_presence, intention=None, state="Safe"):
         super().__init__(activity, address, parent, model, routing_table)
         # self.intention = intention
 
         self.account_type = account_type  # for determining the type of user account
-        self.privilege = privilege  # for determining the set of privileges said user has
         self.media_presence = media_presence
-        self.intention = intention
         self.state = state
         self.security = self.weighted_user_security_level(s1=company_security, s2=personal_security, w1=0.3, w2=0.7)
+        self.intention = intention
 
-        model.users.append(self) #append user into model's user list
+        model.users.append(self)  # append user into model's user list
 
-
-
-    def weighted_user_security_level(self,s1, s2, w1, w2):
-        return (s1 * w1 + s2 * w2)/2
+    def weighted_user_security_level(self, s1, s2, w1, w2):
+        return (s1 * w1 + s2 * w2) / 2

@@ -63,10 +63,9 @@ def network_portrayal(G):
     if G.graph['visualize']:
         portrayal['nodes'] = [{'size': 6,
                                'color': node_color(agents[0]),
-                               'tooltip': "address: %s, packets sent: %d, packets received: %d Network type: %s" % (agents[0].address,
+                               'tooltip': "address: %s, packets sent: %d, packets received: %d" % (agents[0].address,
                                                                                                    agents[0].packets_sent,
-                                                                                                   agents[0].packets_received,
-                                                                                                   agents[0].type),
+                                                                                                   agents[0].packets_received),
                                'id': i,
                                }
                               for i, (_, agents) in enumerate(G.nodes.data('agent'))]
@@ -108,17 +107,19 @@ model_params = {
                                                       description='Choose whether the first level of subgraphs is of devices'),
     'num_internet_devices': UserSettableParameter(param_type='slider', name='Number of internet devices', value=100, min_value=50, max_value=100, step=1,
                                                   description='Choose how many internet devices to have'),
-    'num_subnetworks': UserSettableParameter(param_type='slider', name='Number of subnetworks', value=5, min_value=5, max_value=100, step=1,
+    'num_subnetworks': UserSettableParameter(param_type='slider', name='Number of subnetworks', value=50, min_value=5, max_value=100, step=1,
                                                   description='Choose how many subnetworks to have'),
-    'max_hops': UserSettableParameter(param_type='slider', name='Maximum hops for packets', value=20, min_value=1, max_value=20, step=1,
-                                                  description='Choose the maximum hop length for packets'),
-    'min_capacity': UserSettableParameter(param_type='slider', name='Minimum capacity for device', value=20, min_value=10, max_value=20, step=1,
-                                                  description='Choose the minimum value for device capacity'),
-    'max_capacity': UserSettableParameter(param_type='slider', name='Maximum capacity for device', value=30, min_value=20, max_value=30, step=1,
-                                                  description='Choose the maximum value for device capacity'),
+    'num_attackers': UserSettableParameter(param_type='slider', name='Number of attackers', value=5, min_value=5, max_value=100, step=1,
+                                                  description='Choose how many attackers to have'),
+    # 'max_hops': UserSettableParameter(param_type='slider', name='Maximum hops for packets', value=5, min_value=1, max_value=20, step=1,
+    #                                               description='Choose the maximum hop length for packets'),
+    # 'min_capacity': UserSettableParameter(param_type='slider', name='Minimum capacity for device', value=10, min_value=10, max_value=20, step=1,
+    #                                               description='Choose the minimum value for device capacity'),
+    # 'max_capacity': UserSettableParameter(param_type='slider', name='Maximum capacity for device', value=20, min_value=20, max_value=30, step=1,
+    #                                               description='Choose the maximum value for device capacity'),
     'min_device_count': UserSettableParameter(param_type='slider', name='Minimum subnetwork device count', value=5, min_value=5, max_value=25, step=1,
                                                   description='Choose the minimum number of devices for a subnetwork'),
-    'max_device_count': UserSettableParameter(param_type='slider', name='Maximum subnetwork device count', value=25, min_value=25, max_value=50, step=1,
+    'max_device_count': UserSettableParameter(param_type='slider', name='Maximum subnetwork device count', value=50, min_value=25, max_value=50, step=1,
                                                   description='Choose the maximum number of devices for a subnetwork'),
 
 
@@ -129,4 +130,4 @@ text = VisualizationElement()
 
 
 
-server = ModularServer(CybCim, [network, MyTextElement(), chart, chart2, pie], 'Computer Network',   model_params)
+server = ModularServer(CybCim, [network, MyTextElement(), chart, pie], 'Computer Network',   model_params)
