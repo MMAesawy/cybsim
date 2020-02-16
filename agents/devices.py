@@ -14,10 +14,9 @@ class NetworkDevice(Agent):
         self.packets_received = 0
         self.packets_sent = 0
         self.current_packets = []
-        self.type = self.parent.type
+        # self.type = self.parent.type
         self.passing_packets = 0
-        # self.capacity = random.randint(self.model.min_capacity,self.model.max_capacity)
-        self.capacity = 10000  # For testing
+        self.capacity = -1 # -1 == infinite capacity
 
         # a list to store packet payloads in the device
         self.occupying_packets = []
@@ -34,7 +33,7 @@ class NetworkDevice(Agent):
 
 
     def route(self, packet):
-        if self.passing_packets < self.capacity:
+        if self.capacity < 0 or self.passing_packets < self.capacity:
             self.passing_packets += 1
             if self.address == packet.destination:  # this device is the recipient
                 self._receive(packet)
@@ -70,7 +69,7 @@ class NetworkDevice(Agent):
         Logic for sending a network packet.
         :param packet: packet to send
         """
-        if packet.step < packet.max_hops:
+        if packet.max_hops < 0 or packet.step < packet.max_hops: # packet can still hop
             if self.address.is_share_subnetwork(packet.destination): # device is in the local network
                 dest_local_address = packet.destination[len(self.address) - 1]
                 next_device_address = self.routing_table[dest_local_address][1]
@@ -93,7 +92,7 @@ class NetworkDevice(Agent):
             self._activate_edge_to(other=next_device)
             packet.step += 1
             next_device.route(packet)
-        else:
+        else: # packet reached its maximum amount of hops
             packet.stop_step = self.model.schedule.steps
             self.current_packets.append(packet)
             if model.VERBOSE:
