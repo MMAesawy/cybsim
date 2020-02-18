@@ -1,3 +1,4 @@
+from agents.AttackTeam import AttackClient
 from helpers import *
 from agents.agents import *
 from abc import ABC, abstractmethod
@@ -134,7 +135,6 @@ class Organization(SubNetwork):
     def _create_devices(self):
         self.children = []
         self.num_users = len(self.network.nodes) - 1 # TODO num users thing
-        self.model.num_users += self.num_users
         # create objects to be stored within the graph
         for i in range(len(self.network.nodes)):
             company_security = get_company_security(self.num_devices)
@@ -175,11 +175,46 @@ class Organization(SubNetwork):
         elif (type == 2):
             security = 0.3 + random.random() * (0.5 - 0.3)
         elif (type == 3):
+
             security = 0.8 + random.random() * (1 - 0.8)
         else:
             security = 0.5 + random.random() + (0.8 - 0.5)
 
         return account_type, security
+
+
+class Attackers(SubNetwork):
+
+    def _create_graph(self):
+        self.network = random_star_graph(self.model.num_attackers+1, 0)
+
+    def _create_devices(self):
+        self.children = []
+        self.num_users = self.model.num_attackers # TODO num users thing
+        # create objects to be stored within the graph
+        for i in range(len(self.network.nodes)):
+            # company_security = get_company_security(self.num_devices)
+            routing_table = self.shortest_paths[i]
+            if i == self.local_gateway_address:  # if this is the gateway
+                n = NetworkDevice(address=self.address + i,
+                                        parent=self,
+                                        model=self.model,
+                                        routing_table=routing_table)
+                self.network.nodes[i]['subnetwork'] = n
+            else: # the rest of the devices are users.
+                activity = random.random() / 10
+                # media_presence = random.random()  # percentage susceptable to spear phishing attacks
+                # type = random.randint(1, 4)  # assign a user type for each user #TODO define certain range for each type os employee
+                # based on type of employee, define privileges and  percentage of users pre-existing security knowledge
+                # account_type, personal_security = self.define_personal_security(type)
+
+                self.network.nodes[i]['subnetwork'] = AttackClient(activity=activity,
+                                                                   address=self.address + i,
+                                                                   parent=self,
+                                                                   model=self.model,
+                                                                   routing_table=routing_table)
+
+                self.children.append(self.network.nodes[i]['subnetwork'])
 
 # UNUSED
 # class LocalNetwork(SubNetwork):

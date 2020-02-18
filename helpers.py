@@ -55,6 +55,6 @@ def get_company_security(device_count): #TODO change security ranges to be reali
     else:
         return 0.4 + random.random() * (0.6 - 0.4)
 
-def get_subnetwork_attacker_count():
-    return random.randint(2, 10)
+# def get_subnetwork_attacker_count():
+#     return random.randint(2, 10)
 

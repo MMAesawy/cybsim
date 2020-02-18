@@ -14,7 +14,7 @@ class AttackClient(User):
         self.state = state
         self.model = model
         self.utility = utility
-        self.control_cor_list = [] #actively controlled devices
+
 
     def step(self):
         if len(self.communications_devices) == 0:  # communications table is uninitialized, lazy initialization
@@ -28,29 +28,14 @@ class AttackClient(User):
             if len(self.captured) == 0:
                 dest = random.choices(self.communications_devices, weights=self.communications_freq, k=1)[0]
                 # Initiating the phishing correspondence.
-                Correspondence(self, dest, self.model)
+                AttackCorrespondence(self, dest, self.model)
                 if model.VERBOSE:
-                    print("User %s establishing correspondence with %s" % (self.address, dest.address))
-        for i in range(len(self.captured)): #loop over captured devices and decide what strategy to execute
-            self.captured[i][1] = random.choice(['spread', 'execute', 'stay hidden'])
-            if(self.captured[i][1] == "execute"):
-                pass
+                    print("Attacker %s establishing correspondence with %s" % (self.address, dest.address))
 
-
-
-            # else:
-            #     if self.intention == "escalate":
-            #         # Initiating the escalate correspondence
-            #         self._escalate_if_captured()
-            #         self.comm_table_out_size = 0
-            #         self.comm_table_in_size = random.randint(5, 10)
-            #         self._generate_communications_table()  # Note: Should implement logic for initiating table locally.
-            #         # Unfinished code.
         self.update_utility()
 
     def update_utility(self):
         self.utility = len(self.captured) / self.model.num_users
-
 
     def _generate_communications_table(self):
         # ensure the tables are empty
@@ -73,22 +58,4 @@ class AttackClient(User):
                 self.communications_freq.append(freq)
             else:
                 i -= 1
-
-    #  A function for Initiating correspondence with the captured devices.
-    def _escalate_if_captured(self):
-        for i in range(len(self.captured)):
-            if len(self.control_cor_list) != 0:
-                for j in range(len(self.control_cor_list)):
-                    if self.captured[i].address.__eq__(self.control_cor_list[j].address):
-                        continue
-                    else:
-                        Correspondence(self, self.captured[i], self.model, None, None, [1])
-                        if model.VERBOSE:
-                            print("User %s establishing correspondence with %s" % (self.address, self.captured[i].address))
-                        self.control_cor_list.append(self.captured[i])
-            else:
-                Correspondence(self, self.captured[i], self.model, None, None, [1])
-                if model.VERBOSE:
-                    print("User %s establishing correspondence with %s" % (self.address, self.captured[i].address))
-                self.control_cor_list.append(self.captured[i])
 

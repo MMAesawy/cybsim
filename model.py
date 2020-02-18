@@ -14,28 +14,34 @@ import numpy as np
 
 VERBOSE = True
 
+
 def get_total_packets_received(model):
     return model.total_packets_received
+
 
 def get_total_packets_failed(model):
     return model.total_failure_count
 
+
 def get_total_compromised(model):
     return model.total_compromised
+
 
 def get_total_safe(model):
     return model.num_users - model.total_compromised
 
+
 class CybCim(Model):
 
     def __init__(self,
-                 num_internet_devices= 100,
-                 num_subnetworks= 15,
+                 num_internet_devices=100,
+                 num_subnetworks=15,
+                 num_attackers=5,
                  # max_hops=3,
                  # min_capacity=10,
                  # max_capacity=20,
-                 min_device_count = 5,
-                 max_device_count = 50,
+                 min_device_count=5,
+                 max_device_count=50,
                  interactive=True,
                  fisheye=True,
                  subgraph_type=True,
@@ -44,7 +50,7 @@ class CybCim(Model):
         global VERBOSE
         super().__init__()
 
-        self.G = nx.Graph() # master graph
+        self.G = nx.Graph()  # master graph
         self.G.graph['interactive'] = interactive
         self.G.graph['fisheye'] = fisheye
         self.G.graph['visualize'] = visualize
@@ -53,20 +59,19 @@ class CybCim(Model):
 
         self.num_internet_devices = num_internet_devices
         self.num_subnetworks = num_subnetworks
+        self.num_attackers = num_attackers
         # self.max_hops = max_hops
         # self.min_capacity = min_capacity
         # self.max_capacity = max_capacity
         self.num_users = 0
-        # self.num_attackers = get_subnetwork_attacker_count()  # For now it always initializes from 2 to 10 attackers.
-        self.num_attackers = 0
         self.min_device_count = min_device_count
         self.max_device_count = max_device_count
         self.verbose = verbose
         VERBOSE = verbose
 
-        #avg_node_degree = 3
+        # avg_node_degree = 3
         self.devices = []
-        self.users = [] #keeping track of human users in all networks
+        self.users = []  # keeping track of human users in all networks
         self.active_correspondences = []
 
         # create graph and compute pairwise shortest paths
@@ -76,7 +81,6 @@ class CybCim(Model):
 
         # construct subnetworks that compose the main network
         self._create_devices(subgraph_type)
-
 
         # add nodes to master graph
         self.merge_with_master_graph()
@@ -98,9 +102,9 @@ class CybCim(Model):
 
         self.datacollector = DataCollector(
             {"Packets Received": get_total_packets_received,
-            "Packets Dropped": get_total_packets_failed,
+             "Packets Dropped": get_total_packets_failed,
              "Compromised Devices": get_total_compromised,
-             "Safe Devices": get_total_safe,}
+             "Safe Devices": get_total_safe, }
         )
 
         self.running = True
@@ -119,12 +123,20 @@ class CybCim(Model):
             n = get_subnetwork_device_count(self)
             of = 'devices' if subgraph_type else 'subnetworks'
 
-            self.network.nodes[i]['subnetwork'] = Organization(address=Address(i),
-                                                               parent=self,
-                                                               model=self,
-                                                               routing_table=routing_table,
-                                                               num_devices=n,
-                                                               of=of)
+            if len(self.network.nodes) == i + 1:  # the last node of the network is always an attackers subnetwork
+                self.network.nodes[i]['subnetwork'] = Attackers(address=Address(i),
+                                                                parent=self,
+                                                                model=self,
+                                                                routing_table=routing_table,
+                                                                num_devices=None,
+                                                                of=of)
+            else:
+                self.network.nodes[i]['subnetwork'] = Organization(address=Address(i),
+                                                                   parent=self,
+                                                                   model=self,
+                                                                   routing_table=routing_table,
+                                                                   num_devices=n,
+                                                                   of=of)
 
     def get_subnetwork_at(self, at):
         return self.network.nodes[at]['subnetwork']

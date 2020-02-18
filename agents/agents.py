@@ -64,10 +64,11 @@ class User(NetworkDevice):
     def get_work_done(self):
         return self.work_done
 
+
 class Employee(User):
     def __init__(self, activity, address, parent, model, routing_table,
                  account_type, company_security, personal_security,
-                 media_presence, intention="None", state="Safe", controlled_by=None):
+                 media_presence, intention=None, state="Safe", controlled_by=None):
         super().__init__(activity, address, parent, model, routing_table)
         # self.intention = intention
 
@@ -81,10 +82,8 @@ class Employee(User):
 
         model.users.append(self) #append user into model's user list
 
-
-
-    def weighted_user_security_level(self,s1, s2, w1, w2):
-        return (s1 * w1 + s2 * w2)/2
+    def weighted_user_security_level(self, s1, s2, w1, w2):
+        return (s1 * w1 + s2 * w2) / 2
 
     def step(self):
         #if employee is compromised, attacker can hijack
