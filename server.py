@@ -95,9 +95,9 @@ class MyTextElement(TextElement):
         return "Number of devices: {}  Number of users: {}" .format(len(model.devices), model.num_users)
 
 model_params = {
-    'visualize': UserSettableParameter(param_type='checkbox', name='Enable visualization', value=True,
+    'visualize': UserSettableParameter(param_type='checkbox', name='Enable visualization', value=False,
                                                   description='Choose whether to visualize the graph'),
-    'verbose': UserSettableParameter(param_type='checkbox', name='Verbose', value=True,
+    'verbose': UserSettableParameter(param_type='checkbox', name='Verbose', value=False,
                                        description='Choose whether the model is verbose (in the terminal)'),
     'interactive': UserSettableParameter(param_type='checkbox', name='Interactive graph', value=True,
                                                   description='Choose whether the graph is interactive'),

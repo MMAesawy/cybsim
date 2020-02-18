@@ -14,6 +14,7 @@ class AttackClient(User):
         self.state = state
         self.model = model
         self.utility = utility
+        self.controlled_orgs = []
 
 
     def step(self):
@@ -25,14 +26,31 @@ class AttackClient(User):
 
         r = random.random()
         if r < self.activity:
-            if len(self.captured) == 0:
-                dest = random.choices(self.communications_devices, weights=self.communications_freq, k=1)[0]
-                # Initiating the phishing correspondence.
-                AttackCorrespondence(self, dest, self.model)
-                if model.VERBOSE:
-                    print("Attacker %s establishing correspondence with %s" % (self.address, dest.address))
+            # communication devices only contain devices form non compromised orgs
+            dest = random.choices(self.communications_devices, weights=self.communications_freq, k=1)[0]
+            # Initiating the phishing correspondence.
+            AttackCorrespondence(self, dest, self.model)
+            if model.VERBOSE:
+                print("Attacker %s establishing correspondence with %s" % (self.address, dest.address))
 
-        self.update_utility()
+            #try to attack other non compromised organizations
+            for i, org in enumerate(self.controlled_orgs):
+                strategy = random.choice(['execute', 'stay', 'spread'])
+                self.controlled_orgs[i][1] = strategy
+                if(strategy == 'execute'):
+                    if model.VERBOSE:
+                        print("Attacker has executed attack on organization %s with utility %f" % (org[i][0], self.utility))
+                    for device in self.captured: # remove all captured devices from list once executed
+                        if (device.address.get_subnet() == self.controlled_orgs[i][0]):
+                            self.captured.remove(device)
+                    self.controlled_orgs.pop(i)  # remove organization from control
+                        #TODO gateway device block controlled_by address
+                        #TODO change all compromised devices to be free
+                if(strategy == 'stay'):
+                    #increase % detection
+                    pass
+
+            self.update_utility()
 
     def update_utility(self):
         self.utility = len(self.captured) / self.model.num_users
@@ -52,10 +70,20 @@ class AttackClient(User):
         # initialize devices outside the local network
         for i in range(self.comm_table_out_size):
             dest = random.choices(self.model.users, weights=[x.media_presence for x in self.model.users], k=1)[0]
-            if not self.address.is_share_subnetwork(dest.address):  # only add if the device is outside the local network
-                freq = random.random()
-                self.communications_devices.append(dest)
-                self.communications_freq.append(freq)
+            # only add if the device is outside the local network
+            if not self.address.is_share_subnetwork(dest.address):
+                if (len(self.controlled_orgs) != 0):
+                    # and is not in an already compromised organization
+                    if (dest.address.get_subnet() not in org[0] for org in self.controlled_orgs):
+                        freq = random.random()
+                        self.communications_devices.append(dest)
+                        self.communications_freq.append(freq)
+                    else:
+                        i -= 1
+                else:
+                    freq = random.random()
+                    self.communications_devices.append(dest)
+                    self.communications_freq.append(freq)
             else:
                 i -= 1
 

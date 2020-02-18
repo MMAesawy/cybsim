@@ -48,7 +48,6 @@ class SubNetwork(ABC):
                                                                         routing_table=routing_table)
                 self.children.append(self.network.nodes[i]['subnetwork'])
 
-        self.model.num_users += self.num_users
 
     def __init__(self, address, parent, model, routing_table, num_devices, of='subnetworks'):
         self.address = address
@@ -163,6 +162,7 @@ class Organization(SubNetwork):
                                                                 media_presence=media_presence)
 
                 self.children.append(self.network.nodes[i]['subnetwork'])
+            self.model.num_users += self.num_users
 
     def define_personal_security(self, type):
         account_type = {1: "Front Office",

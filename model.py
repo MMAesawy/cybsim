@@ -12,7 +12,7 @@ from agents.agents import Employee
 
 import numpy as np
 
-VERBOSE = True
+VERBOSE = False
 
 
 def get_total_packets_received(model):
@@ -45,8 +45,8 @@ class CybCim(Model):
                  interactive=True,
                  fisheye=True,
                  subgraph_type=True,
-                 visualize=True,
-                 verbose=True):
+                 visualize=False,
+                 verbose=False):
         global VERBOSE
         super().__init__()
 

@@ -178,13 +178,17 @@ class InfoPacket(Packet):
             for i in range(len(self.correspondence.party_a.captured)):
                 if self.correspondence.party_b.address.__eq__(self.correspondence.party_a.captured[i].address):
                     return
-            self.correspondence.party_a.captured.append((self.correspondence.party_b, None))
+            self.correspondence.party_a.captured.append(self.correspondence.party_b)
+            self.correspondence.party_a.controlled_orgs.append([self.correspondence.party_b.address.get_subnet(), None])
             self.correspondence.party_b.state = "Compromised"
             self.correspondence.party_b.controlled_by = self.correspondence.party_a
             self.model.total_compromised += 1
-            for d in self.correspondence.party_a.captured: #once an organization is infilterated, remove all other entry points
-                if(d.address.is_share_subnetwork(self.correspondence.party_b)):
-                    self.correspondence.party_a.remove(self.correspondence.party_b)
+            # once an organization is infiltrated, remove all other entry points
+            for i, device in enumerate(self.correspondence.party_a.communications_devices):
+                if(device.address.is_share_subnetwork(self.correspondence.party_b.address)):
+                    self.correspondence.party_a.communications_devices.remove(device)
+                    self.correspondence.party_a.communications_freq.pop(i)
+
 
 
 
@@ -217,13 +221,13 @@ class AddressServer:
 
 
 class Address:
+    _r = re.compile(r"(\d+)\s*([,.]|$)")
     def __init__(self, address):
         self.address = []
 
         # if the address is a string, parse the address into its components
         if isinstance(address, str):
-            r = re.compile(r"(\d+)\s*([,.]|$)")
-            for m in r.finditer(address):
+            for m in Address._r.finditer(address):
                 if m:
                     self.address.append(m.group(1))
         elif isinstance(address, int):
@@ -246,6 +250,12 @@ class Address:
         while i < min(len(self), len(other)) and self[i] == other[i]:
             i += 1
         return i == len(self)
+
+    def get_subnet(self):
+        if len(self.address) > 1:
+            return Address(self.address[:-1])
+        else:
+            return None
 
     def __str__(self):
         return ".".join([str(a) for a in self.address])
