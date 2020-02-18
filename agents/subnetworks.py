@@ -134,6 +134,7 @@ class Organization(SubNetwork):
     def _create_devices(self):
         self.children = []
         self.num_users = len(self.network.nodes) - 1 # TODO num users thing
+        self.model.num_users += self.num_users
         # create objects to be stored within the graph
         for i in range(len(self.network.nodes)):
             company_security = get_company_security(self.num_devices)
@@ -174,7 +175,6 @@ class Organization(SubNetwork):
         elif (type == 2):
             security = 0.3 + random.random() * (0.5 - 0.3)
         elif (type == 3):
-
             security = 0.8 + random.random() * (1 - 0.8)
         else:
             security = 0.5 + random.random() + (0.8 - 0.5)

@@ -171,8 +171,8 @@ class PhishingPacket(Packet):
 class InfoPacket(Packet):
     packet_payloads = ["Here is my info (;", "YEYEYEYEYEYEYEY", "Oh wow! okay okay, here is my password :)"]
 
-    def __init__(self, model, destination, correspondence, vital=True, payload=None,
-                 step=0):  # The vital flag is to signify that this information will allow the attacker to escalate privilege once. (set to True for testing)
+    # The vital flag is to signify that this information will allow the attacker to escalate privilege once. (set to True for testing)
+    def __init__(self, model, destination, correspondence, vital=True, payload=None,step=0):
         super().__init__(model, destination, correspondence, payload=None, step=0)
         self.vital = vital
         self.payload = payload if payload else random.choice(InfoPacket.packet_payloads)
@@ -187,9 +187,14 @@ class InfoPacket(Packet):
             for i in range(len(self.correspondence.party_a.captured)):
                 if self.correspondence.party_b.address.__eq__(self.correspondence.party_a.captured[i].address):
                     return
-            self.correspondence.party_a.captured.append(self.correspondence.party_b)
+            self.correspondence.party_a.captured.append((self.correspondence.party_b, ""))
             self.correspondence.party_b.state = "Compromised"
+            self.correspondence.party_b.controlled_by = self.correspondence.party_a
             self.model.total_compromised += 1
+            for d in self.correspondence.party_a.captured: #once an organization is infilterated, remove all other entry points
+                if(d.address.is_share_subnetwork(self.correspondence.party_b)):
+                    self.correspondence.party_a.remove(self.correspondence.party_b)
+
 
 
 #  A child class for the packets that are sent from an attacker to control a captured device

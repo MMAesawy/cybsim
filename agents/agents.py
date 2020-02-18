@@ -67,14 +67,17 @@ class User(NetworkDevice):
 class Employee(User):
     def __init__(self, activity, address, parent, model, routing_table,
                  account_type, company_security, personal_security,
-                 media_presence, state="Safe"):
+                 media_presence, intention="None", state="Safe", controlled_by=None):
         super().__init__(activity, address, parent, model, routing_table)
         # self.intention = intention
 
         self.account_type = account_type  # for determining the type of user account
         self.media_presence = media_presence
+        self.intention = intention
         self.state = state
+        self.controlled_by = controlled_by
         self.security = self.weighted_user_security_level(s1=company_security, s2=personal_security, w1=0.3, w2=0.7)
+        self.immune_from = []
 
         model.users.append(self) #append user into model's user list
 
@@ -82,3 +85,8 @@ class Employee(User):
 
     def weighted_user_security_level(self,s1, s2, w1, w2):
         return (s1 * w1 + s2 * w2)/2
+
+    def step(self):
+        #if employee is compromised, attacker can hijack
+        if(self.state == "Compromised"):
+            pass

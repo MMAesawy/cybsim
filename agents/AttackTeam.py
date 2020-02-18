@@ -5,7 +5,7 @@ import model
 
 
 class AttackClient(User):
-    def __init__(self, activity, address, parent, model, routing_table, captured=None, intention="phishing", state="Inactive"):
+    def __init__(self, activity, address, parent, model, routing_table, utility = 0, captured=None, intention="phishing", state="Inactive"):
         super().__init__(activity, address, parent, model, routing_table)
         if captured is None: #list of devices that can be controlled
             captured = []
@@ -13,6 +13,7 @@ class AttackClient(User):
         self.captured = captured
         self.state = state
         self.model = model
+        self.utility = utility
         self.control_cor_list = [] #actively controlled devices
 
     def step(self):
@@ -21,22 +22,35 @@ class AttackClient(User):
             self.comm_table_in_size = 0
             self._generate_communications_table()
 
+
         r = random.random()
         if r < self.activity:
-            if len(self.captured) == 0: #TODO target specific users for phishing
+            if len(self.captured) == 0:
                 dest = random.choices(self.communications_devices, weights=self.communications_freq, k=1)[0]
                 # Initiating the phishing correspondence.
                 Correspondence(self, dest, self.model)
                 if model.VERBOSE:
                     print("User %s establishing correspondence with %s" % (self.address, dest.address))
-            else:
-                if self.intention == "escalate":
-                    # Initiating the escalate correspondence
-                    self._escalate_if_captured()
-                    self.comm_table_out_size = 0
-                    self.comm_table_in_size = random.randint(5, 10)
-                    self._generate_communications_table()  # Note: Should implement logic for initiating table locally.
-                    # Unfinished code.
+        for i in range(len(self.captured)): #loop over captured devices and decide what strategy to execute
+            self.captured[i][1] = random.choice(['spread', 'execute', 'stay hidden'])
+            if(self.captured[i][1] == "execute"):
+                pass
+
+
+
+            # else:
+            #     if self.intention == "escalate":
+            #         # Initiating the escalate correspondence
+            #         self._escalate_if_captured()
+            #         self.comm_table_out_size = 0
+            #         self.comm_table_in_size = random.randint(5, 10)
+            #         self._generate_communications_table()  # Note: Should implement logic for initiating table locally.
+            #         # Unfinished code.
+        self.update_utility()
+
+    def update_utility(self):
+        self.utility = len(self.captured) / self.model.num_users
+
 
     def _generate_communications_table(self):
         # ensure the tables are empty
