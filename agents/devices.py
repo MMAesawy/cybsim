@@ -1,6 +1,5 @@
 from mesa.agent import Agent
 import model
-import random
 
 class NetworkDevice(Agent):
 

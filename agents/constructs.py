@@ -2,7 +2,6 @@ from __future__ import annotations
 import re
 import random
 
-
 class Correspondence:
     def __init__(self, party_a, party_b, model, fails_to_end=None, sequence_length=None, sequence=None):
         self.party_a = party_a
@@ -178,16 +177,10 @@ class InfoPacket(Packet):
             for i in range(len(self.correspondence.party_a.captured)):
                 if self.correspondence.party_b.address.__eq__(self.correspondence.party_a.captured[i].address):
                     return
-            self.correspondence.party_a.captured.append(self.correspondence.party_b)
-            self.correspondence.party_a.controlled_orgs.append([self.correspondence.party_b.address.get_subnet(), None])
-            self.correspondence.party_b.state = "Compromised"
-            self.correspondence.party_b.controlled_by = self.correspondence.party_a
-            self.model.total_compromised += 1
-            # once an organization is infiltrated, remove all other entry points
-            for i, device in enumerate(self.correspondence.party_a.communications_devices):
-                if(device.address.is_share_subnetwork(self.correspondence.party_b.address)):
-                    self.correspondence.party_a.communications_devices.remove(device)
-                    self.correspondence.party_a.communications_freq.pop(i)
+                # call respective function for attacker to add new victim to control list
+            print("party a,b", self.correspondence.party_a.address, self.correspondence.party_b.address)
+            self.correspondence.party_a.receive(self.correspondence.party_b)
+
 
 
 

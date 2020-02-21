@@ -10,7 +10,6 @@ from mesa.visualization.ModularVisualization import VisualizationElement
 from mesa.visualization.modules import TextElement
 from model import CybCim
 from agents.AttackTeam import AttackClient
-from agents.devices import NetworkDevice
 from agents.agents import Employee
 
 
@@ -95,7 +94,7 @@ class MyTextElement(TextElement):
         return "Number of devices: {}  Number of users: {}" .format(len(model.devices), model.num_users)
 
 model_params = {
-    'visualize': UserSettableParameter(param_type='checkbox', name='Enable visualization', value=False,
+    'visualize': UserSettableParameter(param_type='checkbox', name='Enable visualization', value=True,
                                                   description='Choose whether to visualize the graph'),
     'verbose': UserSettableParameter(param_type='checkbox', name='Verbose', value=False,
                                        description='Choose whether the model is verbose (in the terminal)'),
@@ -105,11 +104,11 @@ model_params = {
                                                       description='Choose whether a fisheye effect is enabled'),
     'subgraph_type': UserSettableParameter(param_type='checkbox', name='Subgraph of devices?', value=True,
                                                       description='Choose whether the first level of subgraphs is of devices'),
-    'num_internet_devices': UserSettableParameter(param_type='slider', name='Number of internet devices', value=50, min_value=50, max_value=100, step=1,
+    'num_internet_devices': UserSettableParameter(param_type='slider', name='Number of internet devices', value=10, min_value=10, max_value=100, step=1,
                                                   description='Choose how many internet devices to have'),
-    'num_subnetworks': UserSettableParameter(param_type='slider', name='Number of subnetworks', value=50, min_value=5, max_value=100, step=1,
+    'num_subnetworks': UserSettableParameter(param_type='slider', name='Number of subnetworks', value=4, min_value=4, max_value=100, step=1,
                                                   description='Choose how many subnetworks to have'),
-    'num_attackers': UserSettableParameter(param_type='slider', name='Number of attackers', value=30, min_value=5, max_value=100, step=1,
+    'num_attackers': UserSettableParameter(param_type='slider', name='Number of attackers', value=1, min_value=1, max_value=100, step=1,
                                                   description='Choose how many attackers to have'),
     # 'max_hops': UserSettableParameter(param_type='slider', name='Maximum hops for packets', value=5, min_value=1, max_value=20, step=1,
     #                                               description='Choose the maximum hop length for packets'),
@@ -117,9 +116,9 @@ model_params = {
     #                                               description='Choose the minimum value for device capacity'),
     # 'max_capacity': UserSettableParameter(param_type='slider', name='Maximum capacity for device', value=20, min_value=20, max_value=30, step=1,
     #                                               description='Choose the maximum value for device capacity'),
-    'min_device_count': UserSettableParameter(param_type='slider', name='Minimum subnetwork device count', value=5, min_value=5, max_value=25, step=1,
+    'min_device_count': UserSettableParameter(param_type='slider', name='Minimum subnetwork device count', value=5, min_value=5, max_value=10, step=1,
                                                   description='Choose the minimum number of devices for a subnetwork'),
-    'max_device_count': UserSettableParameter(param_type='slider', name='Maximum subnetwork device count', value=25, min_value=25, max_value=50, step=1,
+    'max_device_count': UserSettableParameter(param_type='slider', name='Maximum subnetwork device count', value=10, min_value=10, max_value=50, step=1,
                                                   description='Choose the maximum number of devices for a subnetwork'),
 
 

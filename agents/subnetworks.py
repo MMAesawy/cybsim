@@ -133,7 +133,10 @@ class Organization(SubNetwork):
 
     def _create_devices(self):
         self.children = []
+        self.users_on_subnetwork = []  # keeping track of human users on subnetwork
         self.num_users = len(self.network.nodes) - 1 # TODO num users thing
+        self.num_compromised = 0
+        self.model.num_users += self.num_users
         # create objects to be stored within the graph
         for i in range(len(self.network.nodes)):
             company_security = get_company_security(self.num_devices)
@@ -162,7 +165,8 @@ class Organization(SubNetwork):
                                                                 media_presence=media_presence)
 
                 self.children.append(self.network.nodes[i]['subnetwork'])
-            self.model.num_users += self.num_users
+                self.users_on_subnetwork.append(self.network.nodes[i]['subnetwork'])
+
 
     def define_personal_security(self, type):
         account_type = {1: "Front Office",
