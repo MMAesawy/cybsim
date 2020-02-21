@@ -96,9 +96,8 @@ class AttackCorrespondence(Correspondence):
                 packet = PhishingPacket(self.model, self.party_b.address,
                                         self)  # Note: i think packets should be initialized from a Client or User object, unrealistic to be initialized from correspondence. (for setting effectiveness for example)
 
-                security_awareness = self.party_b.security
-                if packet.effectiveness > security_awareness:  # If lower than chance of responding, a 2 is inserted into the sequence after the current position to signify a user responding.
-                    self.sequence.insert(random.randint(self.pointer + 1, len(self.sequence)), 2)
+                if self.attack_success(packet):
+                    self.sequence.insert(random.randint(self.pointer + 1, len(self.sequence)), 2) # attack is successful
                 self.party_a.route(packet)
 
             elif next_action == 2:
@@ -106,6 +105,13 @@ class AttackCorrespondence(Correspondence):
                                     self)  # Note: Should compute the vital or not parameter later. (for now it's always True for testing)
                 self.party_b.route(packet)
 
+    def attack_success(self, packet):
+        detection_prob = self.party_b.get_probability_detection(packet.effectiveness, self.party_a.address)
+        r = random.random()
+        if r < detection_prob: # If lower than chance of responding, a 2 is inserted into the sequence after the current position to signify a user responding.
+            return False
+        else:
+            return True
 
 class Packet:
     total_packet_count = 0

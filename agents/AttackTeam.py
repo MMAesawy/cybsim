@@ -53,26 +53,25 @@ class AttackClient(User):
                 if strategy == 'execute':
                     self.execute(org)
                 if strategy == 'stay':
-                    #TODO increase % detection
                     pass
                 if strategy == 'spread':
                     self.spread(org)
 
             self.update_utility()
 
-    def execute(self,org):
+    def execute(self, org):
         if model.VERBOSE:
             print("Attacker has executed attack on organization %s with utility %f" % (org, self.utility))
+        added = False
         for device in self.captured:  # remove all captured devices from list once executed
             if (device.address.get_subnet() == org[0]):
                 device.clean()
                 self.captured.remove(device)
                 self.model.total_compromised -= 1
+                if not added:
+                    device.parent.blocking_list.append(self.address)
 
         self.controlled_orgs.remove(org)  # remove organization from control
-        org.blocking_list.append(self.address)
-
-        # TODO gateway device block controlled_by address
 
     def spread(self, org):
 
@@ -185,5 +184,4 @@ class AttackClient(User):
                     i -= 1
             else:
                 i -= 1
-
 

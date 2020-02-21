@@ -135,11 +135,16 @@ class Organization(SubNetwork, Agent):
         self.blocking_list = []
         self.security_budget = 0
         self.utility = 0
+        self.prob_detect_intrusion = 0.1
+        self.prob_detect_stay = 0.03
+        self.prob_detect_spread = 0.05 #TODO baleez figure out what to do with base probabilities and think about probabilities in general.
+
         model.subnetworks.append(self)
 
     def step(self):
         # This budget in percentage of total budget of company
         self.security_budget = random.randrange(0, 1)
+        print(self.blocking_list)
 
     def _create_graph(self):
         self.network = random_star_graph(self.num_devices, 0)
@@ -198,6 +203,9 @@ class Organization(SubNetwork, Agent):
             security = 0.5 + random.random() + (0.8 - 0.5)
 
         return account_type, security
+
+    def advance(self):
+        pass
 
 
 class Attackers(SubNetwork):

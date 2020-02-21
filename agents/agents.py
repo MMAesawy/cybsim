@@ -158,4 +158,4 @@ class Employee(User):
         else:
             isKnown = 0
         securityBudget = self.parent.security_budget
-        return (effectiveness + isKnown + securityBudget) / 3
+        return (1 - effectiveness + isKnown + securityBudget) / 3
