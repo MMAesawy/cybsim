@@ -71,6 +71,7 @@ class CybCim(Model):
 
         # avg_node_degree = 3
         self.devices = []
+        self.subnetworks = []
         self.users = []  # keeping track of human users in all networks
         self.active_correspondences = []
 
@@ -95,6 +96,8 @@ class CybCim(Model):
         for d in self.devices:
             self.grid.place_agent(d, self.address_server[d.address])
             self.schedule.add(d)
+        for o in self.subnetworks:
+            self.schedule.add(o)
         self.total_packets_received = 0
         self.total_failure_count = 0
         self.total_compromised = 0

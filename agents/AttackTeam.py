@@ -70,6 +70,8 @@ class AttackClient(User):
                 self.model.total_compromised -= 1
 
         self.controlled_orgs.remove(org)  # remove organization from control
+        org.blocking_list.append(self.address)
+
         # TODO gateway device block controlled_by address
 
     def spread(self, org):

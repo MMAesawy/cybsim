@@ -2,6 +2,7 @@ from agents.AttackTeam import AttackClient
 from helpers import *
 from agents.agents import *
 from abc import ABC, abstractmethod
+from mesa.agent import Agent
 import numpy as np
 
 
@@ -126,7 +127,19 @@ class SubNetwork(ABC):
         return self.num_devices
 
 
-class Organization(SubNetwork):
+class Organization(SubNetwork, Agent):
+    def __init__(self, address, parent, model, routing_table, num_devices, of='subnetworks'):
+        SubNetwork.__init__(self, address, parent, model, routing_table, num_devices, of)
+        Agent.__init__(self, address, model)
+
+        self.blocking_list = []
+        self.security_budget = 0
+        self.utility = 0
+        model.subnetworks.append(self)
+
+    def step(self):
+        # This budget in percentage of total budget of company
+        self.security_budget = random.randrange(0, 1)
 
     def _create_graph(self):
         self.network = random_star_graph(self.num_devices, 0)
