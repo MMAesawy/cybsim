@@ -168,6 +168,7 @@ class Organization(SubNetwork):
                 self.users_on_subnetwork.append(self.network.nodes[i]['subnetwork'])
 
 
+
     def define_personal_security(self, type):
         account_type = {1: "Front Office",
                         2: "Back Office",

@@ -35,8 +35,8 @@ class Employee(User):
         self.immune_from = []
         self.malicious_communications_devices = []
         self.malicious_communications_freq = []
+
         self.comm_table_in_size = random.randint(1, self.parent.num_users - self.parent.num_compromised)
-        print("user com size in", self.comm_table_in_size)
 
 
         # for measuring the success of a user
@@ -80,19 +80,14 @@ class Employee(User):
         self.malicious_communications_freq.clear()
 
         # initialize devices inside the local network
-        counter = 0
-        print(self.comm_table_in_size)
         while len(self.malicious_communications_devices) < self.comm_table_in_size:
             dest = random.choices(self.parent.users_on_subnetwork,
                                   weights=[x.media_presence for x in self.parent.users_on_subnetwork], k=1)[0]
-            print("malicious commm...", dest.address, dest.state)
 
             if (dest.state == 'Safe'): # only attack non compromised devices
                 freq = random.random()
                 self.malicious_communications_devices.append(dest)
                 self.malicious_communications_freq.append(freq)
-            else:
-                counter += 1
 
     def get_num_compromised(self):
         return self.parent.num_compromised
@@ -132,22 +127,27 @@ class Employee(User):
         return self.work_done
 
     def spread(self):  # For spreading the attack through the organization.
-        print("sss",len(self.malicious_communications_devices))
-        print(self.get_num_compromised())
-        print(self.parent.num_users)
         if len(self.malicious_communications_devices) == 0:  # communications table is uninitialized, lazy initialization
-            print("generating!!")
             self._generate_malicious_communications_table()
+        else:
+            # make sure devices in table have not been compromised by another attacker
+            self.clean_malicious_communications_table()
+            if len(self.malicious_communications_devices) == 0:
+                self._generate_malicious_communications_table()
+
 
         r = random.random()
-        if r < 1: # for testing
-            print("sss2",len(self.malicious_communications_devices))
+        if r < self.activity:
             dest = random.choices(self.malicious_communications_devices, weights=self.malicious_communications_freq, k=1)[0]
-            print("spreading from device" ,self.address)
-            print("attacker", self.controlled_by.address," to " ,dest.address)
             AttackCorrespondence(self.controlled_by, dest, self.model)
             if model.VERBOSE:
                 print("Compromised User %s establishing correspondence with %s" % (self.address, dest.address))
+
+    def clean_malicious_communications_table(self):
+        for i, dest in enumerate(self.malicious_communications_devices):
+            if dest.state == "Compromised":
+                self.malicious_communications_devices.pop(i)
+                self.malicious_communications_freq.pop(i)
 
     def receive(self, victim):
         self.controlled_by.receive(victim)

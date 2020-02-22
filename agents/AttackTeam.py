@@ -17,111 +17,103 @@ class AttackClient(User):
 
 
     def step(self):
-        if len(self.communications_devices) == 0:  # communications table is uninitialized, lazy initialization
-            self.comm_table_out_size = random.randint(3, 6)
-            self.comm_table_in_size = 0
-            self._generate_communications_table()
-        for c in self.communications_devices:
-            print("comm..", c.address)
-
-
-        for  d in self.controlled_orgs:
-            print("orgs..", d[0], d[1])
         r = random.random()
-        if r < 1: #testing attack every time
-            # communication devices only contain devices form non compromised orgs
-            # try to attack other non compromised organizations
-            # attacker cannot continue infilterating compromised orgs
-            # TODO add coniditon that checks how many other subnetworks are blocked
-            if len(self.controlled_orgs) != self.model.num_subnetworks:
-                dest = random.choices(self.communications_devices, weights=self.communications_freq, k=1)[0]
-                # Initiating the phishing correspondence.
-                print("victim..", dest.address)
-                AttackCorrespondence(self, dest, self.model)
-                if model.VERBOSE:
-                    print("Attacker %s establishing correspondence with %s" % (self.address, dest.address))
+        if r < self.activity:
+            # communications table is uninitialized, lazy initialization
+            if len(self.communications_devices) == 0:
+                # communication devices only contain devices form non compromised orgs
+                if len(self.controlled_orgs) != self.model.num_subnetworks - 1:
+                    # attacker cannot communicate with compromised devices
+                    if self.model.num_users != self.model.total_compromised:
+                        # maximum_range =
+                        maximum = int((self.model.num_users - self.model.total_compromised) / 10)
+                        minimum = min(self.model.num_subnetworks - 1 - len(self.controlled_orgs), maximum)
+                        self.comm_table_out_size = random.randint(minimum, maximum)
+                        self.comm_table_in_size = 0
+                        if(self.comm_table_out_size == 0):
+                            self.comm_table_out_size = 1
+                            self._generate_communications_table()
+                            self.communicate()
+                    else:
+                        if model.VERBOSE:
+                            print("All devices are compromised...")
+                else:
+                    if model.VERBOSE:
+                        print("Attacker %s has infiltrated all organization..."% (self.address))
             else:
-                print("Attacker %s has infilterated all organization..."% (self.address))
+                self.communicate()
 
+            self.strategize()
+            self.update_utility()
+
+            # try to attack other non compromised organizations
+
+            # TODO add coniditon that checks how many other subnetworks are blocked
             # choose strategy for each compromised organization
 
-            for i, org in enumerate(self.controlled_orgs):
-                strategy = random.choice(['stay', 'spread', 'execute'])
-                org[1] = strategy
+    def calculate_ranges(self):
+        pass
 
-                print("chosen strat..", org[0], org[1])
-                if strategy == 'execute':
-                    self.execute(org)
-                if strategy == 'stay':
-                    #TODO increase % detection
-                    pass
-                if strategy == 'spread':
-                    self.spread(org)
 
-            self.update_utility()
+    def communicate(self):
+        dest = random.choices(self.communications_devices, weights=self.communications_freq, k=1)[0]
+        # Initiating the phishing correspondence.
+        AttackCorrespondence(self, dest, self.model)
+        if model.VERBOSE:
+            print("Attacker %s establishing correspondence with %s" % (self.address, dest.address))
+
+    def strategize(self):
+        for i, org in enumerate(self.controlled_orgs):
+            strategy = random.choice(['stay', 'spread', 'execute'])
+            org[1] = strategy
+            if strategy == 'execute':
+                self.execute(org)
+            if strategy == 'stay':
+                # TODO increase % detection
+                pass
+            if strategy == 'spread':
+                self.spread(org)
 
     def execute(self,org):
         if model.VERBOSE:
             print("Attacker has executed attack on organization %s with utility %f" % (org, self.utility))
-        for device in self.captured:  # remove all captured devices from list once executed
+        for i, device in enumerate(self.captured):  # remove all captured devices from list once executed
             if (device.address.get_subnet() == org[0]):
+                self.captured.pop(i)
                 device.clean()
-                self.captured.remove(device)
                 self.model.total_compromised -= 1
 
         self.controlled_orgs.remove(org)  # remove organization from control
         # TODO gateway device block controlled_by address
 
     def spread(self, org):
-
         for device in self.captured:
-            print("aaaaaaaa",device.address, device.state)
             if (device.address.get_subnet() == org[0]):
-                print("spreading in network", org[0], "with num comp", device.get_num_compromised(), "out of ", device.parent.num_users)
                 # make sure that spreading only occurs if compromised network still has Safe devices
                 if(device.get_num_compromised() != device.parent.num_users):
                     if model.VERBOSE:
                         print("Attacker spreading attack in organization %s through device %s" % (org[0], device.address))
-                    print("deviceee spread pre", device.address, self, device.state)
                     device.spread()
                 else:
-                    print("All devices on organization %s are compromised.." %(org[0]))
+                    if model.VERBOSE:
+                        print("All devices on organization %s are compromised.." %(org[0]))
                     return
 
     def update_utility(self):
         self.utility = len(self.captured) / self.model.num_users
 
     def receive(self, victim):
-        # print("victim..", victim.address)
-        # victim.infect(self)
-        # self.captured.append(victim)
-        # # add victim from new organization to controlled orgs
-        # # print("org..", self.controlled_orgs)
-        # if len(self.controlled_orgs) != 0:
-        #     if (victim.address.get_subnet() not in org[0] for org in self.controlled_orgs):
-        #         self.controlled_orgs.append([victim.address.get_subnet(), None])
-        # else:
-        #     self.controlled_orgs.append([victim.address.get_subnet(), None])
-        #
-        #
-        # self.model.total_compromised += 1
-        # # once an organization is infiltrated, remove all other entry points
-        #
-        # self.cease_communications(victim)
-        # print("victim..", victim.address)
         victim.infect(self)
         self.captured.append(victim)
-        print("appended victim..", victim.address, victim.state)
-
-
-        org_list = self.create_list(victim.address.get_subnet(), self.controlled_orgs)
         if len(self.controlled_orgs) != 0:
+            org_list = self.create_list(victim.address.get_subnet(), self.controlled_orgs)
             if not any(org_list): # make sure only new unique orgs are added
                 self.controlled_orgs.append([victim.address.get_subnet(), None])
         else:
             self.controlled_orgs.append([victim.address.get_subnet(), None])
 
         self.model.total_compromised += 1
+
         # once an organization is infiltrated, remove all other entry points
 
         self.cease_communications(victim)
@@ -158,30 +150,20 @@ class AttackClient(User):
             self.communications_freq.append(freq)
 
         # initialize devices outside the local network
-        i = 0
-        while i < self.comm_table_out_size:
+        while (len(self.communications_devices) < self.comm_table_out_size):
             dest = random.choices(self.model.users, weights=[x.media_presence for x in self.model.users], k=1)[0]
             # only add if the device is outside the local network
             if dest.state == "Safe":
                 if not self.address.is_share_subnetwork(dest.address):
                     if (len(self.controlled_orgs) != 0):
                         # and is not in an already compromised organization
-                        if (dest.address.get_subnet() not in org[0] for org in self.controlled_orgs):
-                        # if (dest.address.get_subnet() not in self.controlled_orgs[0]):
+                        org_list = self.create_list(dest.address.get_subnet(), self.controlled_orgs)
+                        if not any(org_list):
                             freq = random.random()
                             self.communications_devices.append(dest)
                             self.communications_freq.append(freq)
-                            i += 1
-                        else:
-                            i -= 1
-                    else:
+
+                    else: # no organizations in control
                         freq = random.random()
                         self.communications_devices.append(dest)
                         self.communications_freq.append(freq)
-                        i += 1
-                else:
-                    i -= 1
-            else:
-                i -= 1
-
-

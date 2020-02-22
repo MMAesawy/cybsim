@@ -60,6 +60,7 @@ class CybCim(Model):
         self.num_internet_devices = num_internet_devices
         self.num_subnetworks = num_subnetworks
         self.num_attackers = num_attackers
+        self.subnetworks = []
         # self.max_hops = max_hops
         # self.min_capacity = min_capacity
         # self.max_capacity = max_capacity
@@ -114,7 +115,7 @@ class CybCim(Model):
             print("Number of devices: %d" % len(self.devices))
 
     def _create_graph(self):
-        self.network = random_mesh_graph(self.num_internet_devices)
+        self.network = random_mesh_graph(self.num_subnetworks)
 
     def _create_devices(self, subgraph_type):
         for i in range(len(self.network.nodes)):

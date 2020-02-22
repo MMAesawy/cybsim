@@ -178,8 +178,12 @@ class InfoPacket(Packet):
                 if self.correspondence.party_b.address.__eq__(self.correspondence.party_a.captured[i].address):
                     return
                 # call respective function for attacker to add new victim to control list
-            print("party a,b", self.correspondence.party_a.address, self.correspondence.party_b.address)
-            self.correspondence.party_a.receive(self.correspondence.party_b)
+            if(self.correspondence.party_b.state == "Compromised"):
+                # TODO make it only remove comproised device
+                self.correspondence.party_a.communications_devices.clear()
+                self.correspondence.party_a.communications_freq.clear()
+            else:
+                self.correspondence.party_a.receive(self.correspondence.party_b)
 
 
 
