@@ -1,6 +1,7 @@
 from mesa.agent import Agent
 import model
 
+
 class NetworkDevice(Agent):
 
     def __init__(self, address, parent, model, routing_table):
@@ -15,7 +16,7 @@ class NetworkDevice(Agent):
         self.current_packets = []
         # self.type = self.parent.type
         self.passing_packets = 0
-        self.capacity = -1 # -1 == infinite capacity
+        self.capacity = -1  # -1 == infinite capacity
 
         # a list to store packet payloads in the device
         self.occupying_packets = []
@@ -30,7 +31,6 @@ class NetworkDevice(Agent):
         if self.master_address not in model.G.nodes:
             model.G.add_node(self.master_address)
 
-
     def route(self, packet):
         if self.capacity < 0 or self.passing_packets < self.capacity:
             self.passing_packets += 1
@@ -41,14 +41,12 @@ class NetworkDevice(Agent):
         else:
             if model.VERBOSE:
                 print("Device %s reached its capacity of %d, dropping packet %d..." %
-                  (self.address, self.capacity, packet.packet_id))
+                      (self.address, self.capacity, packet.packet_id))
             packet.drop()
-
 
     def gateway_device(self):
         """Returns itself. This is the base condition of the SubNetwork.gateway_device() function."""
         return self
-
 
     def _receive(self, packet):
         """
@@ -62,21 +60,20 @@ class NetworkDevice(Agent):
         if model.VERBOSE:
             print("Device %s received packet: %s" % (self.address, packet.payload))
 
-
     def _send(self, packet):
         """
         Logic for sending a network packet.
         :param packet: packet to send
         """
-        if packet.max_hops < 0 or packet.step < packet.max_hops: # packet can still hop
-            if self.address.is_share_subnetwork(packet.destination): # device is in the local network
+        if packet.max_hops < 0 or packet.step < packet.max_hops:  # packet can still hop
+            if self.address.is_share_subnetwork(packet.destination):  # device is in the local network
                 dest_local_address = packet.destination[len(self.address) - 1]
                 next_device_address = self.routing_table[dest_local_address][1]
                 next_device = self.parent.get_subnetwork_at(next_device_address)
             else:  # device is outside the local network, send to gateway:
                 gateway_address = self.parent.gateway_local_address()
 
-                if self.address[-1] == gateway_address: # if this is the gateway device:
+                if self.address[-1] == gateway_address:  # if this is the gateway device:
                     # propagate message "upwards"
                     next_device = self.parent.get_next_gateway(packet)
                 else:  # this is not the gateway device:
@@ -85,17 +82,18 @@ class NetworkDevice(Agent):
                     next_device = self.parent.get_subnetwork_at(next_device_address)
             if model.VERBOSE:
                 print("Device %s sending packet with destination %s to device %s" %
-                    (self.address, packet.destination, next_device.address))
+                      (self.address, packet.destination, next_device.address))
             self.packets_sent += 1
 
             self._activate_edge_to(other=next_device)
             packet.step += 1
             next_device.route(packet)
-        else: # packet reached its maximum amount of hops
+        else:  # packet reached its maximum amount of hops
             packet.stop_step = self.model.schedule.steps
             self.current_packets.append(packet)
             if model.VERBOSE:
-                print("Packet %s going to device %s has reached maximum number of %d hops in %d steps and stopped at device %s" %
+                print(
+                    "Packet %s going to device %s has reached maximum number of %d hops in %d steps and stopped at device %s" %
                     (packet.packet_id, packet.destination, packet.max_hops, packet.step, self.address))
 
     def _activate_edge_to(self, other):
@@ -117,4 +115,3 @@ class NetworkDevice(Agent):
                 self.route(packet)
             else:
                 i += 1
-

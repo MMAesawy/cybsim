@@ -14,6 +14,7 @@ class AttackClient(User):
         self.model = model
         self.utility = utility
         self.controlled_orgs = []
+        self.skill = random.random() #TODO think about probabilities and how they interact with each other IMPORTNANTTNTSJNTJsn
 
 
     def step(self):
@@ -43,12 +44,11 @@ class AttackClient(User):
             else:
                 self.communicate()
 
+
             self.strategize()
             self.update_utility()
 
-            # try to attack other non compromised organizations
 
-            # TODO add coniditon that checks how many other subnetworks are blocked
             # choose strategy for each compromised organization
 
     def calculate_ranges(self):
@@ -66,25 +66,41 @@ class AttackClient(User):
         for i, org in enumerate(self.controlled_orgs):
             strategy = random.choice(['stay', 'spread', 'execute'])
             org[1] = strategy
-            if strategy == 'execute':
-                self.execute(org)
-            if strategy == 'stay':
-                # TODO increase % detection
-                pass
-            if strategy == 'spread':
-                self.spread(org)
+            for j in range(len(self.model.subnetworks)):  # This loop is for retrieving organization objects.
+                if org[0] == self.model.subnetworks[j].address:
+                    cur_org = self.model.subnetworks[j]
+                if strategy == 'execute':
+                    self.execute(org)
+                if strategy == 'stay':
+                    if random.random() < cur_org.children[0].get_probability_detection(self.skill, self.address):
+                        self.got_detected(org)
+                    else:
+                        pass
+                if strategy == 'spread':
+                    if random.random() < cur_org.children[0].get_probability_detection(self.skill, self.address):
+                        self.got_detected(org)
+                    else:
+                        self.spread(org)
+
+    def got_detected(self, org):
+        added = False
+        for device in self.captured:  # remove all captured devices from list once executed
+            if (device.address.get_subnet() == org[0]):
+                device.clean()
+                self.captured.remove(device)
+                self.model.total_compromised -= 1
+                if not added:
+                    device.parent.blocking_list.append(self.address)
+
+        self.controlled_orgs.remove(org)  # remove
 
     def execute(self,org):
+        # TODO Increase or decrease utility when executing.
+
         if model.VERBOSE:
             print("Attacker has executed attack on organization %s with utility %f" % (org, self.utility))
-        for i, device in enumerate(self.captured):  # remove all captured devices from list once executed
-            if (device.address.get_subnet() == org[0]):
-                self.captured.pop(i)
-                device.clean()
-                self.model.total_compromised -= 1
+        self.got_detected(org)
 
-        self.controlled_orgs.remove(org)  # remove organization from control
-        # TODO gateway device block controlled_by address
 
     def spread(self, org):
         for device in self.captured:

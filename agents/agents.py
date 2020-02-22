@@ -152,3 +152,10 @@ class Employee(User):
     def receive(self, victim):
         self.controlled_by.receive(victim)
 
+    def get_probability_detection(self, effectiveness, attackerAddress):
+        if attackerAddress in self.parent.blocking_list:
+            isKnown = 1
+        else:
+            isKnown = 0
+        securityBudget = self.parent.security_budget
+        return (1 - effectiveness + isKnown + securityBudget) / 3
