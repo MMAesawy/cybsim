@@ -169,11 +169,11 @@ var NetworkModule = function (svg_width, svg_height) {
             lines[i].setAttribute("stroke", current_graph.edges[i].color);
         }
 
-        // var circles = $("circle");
-        // //console.log(circles.length);
-        // for (i = 0; i < circles.length; i++) {
-        //     circles[i].setAttribute("fill", current_graph.nodes[i].color);
-        // }
+        var circles = $("circle");
+        //console.log(circles.length);
+        for (i = 0; i < circles.length; i++) {
+            circles[i].setAttribute("fill", current_graph.nodes[i].color);
+        }
     };
 
     drag = simulation => {

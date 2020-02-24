@@ -33,8 +33,8 @@ class AttackClient(User):
                         self.comm_table_in_size = 0
                         if(self.comm_table_out_size == 0):
                             self.comm_table_out_size = 1
-                            self._generate_communications_table()
-                            self.communicate()
+                        self._generate_communications_table()
+                        self.communicate()
                     else:
                         if model.VERBOSE:
                             print("All devices are compromised...")
@@ -44,7 +44,6 @@ class AttackClient(User):
             else:
                 self.communicate()
 
-
             self.strategize()
             self.update_utility()
 
@@ -53,7 +52,6 @@ class AttackClient(User):
 
     def calculate_ranges(self):
         pass
-
 
     def communicate(self):
         dest = random.choices(self.communications_devices, weights=self.communications_freq, k=1)[0]
@@ -69,27 +67,26 @@ class AttackClient(User):
             for j in range(len(self.model.subnetworks)):  # This loop is for retrieving organization objects.
                 if org[0] == self.model.subnetworks[j].address:
                     cur_org = self.model.subnetworks[j]
-                if strategy == 'execute':
-                    self.execute(org)
-                if strategy == 'stay':
-                    if random.random() < cur_org.children[0].get_probability_detection(self.skill, self.address):
-                        self.got_detected(org)
-                    else:
-                        pass
-                if strategy == 'spread':
-                    if random.random() < cur_org.children[0].get_probability_detection(self.skill, self.address):
-                        self.got_detected(org)
-                    else:
-                        self.spread(org)
+            if strategy == 'execute':
+                self.execute(org)
+            if strategy == 'stay':
+                if random.random() < cur_org.children[0].get_probability_detection(self.skill, self.address):
+                    self.got_detected(org)
+                else:
+                    pass
+            if strategy == 'spread':
+                if random.random() < cur_org.children[0].get_probability_detection(self.skill, self.address):
+                    self.got_detected(org)
+                else:
+                    self.spread(org)
 
     def got_detected(self, org):
-        added = False
         for device in self.captured:  # remove all captured devices from list once executed
             if (device.address.get_subnet() == org[0]):
                 device.clean()
                 self.captured.remove(device)
                 self.model.total_compromised -= 1
-                if not added:
+                if (self.address not in device.parent.blocking_list):
                     device.parent.blocking_list.append(self.address)
 
         self.controlled_orgs.remove(org)  # remove
@@ -134,8 +131,6 @@ class AttackClient(User):
 
         self.cease_communications(victim)
 
-
-
     def create_list(self,victim_address, control_org_list):
         org_list = []
         for org in control_org_list:
@@ -144,7 +139,6 @@ class AttackClient(User):
             else:
                 org_list.append(False)
         return org_list
-
 
     def cease_communications(self, compromised_device):
         for i, device in enumerate(self.communications_devices):

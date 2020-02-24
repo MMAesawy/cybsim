@@ -106,7 +106,7 @@ class AttackCorrespondence(Correspondence):
                 self.party_b.route(packet)
 
     def attack_success(self, packet):
-        detection_prob = self.party_b.get_probability_detection(packet.effectiveness, self.party_a.address)
+        detection_prob = self.party_b.get_probability_detection(self.party_a.skill, self.party_a.address)
         r = random.random()
         if r < detection_prob: # If lower than chance of responding, a 2 is inserted into the sequence after the current position to signify a user responding.
             return False

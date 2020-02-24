@@ -133,7 +133,7 @@ class Organization(SubNetwork, Agent):
         Agent.__init__(self, address, model)
 
         self.blocking_list = []
-        self.security_budget = 0
+        self.security_budget = random.random() # This budget in percentage of total budget of company
         self.utility = 0
         self.prob_detect_intrusion = 0.1
         self.prob_detect_stay = 0.03
@@ -142,9 +142,10 @@ class Organization(SubNetwork, Agent):
         model.subnetworks.append(self)
 
     def step(self):
-        # This budget in percentage of total budget of company
-        self.security_budget = random.randrange(0, 1)
-        print(self.blocking_list)
+        pass
+
+    def update_budget(self):
+        pass
 
     def _create_graph(self):
         self.network = random_star_graph(self.num_devices, 0)
@@ -228,7 +229,7 @@ class Attackers(SubNetwork):
                                         routing_table=routing_table)
                 self.network.nodes[i]['subnetwork'] = n
             else: # the rest of the devices are users.
-                activity = random.random() / 10
+                activity = random.random() / 4
                 # media_presence = random.random()  # percentage susceptable to spear phishing attacks
                 # type = random.randint(1, 4)  # assign a user type for each user #TODO define certain range for each type os employee
                 # based on type of employee, define privileges and  percentage of users pre-existing security knowledge
