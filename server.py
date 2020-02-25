@@ -22,12 +22,12 @@ def network_portrayal(G):
         # #print(r)
         # return r
         if type(agent) is AttackClient:
-                return "#A83232"
+                return "#FF0000"
         elif type(agent) is Employee:
             if (agent.state == "Safe"):
                 return "#0000FF"
             else:
-                return "#FFC0CB"
+                return "#A83232"
         else:
             return "#000000"
 
