@@ -1,4 +1,4 @@
-(function() {
+init_fisheye = function() {
   d3.fisheye = {
     scale: function(scaleType) {
       return d3_fisheye_scale(scaleType(), 3, 0);
@@ -82,4 +82,4 @@
     fisheye.tickFormat = scale.tickFormat;
     return d3.rebind(fisheye, scale, "domain", "range");
   }
-})();
+};

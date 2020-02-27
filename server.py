@@ -1,5 +1,3 @@
-import math
-
 from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.UserParam import UserSettableParameter
 from mesa.visualization.modules import ChartModule
@@ -35,12 +33,10 @@ def network_portrayal(G):
 
     def edge_color(agent1, agent2):
         e = G.get_edge_data(agent1.master_address, agent2.master_address)
-        if type(agent1) is AttackClient or type(agent2) is AttackClient:
-            if e["active"]:
-                return '#A83232'
-        else:
-            if e["active"]:
-                return '#0000FF'
+        if e["malicious"]:
+            return '#A83232'
+        elif e["active"]:
+            return '#0000FF'
         # else:
         #     e = G.get_edge_data(agent2.model_address, agent1.model_address)
         #     if e["active"]:
@@ -80,14 +76,14 @@ def network_portrayal(G):
         portrayal['fisheye'] = 1 if G.graph["fisheye"] else 0
     return portrayal
 
-chart = ChartModule([{'Label': 'Packets Received', 'Color': '#008000'},
-                     {'Label': 'Packets Dropped', 'Color': '#FF0000'}])
+# chart = ChartModule([{'Label': 'Packets Received', 'Color': '#008000'},
+#                      {'Label': 'Packets Dropped', 'Color': '#FF0000'}])
 
-chart2 = ChartModule([{'Label': 'Compromised Devices', 'Color': '#ff4c4c'}])
+chart = ChartModule([{'Label': 'Compromised Devices', 'Color': '#ff4c4c'}])
 
-pie = PieChartModule([{'Label': 'Safe Devices', 'Color': '#4ca64c'},
-                     {'Label': 'Compromised Devices', 'Color': '#ff4c4c'}],
-                     canvas_width=730)
+# pie = PieChartModule([{'Label': 'Safe Devices', 'Color': '#4ca64c'},
+#                      {'Label': 'Compromised Devices', 'Color': '#ff4c4c'}],
+#                      canvas_width=730)
 
 class MyTextElement(TextElement):
     def render(self, model):
@@ -129,4 +125,4 @@ text = VisualizationElement()
 
 
 
-server = ModularServer(CybCim, [network, MyTextElement(), chart, pie], 'Computer Network', model_params)
+server = ModularServer(CybCim, [network, MyTextElement(), chart], 'Computer Network', model_params)

@@ -87,9 +87,7 @@ class CybCim(Model):
         # add nodes to master graph
         self.merge_with_master_graph()
 
-        # initialize edge 'active' attribute
-        for edge in self.G.edges(data=True):
-            edge[2]["active"] = False
+        self.reset_edge_data()
 
         # initialize agents
         self.grid = NetworkGrid(self.G)
@@ -145,10 +143,15 @@ class CybCim(Model):
     def get_subnetwork_at(self, at):
         return self.network.nodes[at]['subnetwork']
 
-    def step(self):
+    def reset_edge_data(self):
         # deactivate all edges
         for edge in self.G.edges(data=True):
             edge[2]["active"] = False
+            edge[2]["malicious"] = False
+
+    def step(self):
+        self.reset_edge_data()
+
         # update agents
         self.schedule.step()
 

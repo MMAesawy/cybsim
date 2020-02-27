@@ -1,4 +1,5 @@
 from mesa.agent import Agent
+from agents.constructs import PhishingPacket
 import model
 
 
@@ -85,7 +86,10 @@ class NetworkDevice(Agent):
                       (self.address, packet.destination, next_device.address))
             self.packets_sent += 1
 
-            self._activate_edge_to(other=next_device)
+            if isinstance(packet, PhishingPacket):
+                self._activate_edge_to(other=next_device, status="malicious")
+            else:
+                self._activate_edge_to(other=next_device, status="active")
             packet.step += 1
             next_device.route(packet)
         else:  # packet reached its maximum amount of hops
@@ -96,9 +100,9 @@ class NetworkDevice(Agent):
                     "Packet %s going to device %s has reached maximum number of %d hops in %d steps and stopped at device %s" %
                     (packet.packet_id, packet.destination, packet.max_hops, packet.step, self.address))
 
-    def _activate_edge_to(self, other):
+    def _activate_edge_to(self, other, status):
         self.model.G.get_edge_data(self.master_address,
-                                   other.master_address)["active"] = True
+                                   other.master_address)[status] = True
 
     def step(self):
         self.passing_packets = 0
