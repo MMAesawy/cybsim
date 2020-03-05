@@ -19,7 +19,6 @@ var NetworkModule = function (svg_width, svg_height) {
         .style("opacity", 0);
 
 
-
     svg.call(d3.zoom()
         .on("zoom", function () {
             g.attr("transform", d3.event.transform);
@@ -49,6 +48,7 @@ var NetworkModule = function (svg_width, svg_height) {
 
     this.createGraph = function (data) {
         graph = JSON.parse(JSON.stringify(data));
+        init_fisheye();
         if (graph.fisheye === 1){
             fisheye = d3.fisheye.circular()
             .radius(300)
@@ -169,11 +169,11 @@ var NetworkModule = function (svg_width, svg_height) {
             lines[i].setAttribute("stroke", current_graph.edges[i].color);
         }
 
-        // var circles = $("circle");
-        // //console.log(circles.length);
-        // for (i = 0; i < circles.length; i++) {
-        //     circles[i].setAttribute("fill", current_graph.nodes[i].color);
-        // }
+        var circles = $("circle");
+        //console.log(circles.length);
+        for (i = 0; i < circles.length; i++) {
+            circles[i].setAttribute("fill", current_graph.nodes[i].color);
+        }
     };
 
     drag = simulation => {

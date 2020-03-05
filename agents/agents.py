@@ -1,23 +1,69 @@
-from agents.constructs import Correspondence
 from agents.devices import NetworkDevice
 from agents.constructs import *
-import model
+# from agents.constructs import Correspondence
 import random
+import model
+
+
 
 class User(NetworkDevice):
-    def __init__(self, activity, address, parent, model, routing_table, work_done=0):
+    def __init__(self, activity, address, parent, model, routing_table):
+        super().__init__(address, parent, model, routing_table)
         self.activity = activity
         self.parent = parent
-        self.comm_table_in_size = random.randint(2, 10)
+        self.comm_table_in_size = random.randint(1, self.parent.num_users)
         self.comm_table_out_size = random.randint(0, 5)
         self.comm_table_size = self.comm_table_in_size + self.comm_table_out_size
         self.communications_devices = []
         self.communications_freq = []
+
+
+
+class Employee(User):
+    def __init__(self, activity, address, parent, model, routing_table,
+                 account_type, company_security, personal_security,
+                 media_presence, intention=None, state="Safe", controlled_by=None, work_done=0):
+        super().__init__(activity, address, parent, model, routing_table)
+        # self.intention = intention
+
+        self.account_type = account_type  # for determining the type of user account
+        self.media_presence = media_presence
+        self.intention = intention
+        self.state = state
+        self.controlled_by = controlled_by
+        self.security = self.weighted_user_security_level(s1=company_security, s2=personal_security, w1=0.3, w2=0.7)
+        self.immune_from = []
+        self.malicious_communications_devices = []
+        self.malicious_communications_freq = []
+
+        self.comm_table_in_size = random.randint(1, self.parent.num_users - self.parent.num_compromised)
+
+
         # for measuring the success of a user
         self.work_done = work_done
-        super().__init__(address, parent, model, routing_table)
+
+        model.users.append(self) #append user into model's user list
+
+    def weighted_user_security_level(self, s1, s2, w1, w2):
+        return (s1 * w1 + s2 * w2) / 2
 
     def step(self):
+       self.communicate()
+
+    def infect(self, attacker):
+        self.state = "Compromised"
+        self.controlled_by = attacker
+        self.parent.num_compromised += 1
+
+
+    def clean(self):
+        self.state = "Safe"
+        self.controlled_by = None
+        self.parent.num_compromised -= 1
+        self.malicious_communications_devices.clear()
+        self.malicious_communications_freq.clear()
+
+    def communicate(self): # normal communications with either safe or none safe device
         if len(self.communications_devices) == 0:  # communications table is uninitialized, lazy initialization
             self._generate_communications_table()
 
@@ -27,6 +73,24 @@ class User(NetworkDevice):
             Correspondence(self, dest, self.model)
             if model.VERBOSE:
                 print("User %s establishing correspondence with %s" % (self.address, dest.address))
+
+    def _generate_malicious_communications_table(self):
+        # ensure the tables are empty
+        self.malicious_communications_devices.clear()
+        self.malicious_communications_freq.clear()
+
+        # initialize devices inside the local network
+        while len(self.malicious_communications_devices) < self.comm_table_in_size:
+            dest = random.choices(self.parent.users_on_subnetwork,
+                                  weights=[x.media_presence for x in self.parent.users_on_subnetwork], k=1)[0]
+
+            if (dest.state == 'Safe'): # only attack non compromised devices
+                freq = random.random()
+                self.malicious_communications_devices.append(dest)
+                self.malicious_communications_freq.append(freq)
+
+    def get_num_compromised(self):
+        return self.parent.num_compromised
 
     def _generate_communications_table(self):
         # ensure the tables are empty
@@ -41,15 +105,13 @@ class User(NetworkDevice):
             self.communications_freq.append(freq)
 
         # initialize devices outside the local network
-        for i in range(self.comm_table_out_size):
+        while len(self.communications_devices) < self.comm_table_out_size:
             dest = random.choice(self.model.devices)
-            if not self.address.is_share_subnetwork(
-                    dest.address):  # only add if the device is outside the local network
+            if not self.address.is_share_subnetwork(dest.address):  # only add if the device is outside the local network
                 freq = random.random()
                 self.communications_devices.append(dest)
                 self.communications_freq.append(freq)
-            else:
-                i -= 1
+
 
         s = sum(self.communications_freq)
         for i in range(len(self.communications_freq)):
@@ -63,3 +125,38 @@ class User(NetworkDevice):
 
     def get_work_done(self):
         return self.work_done
+
+    def spread(self):  # For spreading the attack through the organization.
+        if len(self.malicious_communications_devices) == 0:  # communications table is uninitialized, lazy initialization
+            self._generate_malicious_communications_table()
+        else:
+            # make sure devices in table have not been compromised by another attacker
+            self.clean_malicious_communications_table()
+            if len(self.malicious_communications_devices) == 0:
+                self._generate_malicious_communications_table()
+
+
+        r = random.random()
+        if r < self.activity:
+            dest = random.choices(self.malicious_communications_devices, weights=self.malicious_communications_freq, k=1)[0]
+            AttackCorrespondence(self.controlled_by, dest, self.model)
+            if model.VERBOSE:
+                print("Compromised User %s establishing correspondence with %s" % (self.address, dest.address))
+
+    def clean_malicious_communications_table(self):
+        for i, dest in enumerate(self.malicious_communications_devices):
+            if dest.state == "Compromised":
+                self.malicious_communications_devices.pop(i)
+                self.malicious_communications_freq.pop(i)
+
+    def receive(self, victim):
+        self.controlled_by.receive(victim)
+
+    def get_probability_detection(self, effectiveness, attackerAddress):
+        if attackerAddress in self.parent.blocking_list:
+            isKnown = 1
+        else:
+            isKnown = 0
+        securityBudget = self.parent.security_budget
+        return ((1 - effectiveness) + isKnown + securityBudget + self.parent.num_compromised/self.parent.num_users) / 4
+

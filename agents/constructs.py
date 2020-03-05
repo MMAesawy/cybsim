@@ -1,15 +1,19 @@
 import re
 import random
 
-
 class Correspondence:
-    def __init__(self, party_a, party_b, model, fails_to_end=None, sequence_length=None):
+    def __init__(self, party_a, party_b, model, fails_to_end=None, sequence_length=None, sequence=None):
         self.party_a = party_a
         self.party_b = party_b
         self.fails_to_end = fails_to_end
         self.model = model
 
-        self.sequence = self._generate_sequence(sequence_length)
+        if sequence is None:
+            self.sequence = self._generate_sequence(sequence_length)
+
+        else:
+            self.sequence = sequence
+
         self.failure_count = 0
         self.pointer = 0
         # self.total_failure_count = 0
@@ -23,7 +27,7 @@ class Correspondence:
     def _generate_sequence(self, sequence_length=None):
         if sequence_length is None:
             sequence_length = random.randint(5, 15)
-        return random.choices((0, 1, 2), weights=None, k=sequence_length)
+            return random.choices((0, 1, 2), weights=None, k=sequence_length)
 
     def __len__(self):
         return len(self.sequence)
@@ -35,13 +39,13 @@ class Correspondence:
             if next_action == 0:
                 self.packet_success()
                 return
-            if next_action == 1:
+
+            elif next_action == 1:
                 packet = Packet(self.model, self.party_b.address, self)
                 self.party_a.route(packet)
             elif next_action == 2:
                 packet = Packet(self.model, self.party_a.address, self)
                 self.party_b.route(packet)
-
 
     def packet_success(self):
         self.pointer += 1
@@ -64,20 +68,49 @@ class Correspondence:
         self.active = False
 
         if success:  # if correspondence ended successfully
-            if len(set(self.sequence)) == 1 and self.sequence[0] == 0:
-                pass
-            elif len(set(self.sequence)) == 1 and self.sequence[0] == 1:
-                self.party_a.add_to_work_done(self.importance_level)
-            elif len(set(self.sequence)) == 1 and self.sequence[0] == 2:
-                if type(self.party_b) == type(self.party_a):
-                    self.party_b.add_to_work_done(self.importance_level)
-            else:
-                self.party_a.add_to_work_done(self.importance_level)
-                if type(self.party_b) == type(self.party_a):
-                    self.party_b.add_to_work_done(self.importance_level)
+            pass
         else:
             pass
 
+
+class AttackCorrespondence(Correspondence):
+    def __init__(self, party_a, party_b, model):
+        super().__init__(party_a, party_b, model, fails_to_end=None, sequence_length=None, sequence=None)
+
+    def _generate_sequence(self, sequence_length=None):
+        if sequence_length is None:
+            sequence_length = random.randint(1, 4)
+            sequence = random.choices([1], weights=None, k=sequence_length)
+            return sequence
+
+    def step(self):
+        if self.ready_state and self.active:
+            self.ready_state = False
+            next_action = self.sequence[self.pointer]
+            if next_action == 0:
+                self.packet_success()
+                return
+
+            if next_action == 1:
+                packet = PhishingPacket(self.model, self.party_b.address,
+                                        self)  # Note: i think packets should be initialized from a Client or User object, unrealistic to be initialized from correspondence. (for setting effectiveness for example)
+
+                if self.attack_success(packet):
+                    self.sequence.insert(random.randint(self.pointer + 1, len(self.sequence)), 2) # attack is successful
+                self.party_a.route(packet)
+
+            elif next_action == 2:
+                packet = InfoPacket(self.model, self.party_a.address,
+                                    self)  # Note: Should compute the vital or not parameter later. (for now it's always True for testing)
+                self.party_b.route(packet)
+
+    def attack_success(self, packet):
+        detection_prob = self.party_b.get_probability_detection(self.party_a.skill, self.party_a.address)
+        r = random.random()
+        if r < detection_prob: # If lower than chance of responding, a 2 is inserted into the sequence after the current position to signify a user responding.
+            return False
+        else:
+            return True
 
 class Packet:
     total_packet_count = 0
@@ -100,13 +133,65 @@ class Packet:
         self.correspondence = correspondence
         self.step = step
         self.model = model
-        self.max_hops = self.model.max_hops
+        self.max_hops = -1  # -1 == no maximum hops
 
     def drop(self):
         self.correspondence.packet_failed()
 
     def received(self):
         self.correspondence.packet_success()
+
+
+# A child class for the packet that the attacker would send to the victim hoping that they would retrieve info.
+class PhishingPacket(Packet):
+    packet_payloads = ["You've just won an iphone 11 pro extreme xl !!!!", "This is the real google and someone is "
+                                                                           "trying to hack you! Reset your password "
+                                                                           "by typing yor old one in NAW!!!",
+                       "This is IT, i totally forgot what was your machine's password, can you remind me please?"]
+
+    def __init__(self, model, destination, correspondence, effectiveness=1, payload=None, step=0):
+        super().__init__(model, destination, correspondence, payload=None, step=0)
+        self.effectiveness = effectiveness #TODO function to determine effectiveness of attack
+        self.payload = payload if payload else random.choice(PhishingPacket.packet_payloads)
+        self.step = step
+
+    def drop(self):
+        self.correspondence.packet_failed()
+
+    def received(self):
+        self.correspondence.packet_success()
+
+
+#  A child class for the packet that the victim would send back if phishing is successful for example.
+class InfoPacket(Packet):
+    packet_payloads = ["Here is my info (;", "YEYEYEYEYEYEYEY", "Oh wow! okay okay, here is my password :)"]
+
+    # The vital flag is to signify that this information will allow the attacker to escalate privilege once. (set to True for testing)
+    def __init__(self, model, destination, correspondence, vital=True, payload=None,step=0):
+        super().__init__(model, destination, correspondence, payload=None, step=0)
+        self.vital = vital
+        self.payload = payload if payload else random.choice(InfoPacket.packet_payloads)
+        self.step = step
+
+    def drop(self):
+        self.correspondence.packet_failed()
+
+    def received(self):
+        self.correspondence.packet_success()
+        if self.vital is True:
+            for i in range(len(self.correspondence.party_a.captured)):
+                if self.correspondence.party_b.address.__eq__(self.correspondence.party_a.captured[i].address):
+                    return
+                # call respective function for attacker to add new victim to control list
+            if(self.correspondence.party_b.state == "Compromised"):
+                # TODO make it only remove comproised device
+                self.correspondence.party_a.communications_devices.clear()
+                self.correspondence.party_a.communications_freq.clear()
+            else:
+                self.correspondence.party_a.receive(self.correspondence.party_b)
+
+
+
 
 
 class AddressServer:
@@ -138,13 +223,13 @@ class AddressServer:
 
 
 class Address:
+    _r = re.compile(r"(\d+)\s*([,.]|$)")
     def __init__(self, address):
         self.address = []
 
         # if the address is a string, parse the address into its components
         if isinstance(address, str):
-            r = re.compile(r"(\d+)\s*([,.]|$)")
-            for m in r.finditer(address):
+            for m in Address._r.finditer(address):
                 if m:
                     self.address.append(m.group(1))
         elif isinstance(address, int):
@@ -167,6 +252,12 @@ class Address:
         while i < min(len(self), len(other)) and self[i] == other[i]:
             i += 1
         return i == len(self)
+
+    def get_subnet(self):
+        if len(self.address) > 1:
+            return Address(self.address[:-1])
+        else:
+            return None
 
     def __str__(self):
         return ".".join([str(a) for a in self.address])

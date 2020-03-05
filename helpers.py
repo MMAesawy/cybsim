@@ -3,7 +3,7 @@ import networkx as nx
 import random
 
 
-def get_random_graph(num_nodes, avg_node_degree):
+def random_star_graph(num_nodes, avg_node_degree):
     # calculate single edge probability between two nodes
     prob = avg_node_degree / num_nodes
 
@@ -29,10 +29,32 @@ def get_random_graph(num_nodes, avg_node_degree):
     return graph
 
 
+def random_mesh_graph(num_nodes, m=3):
+    g = nx.barabasi_albert_graph(num_nodes, m)
+    g.graph['gateway'] = random.randint(0, num_nodes-1) # pick a random node as the gateway
+    return g
+
+
 def get_subnetwork_device_count(model):
     return random.randint(model.min_device_count, model.max_device_count)
 
 
 def get_subnetwork_user_count(devices_count):
     return random.randint(2, devices_count - int(devices_count/2))
+
+def get_company_security(device_count): #TODO change security ranges to be realistic
+
+    if 5 <= device_count <= 15:
+        return random.random() * 0.25
+    elif 16 <= device_count <= 25:
+        return 0.25 + random.random() * (0.35 - 0.25)
+    elif 26 <= device_count  <= 35:
+        return 0.35 + random.random() * (0.5 - 0.35)
+    elif 36 <= device_count  <= 50:
+        return 0.85 + random.random() * (0.85 - 0.5)
+    else:
+        return 0.4 + random.random() * (0.6 - 0.4)
+
+# def get_subnetwork_attacker_count():
+#     return random.randint(2, 10)
 
