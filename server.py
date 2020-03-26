@@ -1,14 +1,12 @@
 from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.UserParam import UserSettableParameter
 from mesa.visualization.modules import ChartModule
-from mesa.visualization.modules import PieChartModule
 from visualization.visualization import NetworkModule
 from mesa.visualization.ModularVisualization import VisualizationElement
 
 from mesa.visualization.modules import TextElement
 from model import CybCim
-from agents.AttackTeam import AttackClient
-from agents.agents import Employee
+from agents.agents import *
 
 
 def network_portrayal(G):
@@ -19,10 +17,10 @@ def network_portrayal(G):
         # r = "#%s00%s" % (hex(p)[2:].zfill(2).upper(), hex(255-p)[2:].zfill(2).upper())
         # #print(r)
         # return r
-        if type(agent) is AttackClient:
+        if type(agent) is Attacker:
                 return "#FF0000"
         elif type(agent) is Employee:
-            if (agent.state == "Safe"):
+            if not agent.is_compromised():
                 return "#0000FF"
             else:
                 return "#A83232"

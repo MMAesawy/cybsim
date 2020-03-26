@@ -2,33 +2,15 @@ from mesa import Agent, Model
 from mesa.space import NetworkGrid
 from mesa.time import SimultaneousActivation
 from mesa.datacollection import DataCollector
-from helpers import *
-from agents.devices import *
-from agents.constructs import *
-from agents.agents import *
 from agents.subnetworks import *
-from agents.AttackTeam import AttackClient
-from agents.agents import Employee
 
 import numpy as np
 
 VERBOSE = True
 
 
-def get_total_packets_received(model):
-    return model.total_packets_received
-
-
-def get_total_packets_failed(model):
-    return model.total_failure_count
-
-
 def get_total_compromised(model):
     return model.total_compromised
-
-
-def get_total_safe(model):
-    return model.num_users - model.total_compromised
 
 
 class CybCim(Model):
@@ -74,7 +56,7 @@ class CybCim(Model):
         self.devices = []
         self.subnetworks = []
         self.users = []  # keeping track of human users in all networks
-        self.active_correspondences = []
+        # self.active_correspondences = []
 
         # create graph and compute pairwise shortest paths
         self._create_graph()
@@ -103,10 +85,9 @@ class CybCim(Model):
         self.packet_count = 1
 
         self.datacollector = DataCollector(
-            {"Packets Received": get_total_packets_received,
-             "Packets Dropped": get_total_packets_failed,
-             "Compromised Devices": get_total_compromised,
-             "Safe Devices": get_total_safe, }
+            {
+             "Compromised Devices": get_total_compromised
+            }
         )
 
         self.running = True
@@ -155,17 +136,17 @@ class CybCim(Model):
         # update agents
         self.schedule.step()
 
-        # update correspondences
-        i = 0
-        while True:
-            c = self.active_correspondences[i]
-            if not c.active:
-                self.active_correspondences.pop(i)
-            else:
-                c.step()
-                i += 1
-            if i >= len(self.active_correspondences):
-                break
+        # # update correspondences
+        # i = 0
+        # while True:
+        #     c = self.active_correspondences[i]
+        #     if not c.active:
+        #         self.active_correspondences.pop(i)
+        #     else:
+        #         c.step()
+        #         i += 1
+        #     if i >= len(self.active_correspondences):
+        #         break
         self.datacollector.collect(self)
 
     def merge_with_master_graph(self):

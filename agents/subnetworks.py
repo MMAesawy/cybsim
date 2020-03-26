@@ -1,4 +1,3 @@
-from agents.AttackTeam import AttackClient
 from helpers import *
 from agents.agents import *
 from abc import ABC, abstractmethod
@@ -27,7 +26,7 @@ class SubNetwork(ABC):
             if of == 'subnetworks':  # if this is a subnetwork of subnetworks:
                 n = SubNetwork(address=self.address + i,
                                parent=self,
-                               model=model,
+                               model=self.model,
                                routing_table=routing_table,
                                num_devices=get_subnetwork_device_count(self.model),
                                of='devices')
@@ -40,12 +39,12 @@ class SubNetwork(ABC):
                     self.network.nodes[i]['subnetwork'] = User(activity=activity,
                                                                address=self.address + i,
                                                                parent=self,
-                                                               model=model,
+                                                               model=self.model,
                                                                routing_table=routing_table)
                 else:
                     self.network.nodes[i]['subnetwork'] = NetworkDevice(address=self.address + i,
                                                                         parent=self,
-                                                                        model=model,
+                                                                        model=self.model,
                                                                         routing_table=routing_table)
                 self.children.append(self.network.nodes[i]['subnetwork'])
 
@@ -74,8 +73,8 @@ class SubNetwork(ABC):
         Logic for sending a network packet.
         :param packet: the packet to send
         """
-        if self.address.is_share_subnetwork(packet.destination): # device is in the local network
-            dest_local_address = packet.destination[len(self.address) - 1]
+        if self.address.is_share_subnetwork(packet.destination.address): # device is in the local network
+            dest_local_address = packet.destination.address[len(self.address) - 1]
             next_device_address = self.routing_table[dest_local_address][1]
             next_device = self.parent.get_subnetwork_at(next_device_address).gateway_device()
         else:  # device is outside the local network, send to gateway:
@@ -177,11 +176,7 @@ class Organization(SubNetwork, Agent):
                                                                 address=self.address + i,
                                                                 parent=self,
                                                                 model=self.model,
-                                                                routing_table=routing_table,
-                                                                account_type=account_type[type],
-                                                                company_security=company_security,
-                                                                personal_security=personal_security,
-                                                                media_presence=media_presence)
+                                                                routing_table=routing_table)
 
                 self.children.append(self.network.nodes[i]['subnetwork'])
                 self.users_on_subnetwork.append(self.network.nodes[i]['subnetwork'])
@@ -235,7 +230,7 @@ class Attackers(SubNetwork):
                 # based on type of employee, define privileges and  percentage of users pre-existing security knowledge
                 # account_type, personal_security = self.define_personal_security(type)
 
-                self.network.nodes[i]['subnetwork'] = AttackClient(activity=activity,
+                self.network.nodes[i]['subnetwork'] = Attacker(activity=activity,
                                                                    address=self.address + i,
                                                                    parent=self,
                                                                    model=self.model,

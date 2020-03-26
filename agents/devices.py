@@ -1,5 +1,4 @@
 from mesa.agent import Agent
-from agents.constructs import PhishingPacket
 import model
 
 
@@ -35,7 +34,7 @@ class NetworkDevice(Agent):
     def route(self, packet):
         if self.capacity < 0 or self.passing_packets < self.capacity:
             self.passing_packets += 1
-            if self.address == packet.destination:  # this device is the recipient
+            if self.address == packet.destination.address:  # this device is the recipient
                 self._receive(packet)
             else:
                 self._send(packet)
@@ -54,7 +53,6 @@ class NetworkDevice(Agent):
         Logic for receiving a network packet.
         :param packet: the packet to be received
         """
-        packet.received()
         self.packets_received += 1
         self.occupying_packets.append(packet)
         self.model.total_packets_received += 1
@@ -67,8 +65,8 @@ class NetworkDevice(Agent):
         :param packet: packet to send
         """
         if packet.max_hops < 0 or packet.step < packet.max_hops:  # packet can still hop
-            if self.address.is_share_subnetwork(packet.destination):  # device is in the local network
-                dest_local_address = packet.destination[len(self.address) - 1]
+            if self.address.is_share_subnetwork(packet.destination.address):  # device is in the local network
+                dest_local_address = packet.destination.address[len(self.address) - 1]
                 next_device_address = self.routing_table[dest_local_address][1]
                 next_device = self.parent.get_subnetwork_at(next_device_address)
             else:  # device is outside the local network, send to gateway:
@@ -83,10 +81,10 @@ class NetworkDevice(Agent):
                     next_device = self.parent.get_subnetwork_at(next_device_address)
             if model.VERBOSE:
                 print("Device %s sending packet with destination %s to device %s" %
-                      (self.address, packet.destination, next_device.address))
+                      (self.address, packet.destination.address, next_device.address))
             self.packets_sent += 1
 
-            if isinstance(packet, PhishingPacket):
+            if packet.payload:
                 self._activate_edge_to(other=next_device, status="malicious")
             else:
                 self._activate_edge_to(other=next_device, status="active")
@@ -98,7 +96,7 @@ class NetworkDevice(Agent):
             if model.VERBOSE:
                 print(
                     "Packet %s going to device %s has reached maximum number of %d hops in %d steps and stopped at device %s" %
-                    (packet.packet_id, packet.destination, packet.max_hops, packet.step, self.address))
+                    (packet.packet_id, packet.destination.address, packet.max_hops, packet.step, self.address))
 
     def _activate_edge_to(self, other, status):
         self.model.G.get_edge_data(self.master_address,
