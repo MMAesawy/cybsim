@@ -128,11 +128,12 @@ class SubNetwork(ABC):
 
 class Organization(SubNetwork, Agent):
     def __init__(self, address, parent, model, routing_table, num_devices, of='subnetworks'):
+        self.company_security = get_company_security(num_devices)
         SubNetwork.__init__(self, address, parent, model, routing_table, num_devices, of)
         Agent.__init__(self, address, model)
 
         self.blocking_list = []
-        self.security_budget = random.random() # This budget in percentage of total budget of company
+        self.security_budget = random.random()  # This budget in percentage of total budget of company
         self.utility = 0
         self.prob_detect_intrusion = 0.1
         self.prob_detect_stay = 0.03
@@ -157,7 +158,6 @@ class Organization(SubNetwork, Agent):
         self.model.num_users += self.num_users
         # create objects to be stored within the graph
         for i in range(len(self.network.nodes)):
-            company_security = get_company_security(self.num_devices)
             routing_table = self.shortest_paths[i]
             if i == self.local_gateway_address:  # if this is the gateway
                 n = NetworkDevice(address=self.address + i,
@@ -166,11 +166,10 @@ class Organization(SubNetwork, Agent):
                                         routing_table=routing_table)
                 self.network.nodes[i]['subnetwork'] = n
             else: # the rest of the devices are users.
-                activity = random.random() / 10
+                activity = random.random() / 10  # TODO think about the media presence role in determining who to attack.
                 media_presence = random.random()  # percentage susceptable to spear phishing attacks
                 type = random.randint(1, 4)  # assign a user type for each user #TODO define certain range for each type os employee
                 # based on type of employee, define privileges and  percentage of users pre-existing security knowledge
-                account_type, personal_security = self.define_personal_security(type)
 
                 self.network.nodes[i]['subnetwork'] = Employee(activity=activity,
                                                                 address=self.address + i,
@@ -183,23 +182,7 @@ class Organization(SubNetwork, Agent):
 
 
 
-    def define_personal_security(self, type):
-        account_type = {1: "Front Office",
-                        2: "Back Office",
-                        3: "Security Team",
-                        4: "Developers"}
-        # assign a set of initial personal security based on each user type
-        if (type == 1):
-            security = random.random() * 0.3
-        elif (type == 2):
-            security = 0.3 + random.random() * (0.5 - 0.3)
-        elif (type == 3):
 
-            security = 0.8 + random.random() * (1 - 0.8)
-        else:
-            security = 0.5 + random.random() + (0.8 - 0.5)
-
-        return account_type, security
 
     def advance(self):
         pass

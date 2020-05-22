@@ -51,6 +51,7 @@ class GenericDefender(User):
         """
         for i, c in enumerate(self.compromisers):
             if c is attacker:
+                self.parent.blocking_list.append(c)
                 self.compromisers.pop(i)
                 c.notify_clean(self)
                 break
@@ -81,6 +82,7 @@ class GenericDefender(User):
         :return: Boolean - whether or not the attack was successful
         """
         return True
+
 
     def _generate_packet(self, destination):
         """
@@ -143,7 +145,7 @@ class Attacker(GenericAttacker):
     def __init__(self, activity, address, parent, model, routing_table):
         super().__init__(activity, address, parent, model, routing_table)
 
-        self._strategies = ["stay", "spread", "infect"]
+        self._strategies = ["stay", "spread", "infect"] #TODO execute strategy to get payoff
         self._chosen_strategy = random.choice(self._strategies)
         self._attack_of_choice = self._generate_new_attack()
 
@@ -182,6 +184,9 @@ class Employee(GenericDefender):
 
     def __init__(self, activity, address, parent, model, routing_table):
         super().__init__(activity, address, parent, model, routing_table)
+        self.type = random.choice(["Front Office", "Back Office", "Security Team", "Developers"])  # TODO set restrictions on number of specific type.
+        self.security = self.define_security(self.type)
+
 
     def step(self):
         super().step()
@@ -196,3 +201,34 @@ class Employee(GenericDefender):
             self._send(packet)
         self.communicate_to.clear()
 
+    def define_security(self, type):
+        # assign a set of initial personal security based on each user type
+        if (type == "Front Office"):
+            security = random.random() * 0.3
+        elif (type == "Back Office"):
+            security = 0.3 + random.random() * (0.5 - 0.3)
+        elif (type == "Security Team"):
+
+            security = 0.8 + random.random() * (1 - 0.8)
+        elif (type == "Developers"):
+            security = 0.5 + random.random() + (0.8 - 0.5)
+        else:
+            security = 0
+
+        return ((security * 0.6) + (self.parent.company_security * 0.4)) / 2
+
+    def is_attack_successful(self, attack):
+        if attack.effectiveness > self.security:
+            return True
+        else:
+            return False
+
+    def detect(self, effectiveness, attack_type):
+        if attack_type in self.parent.blocking_list:
+            isKnown = 1
+        else:
+            isKnown = 0
+        securityBudget = self.parent.security_budget
+        prob = ((1 - effectiveness) + isKnown + securityBudget + self.parent.num_compromised / self.parent.num_users) / 4
+        detected = False
+        # if random.random() < prob:
