@@ -132,12 +132,9 @@ class Organization(SubNetwork, Agent):
         SubNetwork.__init__(self, address, parent, model, routing_table, num_devices, of)
         Agent.__init__(self, address, model)
 
-        self.blocking_list = []
+        self.attacks_list = []
         self.security_budget = random.random()  # This budget in percentage of total budget of company
         self.utility = 0
-        self.prob_detect_intrusion = 0.1
-        self.prob_detect_stay = 0.03
-        self.prob_detect_spread = 0.05 #TODO baleez figure out what to do with base probabilities and think about probabilities in general.
 
         model.subnetworks.append(self)
 

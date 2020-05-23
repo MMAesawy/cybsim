@@ -44,21 +44,21 @@ class GenericDefender(User):
         """Returns whether or not the defender is compromised"""
         return len(self.compromisers) > 0
 
-    def clean_specific(self, attacker):
+    def clean_specific(self, attacker): #TODO find a better way to access the attack of choice #unsed for now
         """
         Cleans the user from a specific attacker. Notifies the attacker.
         :param attacker: the attacker to clean
         """
         for i, c in enumerate(self.compromisers):
             if c is attacker:
-                self.parent.blocking_list.append(c)
+                # self.parent.attacks_list.append([c._attack_of_choice, 0.5])
                 self.compromisers.pop(i)
                 c.notify_clean(self)
                 break
         if not self.is_compromised(): # if not compromised any more
             self.model.total_compromised -= 1
 
-    def clean_all(self):
+    def clean_all(self): #unsed for now.
         """Cleans the user from a specific attacker. Notifies each attacker."""
         for c in self.compromisers:
             c.notify_clean(self)
@@ -75,7 +75,7 @@ class GenericDefender(User):
         self.compromisers.append(attacker)
         self.model.total_compromised += 1
 
-    def is_attack_successful(self, attack): # TODO
+    def is_attack_successful(self, attack):
         """
         Tests whether the attack was successful or not against this user
         :param attack: the attack being performed
@@ -191,6 +191,10 @@ class Employee(GenericDefender):
     def step(self):
         super().step()
         self._generate_communicators()
+        for i in range(len(self.compromisers)):
+            detected = self.detect(self.compromisers[i]._attack_of_choice)
+            if detected:
+                self.clean_specific(self.compromisers[i])
 
     def advance(self):
         super().advance()
@@ -217,18 +221,45 @@ class Employee(GenericDefender):
 
         return ((security * 0.6) + (self.parent.company_security * 0.4)) / 2
 
-    def is_attack_successful(self, attack):
-        if attack.effectiveness > self.security:
+    def is_attack_successful(self, attack): #detection function based chance
+        if not self.detect(attack):
             return True
         else:
             return False
 
-    def detect(self, effectiveness, attack_type):
-        if attack_type in self.parent.blocking_list:
-            isKnown = 1
-        else:
-            isKnown = 0
+    def detect(self, attack): #added self security and attack strategy risk to the equation due to the scope of the detection #TODO refine probabilities
+        resistance, index = self.get_attack_resistance(attack)
         securityBudget = self.parent.security_budget
-        prob = ((1 - effectiveness) + isKnown + securityBudget + self.parent.num_compromised / self.parent.num_users) / 4
-        detected = False
-        # if random.random() < prob:
+        atk_strategy_risk = self.get_atk_strategy_risk(attack)
+        prob = (atk_strategy_risk + self.security + (1 - attack.effectiveness) + resistance + securityBudget + self.parent.num_compromised / self.parent.num_users) / 6
+        if random.random() < prob:
+            if resistance == 0:
+                self.parent.attacks_list.append([attack, 0.5]) #appends the attack object and the resistance gained from the detection
+            elif resistance != 1:
+                self.parent.attacks_list[index][1] += 0.5
+            return True
+        else:
+            return False
+
+    def get_attack_resistance(self, attack):
+        if len(self.parent.attacks_list) != 0:
+            for i in range(len(self.parent.attacks_list)):
+                if attack.__eq__(self.parent.attacks_list[i][0]):
+                    resistance = self.parent.attacks_list[i][1]
+                    return resistance, i
+                else:
+                    continue
+        return 0, None
+
+    def get_atk_strategy_risk(self, attack): #basic implementation
+        atk_strategy = attack.original_source._chosen_strategy
+        if atk_strategy == "infect":
+            return 0.1
+        elif atk_strategy == "stay":
+            return 0.03
+        elif atk_strategy == "spread":
+            return 0.05
+        return 0
+
+
+
