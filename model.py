@@ -24,6 +24,7 @@ class CybCim(Model):
                  # max_capacity=20,
                  min_device_count=5,
                  max_device_count=50,
+                 avg_time_to_new_attack=50,
                  interactive=True,
                  fisheye=True,
                  subgraph_type=True,
@@ -47,6 +48,7 @@ class CybCim(Model):
         # self.min_capacity = min_capacity
         # self.max_capacity = max_capacity
         self.num_users = 0
+        self.avg_time_to_new_attack = avg_time_to_new_attack
         self.min_device_count = min_device_count
         self.max_device_count = max_device_count
         self.verbose = verbose
@@ -111,8 +113,9 @@ class CybCim(Model):
                                                                 parent=self,
                                                                 model=self,
                                                                 routing_table=routing_table,
-                                                                num_devices=None,
-                                                                of=of)
+                                                                initial_attack_count=self.num_attackers,
+                                                                of='devices',
+                                                                avg_time_to_attack_gen=self.avg_time_to_new_attack)
             else:
                 self.network.nodes[i]['subnetwork'] = Organization(address=Address(i),
                                                                    parent=self,
@@ -159,3 +162,6 @@ class CybCim(Model):
             nd_address = self.address_server[nd.address]  # creates address entry if it does not exist
             if not self.G.get_edge_data(ns_address, nd_address):
                 self.G.add_edge(ns_address, nd_address)
+                e_data = self.G.get_edge_data(ns_address, nd_address)
+                e_data["active"] = False
+                e_data["malicious"] = False

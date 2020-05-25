@@ -2,6 +2,9 @@ import re
 import networkx as nx
 import random
 
+def random_string(length = 8):
+    return "".join([chr(random.randint(ord("a"), ord("z"))) for _ in range(length)])
+
 
 def random_star_graph(num_nodes, avg_node_degree):
     # calculate single edge probability between two nodes

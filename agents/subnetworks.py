@@ -121,6 +121,9 @@ class SubNetwork(ABC):
             nd_address = self.model.address_server[nd.address]
             if not self.model.G.get_edge_data(ns_address, nd_address):
                 self.model.G.add_edge(ns_address, nd_address)
+                e_data = self.model.G.get_edge_data(ns_address, nd_address)
+                e_data["active"] = False
+                e_data["malicious"] = False
 
     def get_device_count(self):
         return self.num_devices
@@ -178,8 +181,8 @@ class Organization(SubNetwork, Agent):
                                                                 model=self.model,
                                                                 routing_table=routing_table)
 
-                self.children.append(self.network.nodes[i]['subnetwork'])
                 self.users_on_subnetwork.append(self.network.nodes[i]['subnetwork'])
+            self.children.append(self.network.nodes[i]['subnetwork'])
 
 
 
@@ -205,7 +208,46 @@ class Organization(SubNetwork, Agent):
         pass
 
 
-class Attackers(SubNetwork):
+class Attackers(SubNetwork, Agent):
+
+    def __init__(self, address, parent, model, routing_table, initial_attack_count, of='devices', avg_time_to_attack_gen=0):
+        SubNetwork.__init__(self, address, parent, model, routing_table, initial_attack_count, of)
+        Agent.__init__(self, address, model)
+        self._p_attack_generation = 1 / (avg_time_to_attack_gen + 1) if avg_time_to_attack_gen else 0.0
+        self._is_generate_new_attack = False
+        model.subnetworks.append(self)
+
+    def step(self):
+        super().step()
+        self._is_generate_new_attack = random.random() < self._p_attack_generation
+
+    def advance(self):
+        if self._is_generate_new_attack:
+            self._generate_new_attacker()
+            self._is_generate_new_attack = False
+
+    def _generate_new_attacker(self):
+        new_node_local_address = self.network.number_of_nodes()
+        self.network.add_node(new_node_local_address)
+        self.network.add_edge(self.network.graph['gateway'], new_node_local_address)
+        self.shortest_paths = dict(nx.all_pairs_shortest_path(self.network))
+        # print(len(self.shortest_paths[0]))
+        activity = random.random() / 4
+        attacker = Attacker(activity=activity,
+                                   address=self.address + new_node_local_address,
+                                   parent=self,
+                                   model=self.model,
+                                   routing_table=self.shortest_paths[new_node_local_address])
+        # print(attacker.address)
+        for i in range(self.network.number_of_nodes()-1):
+            self.network.nodes[i]['subnetwork'].routing_table = self.shortest_paths[i]
+        self.network.nodes[new_node_local_address]['subnetwork'] = attacker
+        self.children.append(attacker)
+        self.merge_with_master_graph()
+        self.model.merge_with_master_graph()
+        self.model.grid.G.node[attacker.master_address]['agent'] = list()  # necessary evil
+        self.model.grid.place_agent(attacker, attacker.master_address)
+        # print("SUCCESSFULLY ADDED A NEW ATTACKER %d!" % attacker.master_address)
 
     def _create_graph(self):
         self.network = random_star_graph(self.model.num_attackers+1, 0)
@@ -225,10 +267,6 @@ class Attackers(SubNetwork):
                 self.network.nodes[i]['subnetwork'] = n
             else: # the rest of the devices are users.
                 activity = random.random() / 4
-                # media_presence = random.random()  # percentage susceptable to spear phishing attacks
-                # type = random.randint(1, 4)  # assign a user type for each user #TODO define certain range for each type os employee
-                # based on type of employee, define privileges and  percentage of users pre-existing security knowledge
-                # account_type, personal_security = self.define_personal_security(type)
 
                 self.network.nodes[i]['subnetwork'] = Attacker(activity=activity,
                                                                    address=self.address + i,
@@ -236,7 +274,9 @@ class Attackers(SubNetwork):
                                                                    model=self.model,
                                                                    routing_table=routing_table)
 
-                self.children.append(self.network.nodes[i]['subnetwork'])
+            self.children.append(self.network.nodes[i]['subnetwork'])
+
+
 
 # UNUSED
 # class LocalNetwork(SubNetwork):

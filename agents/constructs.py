@@ -1,13 +1,13 @@
 import re
-import random
+from helpers import random_string
 
 class Attack:
-    def __init__(self, original_source, attack_type=None):
+    def __init__(self, original_source=None, attack_type=None):
         self.original_source = original_source
         if attack_type:
             self.attack_type = attack_type
         else:
-            self.attack_type = "".join([chr(random.randint(ord("a"), ord("z"))) for _ in range(8)])
+            self.attack_type = random_string(length=8)
 
     def __eq__(self, other):
         return self.attack_type == other.attack_type
@@ -17,12 +17,13 @@ class Attack:
 
     def execute(self, source, destination):
         """
-        Executes the attack
+        Executes the attack. Will not execute if the original_source is not set.
         :param source: the sender of the packet (the attacker)
         :param destination: the destination of the packet (the victim)
         :return: whether or not the attack is successful
         """
-        attacker = source
+        if not self.original_source:
+            return False
         defender = destination
         if defender.is_attack_successful(attack=self) \
                 and defender not in self.original_source.compromised:
@@ -30,6 +31,9 @@ class Attack:
             return True
         else:
             return False
+
+    def __str__(self):
+        return "Attack of type: %s" % self.attack_type
 
 class Packet:
     total_packet_count = 0

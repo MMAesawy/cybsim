@@ -59,7 +59,7 @@ def network_portrayal(G):
                                'tooltip': "address: %s, packets sent: %d, packets received: %d" % (agents[0].address,
                                                                                                    agents[0].packets_sent,
                                                                                                    agents[0].packets_received),
-                               'id': i,
+                               'id': agents[0].master_address,
                                }
                               for i, (_, agents) in enumerate(G.nodes.data('agent'))]
 
@@ -114,7 +114,9 @@ model_params = {
                                                   description='Choose the minimum number of devices for a subnetwork'),
     'max_device_count': UserSettableParameter(param_type='slider', name='Maximum subnetwork device count', value=30, min_value=30, max_value=100, step=1,
                                                   description='Choose the maximum number of devices for a subnetwork'),
-
+    # 'avg_time_to_new_attack': UserSettableParameter(param_type='number', name='Average time for new attack', value=50,
+    'avg_time_to_new_attack': UserSettableParameter(param_type='slider', name='Average time for new attack', value=50, min_value=0, max_value=200, step=1,
+                                                  description='Choose the average time for the generation of a new attack on the network'),
 
 }
 network = NetworkModule(network_portrayal, 500, 730)
