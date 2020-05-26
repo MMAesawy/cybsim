@@ -78,10 +78,7 @@ var NetworkModule = function (svg_width, svg_height) {
                 }
         }
 
-
         this.add_edges(graph.edges);
-
-
         this.add_nodes(graph.nodes);
 
         if (graph.interactive === 1)
@@ -93,11 +90,11 @@ var NetworkModule = function (svg_width, svg_height) {
           .attr("cx", function(d) { return d.fisheye.x; })
           .attr("cy", function(d) { return d.fisheye.y; });
 
-      links.attr("x1", function(d) { return d.source.fisheye.x; })
-          .attr("y1", function(d) { return d.source.fisheye.y; })
-          .attr("x2", function(d) { return d.target.fisheye.x; })
-          .attr("y2", function(d) { return d.target.fisheye.y; });
-        });
+          links.attr("x1", function(d) { return d.source.fisheye.x; })
+              .attr("y1", function(d) { return d.source.fisheye.y; })
+              .attr("x2", function(d) { return d.target.fisheye.x; })
+              .attr("y2", function(d) { return d.target.fisheye.y; });
+            });
 
 
     };
@@ -121,7 +118,7 @@ var NetworkModule = function (svg_width, svg_height) {
             .attr("stroke-width", function (d) { return d.width; })
             .attr("line-id", function (d) { return d.id;})
             .attr("stroke", function (d) { return d.color;});
-        };
+    };
 
     this.add_nodes = function(n){
         let t;
@@ -154,8 +151,7 @@ var NetworkModule = function (svg_width, svg_height) {
                     .style("opacity", 0);
             });
     };
-
-
+    
     this.render = function (data) {
         let i;
         var current_graph = JSON.parse(JSON.stringify(data));
@@ -163,54 +159,25 @@ var NetworkModule = function (svg_width, svg_height) {
             this.createGraph(data);
         }
         else if (node_count < current_graph.nodes.length){
-            console.log("NEW NODE!");
-            // svg.selectAll("circle")
-            //     .data(n)
-            //     .enter().add_edges()
-
-            //let lines = $("line");
-            //console.log(lines);
-            console.log(current_graph.nodes);
-
             var existing_nodes = simulation.nodes();
-            console.log(existing_nodes);
             for(var j = 0; j < existing_nodes.length;j++){
-                current_graph.nodes[j]['x'] = existing_nodes[j].x;
-                current_graph.nodes[j]['y'] = existing_nodes[j].y;
-                current_graph.nodes[j]['vx'] = existing_nodes[j].vx;
-                current_graph.nodes[j]['vy'] = existing_nodes[j].vy;
+                existing_nodes[j]['tooltip'] = current_graph.nodes[j].tooltip;
+                existing_nodes[j]['color'] = current_graph.nodes[j].color;
+                current_graph.nodes[j] = existing_nodes[j];
+                // current_graph.nodes[j]['index'] = existing_nodes[j].index;
+                // current_graph.nodes[j]['x'] = existing_nodes[j].x;
+                // current_graph.nodes[j]['y'] = existing_nodes[j].y;
+                // current_graph.nodes[j]['vx'] = existing_nodes[j].vx;
+                // current_graph.nodes[j]['vy'] = existing_nodes[j].vy;
             }
+            // console.log(current_graph.nodes);
             simulation.nodes(current_graph.nodes);
             simulation.force("link").links(current_graph.edges);
-            simulation.alpha(1).restart();
-            // simulation.restart();
-            //
+            simulation.alpha(0.1).restart();
 
-
-            // for (i = 0; i < lines.length; i++) {
-            //     current_graph.edges[i].source.x = lines[i].getAttribute("x1");
-            //     current_graph.edges[i].source.y = lines[i].getAttribute("y1");
-            //     current_graph.edges[i].target.x = lines[i].getAttribute("x2");
-            //     current_graph.edges[i].target.y = lines[i].getAttribute("y2");
-            // }
-            //
-            // let circles = $("circle");
-            // //console.log(circles.length);
-            // for (i = 0; i < circles.length; i++) {
-            //     current_graph.nodes[i].x = circles[i].getAttribute("cx");
-            //     current_graph.nodes[i].y = circles[i].getAttribute("cy");
-            //     current_graph.nodes[i].size = circles[i].getAttribute("r");
-            // }
-            // this.add_edges(current_graph.edges.slice(edge_count));
-            // this.add_nodes(current_graph.nodes.slice(node_count));
             this.add_edges(current_graph.edges);
             this.add_nodes(current_graph.nodes);
-            //
-            // simulation.stop();
-            // simulation..push(current_graph.edges.slice(edge_count));
-            // simulation.nodes().push(current_graph.nodes.slice(node_count));
-            // this.add_edges(simulation.links());
-            // this.add_nodes(simulation.nodes());
+
             simulation.on("tick", () => {
                 nodes.each(function(d) { d.fisheye = fisheye(d); })
                     .attr("cx", function(d) { return d.fisheye.x; })
@@ -221,29 +188,15 @@ var NetworkModule = function (svg_width, svg_height) {
                 .attr("x2", function(d) { return d.target.fisheye.x; })
                 .attr("y2", function(d) { return d.target.fisheye.y; });
             });
-            // simulation.restart();
         }
         node_count = current_graph.nodes.length;
         edge_count = current_graph.edges.length;
-        console.log(current_graph);
 
+        g.selectAll("line")
+            .attr("stroke",function (d, i) { return  current_graph.edges[i].color });
+        g.selectAll("circle")
+            .attr("fill",function (d, i) { return current_graph.nodes[i].color });
 
-        var lines = g.selectAll("line")
-                     .attr("stroke",function (d, i) { return  current_graph.edges[i].color });
-        var circles = g.selectAll("circle")
-                       .attr("fill",function (d, i) { return current_graph.nodes[i].color });
-
-       // let lines = $("line");
-       //  //console.log(lines);
-       //  for (i = 0; i < lines.length; i++) {
-       //      lines[i].setAttribute("stroke", current_graph.edges[i].color);
-       //  }
-       //
-       //  let circles = $("circle");
-       //  //console.log(circles.length);
-       //  for (i = 0; i < circles.length; i++) {
-       //      circles[i].setAttribute("fill", current_graph.nodes[i].color);
-       //  }
     };
 
     drag = simulation => {
@@ -280,10 +233,6 @@ var NetworkModule = function (svg_width, svg_height) {
     };
 
     this.reset = function () {
-        reset();
-    };
-
-    function reset() {
         graph = null;
         simulation = null;
         links = null;
