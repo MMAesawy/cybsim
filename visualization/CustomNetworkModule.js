@@ -45,6 +45,8 @@ var NetworkModule = function (svg_width, svg_height) {
     var nodes = null;
     var quadtree = null;
     var fisheye = null;
+    var node_count = 0;
+    var edge_count = 0;
 
     this.createGraph = function (data) {
         graph = JSON.parse(JSON.stringify(data));
@@ -77,65 +79,10 @@ var NetworkModule = function (svg_width, svg_height) {
         }
 
 
-        links = g.append("g")
-            .selectAll("line")
-            .data(graph.edges)
-            .join("line")
-            .attr("x1", function (d) {
-                return d.source.x;
-            })
-            .attr("y1", function (d) {
-                return d.source.y;
-            })
-            .attr("x2", function (d) {
-                return d.target.x;
-            })
-            .attr("y2", function (d) {
-                return d.target.y;
-            })
-            .attr("stroke-width", function (d) {
-                return d.width;
-            })
-            .attr("line-id", function (d) {
-                return d.id;
-            })
-            .attr("stroke", function (d) {
-                return d.color;
-            });
+        this.add_edges(graph.edges);
 
 
-        nodes = g.append("g")
-            .selectAll("circle")
-            .data(graph.nodes)
-            .join("circle")
-            .attr("cx", function (d) {
-                return d.x;
-            })
-            .attr("cy", function (d) {
-                return d.y;
-            })
-            .attr("r", function (d) {
-                return d.size;
-            })
-            .attr("fill", function (d) {
-                return d.color;
-            })
-            .attr("node-id", function (d) {
-                return d.id;
-            })
-            .on("mouseover", function (d) {
-                tooltip.transition()
-                    .duration(200)
-                    .style("opacity", .9);
-                tooltip.html(d.tooltip)
-                    .style("left", (d3.event.pageX) + "px")
-                    .style("top", (d3.event.pageY) + "px");
-            })
-            .on("mouseout", function () {
-                tooltip.transition()
-                    .duration(500)
-                    .style("opacity", 0);
-            });
+        this.add_nodes(graph.nodes);
 
         if (graph.interactive === 1)
             nodes.call(drag(simulation));
@@ -155,25 +102,148 @@ var NetworkModule = function (svg_width, svg_height) {
 
     };
 
+    this.add_edges = function(e){
+        let t;
+        if (links){
+            t = g.select("#glinks");
+        }
+        else{
+            t = g.append("g").attr("id", "glinks");
+        }
+        links = t
+            .selectAll("line")
+            .data(e)
+            .join("line")
+            .attr("x1", function (d) { return d.source.x;})
+            .attr("y1", function (d) { return d.source.y;})
+            .attr("x2", function (d) { return d.target.x;})
+            .attr("y2", function (d) { return d.target.y;})
+            .attr("stroke-width", function (d) { return d.width; })
+            .attr("line-id", function (d) { return d.id;})
+            .attr("stroke", function (d) { return d.color;});
+        };
+
+    this.add_nodes = function(n){
+        let t;
+        if (nodes){
+            t = g.select("#gnodes");
+        }
+        else{
+            t = g.append("g").attr("id", "gnodes");
+        }
+        nodes = t
+            .selectAll("circle")
+            .data(n)
+            .join("circle")
+            .attr("cx", function (d) { return d.x;})
+            .attr("cy", function (d) { return d.y;})
+            .attr("r", function (d) { return d.size;})
+            .attr("fill", function (d) { return d.color;})
+            .attr("node-id", function (d) { return d.id;})
+            .on("mouseover", function (d) {
+                tooltip.transition()
+                    .duration(200)
+                    .style("opacity", .9);
+                tooltip.html(d.tooltip)
+                    .style("left", (d3.event.pageX) + "px")
+                    .style("top", (d3.event.pageY) + "px");
+            })
+            .on("mouseout", function () {
+                tooltip.transition()
+                    .duration(500)
+                    .style("opacity", 0);
+            });
+    };
+
 
     this.render = function (data) {
+        let i;
         var current_graph = JSON.parse(JSON.stringify(data));
         if (graph == null) {
             this.createGraph(data);
         }
+        else if (node_count < current_graph.nodes.length){
+            console.log("NEW NODE!");
+            // svg.selectAll("circle")
+            //     .data(n)
+            //     .enter().add_edges()
 
-        var lines = $("line");
-        var i;
-        //console.log(lines);
-        for (i = 0; i < lines.length; i++) {
-            lines[i].setAttribute("stroke", current_graph.edges[i].color);
-        }
+            //let lines = $("line");
+            //console.log(lines);
+            console.log(current_graph.nodes);
 
-        var circles = $("circle");
-        //console.log(circles.length);
-        for (i = 0; i < circles.length; i++) {
-            circles[i].setAttribute("fill", current_graph.nodes[i].color);
+            var existing_nodes = simulation.nodes();
+            console.log(existing_nodes);
+            for(var j = 0; j < existing_nodes.length;j++){
+                current_graph.nodes[j]['x'] = existing_nodes[j].x;
+                current_graph.nodes[j]['y'] = existing_nodes[j].y;
+                current_graph.nodes[j]['vx'] = existing_nodes[j].vx;
+                current_graph.nodes[j]['vy'] = existing_nodes[j].vy;
+            }
+            simulation.nodes(current_graph.nodes);
+            simulation.force("link").links(current_graph.edges);
+            simulation.alpha(1).restart();
+            // simulation.restart();
+            //
+
+
+            // for (i = 0; i < lines.length; i++) {
+            //     current_graph.edges[i].source.x = lines[i].getAttribute("x1");
+            //     current_graph.edges[i].source.y = lines[i].getAttribute("y1");
+            //     current_graph.edges[i].target.x = lines[i].getAttribute("x2");
+            //     current_graph.edges[i].target.y = lines[i].getAttribute("y2");
+            // }
+            //
+            // let circles = $("circle");
+            // //console.log(circles.length);
+            // for (i = 0; i < circles.length; i++) {
+            //     current_graph.nodes[i].x = circles[i].getAttribute("cx");
+            //     current_graph.nodes[i].y = circles[i].getAttribute("cy");
+            //     current_graph.nodes[i].size = circles[i].getAttribute("r");
+            // }
+            // this.add_edges(current_graph.edges.slice(edge_count));
+            // this.add_nodes(current_graph.nodes.slice(node_count));
+            this.add_edges(current_graph.edges);
+            this.add_nodes(current_graph.nodes);
+            //
+            // simulation.stop();
+            // simulation..push(current_graph.edges.slice(edge_count));
+            // simulation.nodes().push(current_graph.nodes.slice(node_count));
+            // this.add_edges(simulation.links());
+            // this.add_nodes(simulation.nodes());
+            simulation.on("tick", () => {
+                nodes.each(function(d) { d.fisheye = fisheye(d); })
+                    .attr("cx", function(d) { return d.fisheye.x; })
+                    .attr("cy", function(d) { return d.fisheye.y; });
+
+            links.attr("x1", function(d) { return d.source.fisheye.x; })
+                .attr("y1", function(d) { return d.source.fisheye.y; })
+                .attr("x2", function(d) { return d.target.fisheye.x; })
+                .attr("y2", function(d) { return d.target.fisheye.y; });
+            });
+            // simulation.restart();
         }
+        node_count = current_graph.nodes.length;
+        edge_count = current_graph.edges.length;
+        console.log(current_graph);
+
+
+        var lines = g.selectAll("line")
+                     .attr("stroke",function (d, i) { return  current_graph.edges[i].color });
+        var circles = g.selectAll("circle")
+                       .attr("fill",function (d, i) { return current_graph.nodes[i].color });
+
+       // let lines = $("line");
+       //  //console.log(lines);
+       //  for (i = 0; i < lines.length; i++) {
+       //      lines[i].setAttribute("stroke", current_graph.edges[i].color);
+       //  }
+       //
+       //  let circles = $("circle");
+       //  //console.log(circles.length);
+       //  for (i = 0; i < circles.length; i++) {
+       //      circles[i].setAttribute("fill", current_graph.nodes[i].color);
+       //  }
     };
 
     drag = simulation => {
@@ -220,6 +290,8 @@ var NetworkModule = function (svg_width, svg_height) {
         nodes = null;
         quadtree = null;
         fisheye = null;
+        node_count = 0;
+        edge_count = 0;
 
         svg.selectAll("g")
             .remove();
