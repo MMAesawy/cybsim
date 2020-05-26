@@ -4,6 +4,8 @@ from helpers import random_string
 class Attack:
     def __init__(self, original_source=None, attack_type=None):
         self.original_source = original_source
+        self.effectiveness = random.random()  # TODO effectiveness or skill of attacker? weighted sum?
+
         if attack_type:
             self.attack_type = attack_type
         else:
