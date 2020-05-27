@@ -31,6 +31,14 @@ class NetworkDevice(Agent):
         if self.master_address not in model.G.nodes:
             model.G.add_node(self.master_address)
 
+    def get_tooltip(self):
+        return "address: %s\n" \
+               "packets sent: %d\n" \
+               "packets received: %d" \
+                % (self.address,
+                 self.packets_sent,
+                 self.packets_received)
+
     def route(self, packet):
         if self.capacity < 0 or self.passing_packets < self.capacity:
             self.passing_packets += 1

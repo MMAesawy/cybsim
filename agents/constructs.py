@@ -1,10 +1,11 @@
 import re
 from helpers import random_string
+import random
 
 class Attack:
-    def __init__(self, original_source=None, attack_type=None):
+    def __init__(self, original_source, attack_type=None):
         self.original_source = original_source
-        self.effectiveness = random.random()  # TODO effectiveness or skill of attacker? weighted sum?
+        self.effectiveness = random.random() / 2 + 0.5  # TODO effectiveness or skill of attacker? weighted sum?
 
         if attack_type:
             self.attack_type = attack_type
@@ -36,6 +37,7 @@ class Attack:
 
     def __str__(self):
         return "Attack of type: %s" % self.attack_type
+
 
 class Packet:
     total_packet_count = 0

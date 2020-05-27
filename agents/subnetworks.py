@@ -2,6 +2,7 @@ from helpers import *
 from agents.agents import *
 from abc import ABC, abstractmethod
 from mesa.agent import Agent
+from collections import defaultdict
 import numpy as np
 
 
@@ -131,14 +132,13 @@ class SubNetwork(ABC):
 
 class Organization(SubNetwork, Agent):
     def __init__(self, address, parent, model, routing_table, num_devices, of='subnetworks'):
-        self.company_security = get_company_security(num_devices)
         SubNetwork.__init__(self, address, parent, model, routing_table, num_devices, of)
         Agent.__init__(self, address, model)
 
-        self.attacks_list = []
+        self.attacks_list = defaultdict(lambda: 0)
         self.security_budget = random.random()  # This budget in percentage of total budget of company
         self.utility = 0
-
+        self.company_security = get_company_security(num_devices) / 2
         model.subnetworks.append(self)
 
     def step(self):
@@ -179,10 +179,6 @@ class Organization(SubNetwork, Agent):
 
                 self.users_on_subnetwork.append(self.network.nodes[i]['subnetwork'])
             self.children.append(self.network.nodes[i]['subnetwork'])
-
-
-
-
 
     def advance(self):
         pass

@@ -137,11 +137,14 @@ var NetworkModule = function (svg_width, svg_height) {
             .attr("r", function (d) { return d.size;})
             .attr("fill", function (d) { return d.color;})
             .attr("node-id", function (d) { return d.id;})
-            .on("mouseover", function (d) {
+            .attr("tooltip", function(d) { return d.tooltip; });
+
+        t.selectAll("circle")
+            .on("mouseover", function (d, i) {
                 tooltip.transition()
                     .duration(200)
                     .style("opacity", .9);
-                tooltip.html(d.tooltip)
+                tooltip.html(generate_bubble(d.tooltip))
                     .style("left", (d3.event.pageX) + "px")
                     .style("top", (d3.event.pageY) + "px");
             })
@@ -195,8 +198,19 @@ var NetworkModule = function (svg_width, svg_height) {
         g.selectAll("line")
             .attr("stroke",function (d, i) { return  current_graph.edges[i].color });
         g.selectAll("circle")
-            .attr("fill",function (d, i) { return current_graph.nodes[i].color });
+            .attr("fill",function (d, i) { return current_graph.nodes[i].color })
+            .attr("tooltip",function (d, i) { return current_graph.nodes[i].tooltip });
 
+        // TODO: Seamlessly update existing tooltips
+        // let t = svg.select("p#tooltip");
+        // if (t){
+        //     t.html(generate_bubble(current_graph.nodes[t.index].tooltip));
+        // }
+
+    };
+
+    generate_bubble = function(d){
+        return "<p id='tooltip' style='font-size:11pt'>" + d + "</p>";
     };
 
     drag = simulation => {
