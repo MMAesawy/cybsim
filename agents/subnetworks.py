@@ -136,16 +136,43 @@ class Organization(SubNetwork, Agent):
         Agent.__init__(self, address, model)
 
         self.attacks_list = defaultdict(lambda: 0)
-        self.security_budget = random.random()  # This budget in percentage of total budget of company
+        self.compromised_detected = 0
+        self.security_budget = random.random()  # This budget in percentage of total budget of company #TODO rethink starting point
         self.utility = 0
+        self.util_buffer = 0
+        self.count = 0
         self.company_security = get_company_security(num_devices) / 2
         model.subnetworks.append(self)
 
     def step(self):
-        pass
+        self.count += 1
+        self.set_utility()
+        if self.count == 10:
+            self.count = 0
+            self.update_budget()
+            self.compromised_detected = 0
+
+
+        else:
+            pass
+        # if self.compromised_detected/len(self.children) >= 0.1:
+        #     self.update_budget()
+        # else:
+        #     pass
 
     def update_budget(self):
-        pass
+        self.util_buffer = self.utility
+        if self.utility < 0:
+            self.security_budget += 0.05
+            self.set_utility()
+        elif self.util_buffer >= self.utility:
+            self.security_budget -= 0.05
+        elif self.util_buffer == 0:
+            pass
+
+    def set_utility(self): #TODO testing (cap 0 or not)
+        # self.utility = -(self.compromised_detected / len(self.children)) - self.security_budget
+        self.utility = -(self.security_budget**2) - (self.compromised_detected / len(self.children)) #TODO add sliders for serurity budget for testing
 
     def _create_graph(self):
         self.network = random_star_graph(self.num_devices, 0)

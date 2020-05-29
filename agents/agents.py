@@ -199,6 +199,7 @@ class Employee(GenericDefender):
         for c in self.compromisers:
             detected = self.detect(c._attack_of_choice, True)
             if detected:
+                self.parent.compromised_detected += 1
                 self.clean_specific(c)
 
     def advance(self):
