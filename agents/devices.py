@@ -125,3 +125,6 @@ class NetworkDevice(Agent):
                 self.route(packet)
             else:
                 i += 1
+
+    def __eq__(self, other):
+        return self.address == other.address

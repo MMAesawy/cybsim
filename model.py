@@ -25,6 +25,12 @@ class CybCim(Model):
                  min_device_count=5,
                  max_device_count=50,
                  avg_time_to_new_attack=50,
+                 information_importance=2,
+                 device_security_deviation_width=0.25,
+                 information_gain_weight=0.5,
+                 passive_detection_weight=0.125,
+                 spread_detection_weight=0.25,
+                 target_detection_weight=1.0,
                  interactive=True,
                  fisheye=True,
                  subgraph_type=True,
@@ -44,6 +50,14 @@ class CybCim(Model):
         self.num_subnetworks = num_subnetworks
         self.num_attackers = num_attackers
         self.subnetworks = []
+
+        self.information_importance = information_importance
+        self.device_security_deviation_width = device_security_deviation_width
+        self.information_gain_weight = information_gain_weight
+        self.passive_detection_weight = passive_detection_weight
+        self.spread_detection_weight = spread_detection_weight
+        self.target_detection_weight = target_detection_weight
+
         # self.max_hops = max_hops
         # self.min_capacity = min_capacity
         # self.max_capacity = max_capacity
