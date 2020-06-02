@@ -12,6 +12,8 @@ VERBOSE = True
 def get_total_compromised(model):
     return model.total_compromised
 
+def get_share(model):
+    return int(model.share_matrix[0,1])
 
 class CybCim(Model):
 
@@ -86,9 +88,13 @@ class CybCim(Model):
         self.total_compromised = 0
         self.packet_count = 1
 
+        #initialize a n*n matrix to store sharing decision disregarding attacker subnetwork
+        self.share_matrix = np.empty((self.num_subnetworks - 1,self.num_subnetworks - 1),dtype=bool)
+
         self.datacollector = DataCollector(
             {
-             "Compromised Devices": get_total_compromised
+             "Compromised Devices": get_total_compromised,
+            "Share No Share": get_share #testing
             }
         )
 
@@ -133,7 +139,15 @@ class CybCim(Model):
             edge[2]["active"] = False
             edge[2]["malicious"] = False
 
+    def fill_share_matrix(self):
+        for i in range(self.num_subnetworks - 1):
+            for j in range(self.num_subnetworks - 1):
+                if i == j or self.subnetworks[i] is Attackers or self.subnetworks[j] is Attackers:
+                    continue
+                else:
+                    self.share_matrix[i,j] = self.subnetworks[i].share_information(self.subnetworks[j])
     def step(self):
+        self.fill_share_matrix()
         self.reset_edge_data()
 
         # update agents
