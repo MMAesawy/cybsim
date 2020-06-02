@@ -88,7 +88,7 @@ class MyTextElement(TextElement):
 model_params = {
     'visualize': UserSettableParameter(param_type='checkbox', name='Enable visualization', value=True,
                                                   description='Choose whether to visualize the graph'),
-    'verbose': UserSettableParameter(param_type='checkbox', name='Verbose', value=True,
+    'verbose': UserSettableParameter(param_type='checkbox', name='Verbose', value=False,
                                        description='Choose whether the model is verbose (in the terminal)'),
     'interactive': UserSettableParameter(param_type='checkbox', name='Interactive graph', value=True,
                                                   description='Choose whether the graph is interactive'),
@@ -100,7 +100,7 @@ model_params = {
     #                                               description='Choose how many internet devices to have'),
     'num_subnetworks': UserSettableParameter(param_type='slider', name='Number of subnetworks', value=10, min_value=1, max_value=50, step=1,
                                                   description='Choose how many subnetworks to have'),
-    'num_attackers': UserSettableParameter(param_type='slider', name='Number of attackers', value=5, min_value=1, max_value=30, step=1,
+    'num_attackers': UserSettableParameter(param_type='slider', name='Number of attackers', value=2, min_value=1, max_value=30, step=1,
                                                   description='Choose how many attackers to have'),
     # 'max_hops': UserSettableParameter(param_type='slider', name='Maximum hops for packets', value=5, min_value=1, max_value=20, step=1,
     #                                               description='Choose the maximum hop length for packets'),
@@ -113,10 +113,31 @@ model_params = {
     'max_device_count': UserSettableParameter(param_type='slider', name='Maximum subnetwork device count', value=30, min_value=30, max_value=100, step=1,
                                                   description='Choose the maximum number of devices for a subnetwork'),
     # 'avg_time_to_new_attack': UserSettableParameter(param_type='number', name='Average time for new attack', value=50,
-    'avg_time_to_new_attack': UserSettableParameter(param_type='slider', name='Average time for new attack', value=50, min_value=0, max_value=200, step=1,
+    'avg_time_to_new_attack': UserSettableParameter(param_type='slider', name='Average time for new attack', value=500, min_value=0, max_value=1000, step=1,
                                                   description='Choose the average time for the generation of a new attack on the network'),
 
+    'information_importance': UserSettableParameter(param_type='slider', name='Information importance', value=2, min_value=1, max_value=10, step=0.5,
+                                                  description='Controls the importance of information in determining probability of detection.'
+                                                              ' Higher values means detection is harder WITHOUT information.'),
+    'device_security_deviation_width': UserSettableParameter(param_type='slider', name='Security deviation width', value=0.25,
+                                                    min_value=0, max_value=1, step=0.005,
+                                                    description='Controls the deviation of devices\' security around the organization\'s security budget '),
+    'information_gain_weight': UserSettableParameter(param_type='slider', name='Information gain scale', value=0.5,
+                                                    min_value=0, max_value=2, step=0.01,
+                                                    description='Scales the amount of information gained through a detection. Greater values means it\'s easier to gain information.'),
+    'passive_detection_weight': UserSettableParameter(param_type='slider', name='Passive detection weight', value=0.125,
+                                                    min_value=0, max_value=1, step=0.005,
+                                                    description='Affects difficulty of passive attacker detection.'),
+    'spread_detection_weight': UserSettableParameter(param_type='slider', name='Spread detection weight', value=0.25,
+                                                      min_value=0, max_value=1, step=0.005,
+                                                      description='Affects difficulty of spreading attacker detection.'),
+    'target_detection_weight': UserSettableParameter(param_type='slider', name='Targeted detection weight', value=1.0,
+                                                      min_value=0, max_value=1, step=0.005,
+                                                      description='Affects difficulty of targeted attacker detection.'),
+
+
 }
+
 network = NetworkModule(network_portrayal, 500, 730)
 text = VisualizationElement()
 
@@ -124,3 +145,4 @@ text = VisualizationElement()
 
 
 server = ModularServer(CybCim, [network, MyTextElement(), chart], 'Computer Network', model_params)
+server.verbose = False

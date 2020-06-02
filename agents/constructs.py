@@ -5,8 +5,8 @@ import random
 class Attack:
     def __init__(self, original_source, attack_type=None):
         self.original_source = original_source
-        self.effectiveness = random.random() / 2 + 0.5  # TODO effectiveness or skill of attacker? weighted sum?
-
+        # self.effectiveness = random.random() / 2 + 0.5  # TODO effectiveness or skill of attacker? weighted sum?
+        self.effectiveness = max(0, min(1, random.gauss(0.5, 1/6)))
         if attack_type:
             self.attack_type = attack_type
         else:
@@ -28,7 +28,7 @@ class Attack:
         if not self.original_source:
             return False
         defender = destination
-        if defender.is_attack_successful(attack=self) \
+        if defender.is_attack_successful(attack=self, targetted=source == self.original_source) \
                 and defender not in self.original_source.compromised:
             self.original_source.infect(defender)
             return True

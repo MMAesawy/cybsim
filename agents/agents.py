@@ -1,5 +1,6 @@
 from agents.devices import NetworkDevice
 from agents.constructs import *
+import helpers
 import random
 
 class User(NetworkDevice):
@@ -30,6 +31,9 @@ class User(NetworkDevice):
                 user = random.choice(self.model.users)
 
             self.communicate_to.append(user)
+
+    def get_tooltip(self):
+        return super().get_tooltip() + ("\nactivity: %.2f" % self.activity)
 
 
 class GenericDefender(User):
@@ -76,7 +80,7 @@ class GenericDefender(User):
             self.model.total_compromised += 1
         self.compromisers.append(attacker)
 
-    def is_attack_successful(self, attack):
+    def is_attack_successful(self, attack, targetted):
         """
         Tests whether the attack was successful or not against this user
         :param attack: the attack being performed
@@ -163,8 +167,8 @@ class Attacker(GenericAttacker):
         self._chosen_strategy = random.choice(self._strategies)
 
         # generate list of users to talk with
-        if self._chosen_strategy == "infect":
-            self._generate_communicators()
+        # if self._chosen_strategy == "infect":
+        self._generate_communicators()
 
     def advance(self):
         super().advance()
@@ -176,19 +180,16 @@ class Attacker(GenericAttacker):
         self.communicate_to.clear()
 
     def notify_victim_packet_generation(self, packet):
-        if self._chosen_strategy == "spread": # TODO strategies
-            packet.add_payload(self._attack_of_choice)
+        # if self._chosen_strategy == "spread": # TODO strategies
+        packet.add_payload(self._attack_of_choice)
 
 
 class Employee(GenericDefender):
 
     def __init__(self, activity, address, parent, model, routing_table):
         super().__init__(activity, address, parent, model, routing_table)
-        # TODO set restrictions on number of specific type.
-        self.type = random.choice(["Front Office", "Back Office", "Security Team", "Developers"])
 
-        self._security = None  # gets initialized as soon as _get_security is called.
-        # do NOT use this variable directly
+        self._security = None  # gets initialized as soon as _get_security is called. do NOT use this variable directly
 
     def get_tooltip(self):
         return super().get_tooltip() + ("\nsecurity: %.2f" % self._get_security())
@@ -197,7 +198,7 @@ class Employee(GenericDefender):
         super().step()
         self._generate_communicators()
         for c in self.compromisers:
-            detected = self.detect(c._attack_of_choice, True)
+            detected = self.detect(c._attack_of_choice, targetted=False, passive=True)
             if detected:
                 self.clean_specific(c)
 
@@ -212,50 +213,40 @@ class Employee(GenericDefender):
 
     def _get_security(self):
         if self._security is None:
-            # assign a set of initial personal security based on each user type
-            if (type == "Front Office"):
-                security = random.random() * 0.3
-            elif (type == "Back Office"):
-                security = 0.3 + random.random() * (0.5 - 0.3)
-            elif (type == "Security Team"):
-                security = 0.8 + random.random() * (1 - 0.8)
-            elif (type == "Developers"):
-                security = 0.5 + random.random() + (0.8 - 0.5)
-            else:
-                security = 0
-
-            self._security = ((security * 0.6) + (self.parent.company_security * 0.4)) / 2
-
+            self._security = helpers.get_total_security(
+                self.parent.security_budget, deviation_width=self.model.device_security_deviation_width)
         return self._security
 
-    def is_attack_successful(self, attack): #detection function based chance
-        return not self.detect(attack)
+    def is_attack_successful(self, attack, targetted): #detection function based chance
+        return not self.detect(attack, targetted)
 
-    def detect(self, attack, passive=False):
+    def detect(self, attack, targetted, passive=False):
         # added self security and attack strategy risk to the equation due to the scope of the detection
         #TODO refine probabilities
-        resistance = self.parent.attacks_list[attack]
-        security_budget = self.parent.security_budget
-        atk_strategy_risk = self.get_atk_strategy_risk(attack)
-        prob = (atk_strategy_risk + self._get_security() + (1 - attack.effectiveness) + resistance + security_budget
-                + self.parent.num_compromised / self.parent.num_users) / 6
+        information = self.parent.attacks_list[attack]
+        security = self._get_security()
+        # defense = helpers.get_defense(security, information)
+        # prob = helpers.get_prob_detection(defense, attack.effectiveness)
+        # prob = helpers.get_prob_detection_v2(security, attack.effectiveness, information)
+
         if passive:
-            prob /= 4
-        if random.random() < prob:  # attack is detected
-            self.parent.attacks_list[attack] = (self.parent.attacks_list[attack] + 1.0) / 2
+            security *= self.model.passive_detection_weight
+        elif targetted:
+            security *= self.model.target_detection_weight
+        else:
+            security *= self.model.spread_detection_weight
+
+        prob = helpers.get_prob_detection_v2(security, attack.effectiveness,
+                                             information, info_weight=self.model.information_importance)
+
+        if random.random() < prob:  # attack is detected, gain information
+            info = self.parent.attacks_list[attack]
+            self.parent.attacks_list[attack] = \
+                helpers.get_new_information_detected(prob, info, w=self.model.information_gain_weight)
             return True
         else:
             return False
 
-    def get_atk_strategy_risk(self, attack): #basic implementation
-        atk_strategy = attack.original_source._chosen_strategy
-        if atk_strategy == "infect":
-            return 0.01
-        elif atk_strategy == "stay":
-            return 0.001
-        elif atk_strategy == "spread":
-            return 0.005
-        return 0
 
 
 

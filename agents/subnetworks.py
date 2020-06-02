@@ -136,9 +136,9 @@ class Organization(SubNetwork, Agent):
         Agent.__init__(self, address, model)
 
         self.attacks_list = defaultdict(lambda: 0)
-        self.security_budget = random.random()  # This budget in percentage of total budget of company
+        # self.security_budget = random.random()  # This budget in percentage of total budget of company
+        self.security_budget = max(0, min(1, random.gauss(0.5, 1/6)))
         self.utility = 0
-        self.company_security = get_company_security(num_devices) / 2
         model.subnetworks.append(self)
 
     def step(self):
@@ -167,9 +167,6 @@ class Organization(SubNetwork, Agent):
                 self.network.nodes[i]['subnetwork'] = n
             else: # the rest of the devices are users.
                 activity = random.random() / 10  # TODO think about the media presence role in determining who to attack.
-                media_presence = random.random()  # percentage susceptable to spear phishing attacks
-                type = random.randint(1, 4)  # assign a user type for each user #TODO define certain range for each type os employee
-                # based on type of employee, define privileges and  percentage of users pre-existing security knowledge
 
                 self.network.nodes[i]['subnetwork'] = Employee(activity=activity,
                                                                 address=self.address + i,
@@ -208,7 +205,7 @@ class Attackers(SubNetwork, Agent):
         self.network.add_edge(self.network.graph['gateway'], new_node_local_address)
         self.shortest_paths = dict(nx.all_pairs_shortest_path(self.network))
         # print(len(self.shortest_paths[0]))
-        activity = random.random() / 4
+        activity = random.random()
         attacker = Attacker(activity=activity,
                                    address=self.address + new_node_local_address,
                                    parent=self,
@@ -223,6 +220,7 @@ class Attackers(SubNetwork, Agent):
         self.model.merge_with_master_graph()
         self.model.grid.G.node[attacker.master_address]['agent'] = list()  # necessary evil
         self.model.grid.place_agent(attacker, attacker.master_address)
+        self.model.schedule.add(attacker)
         # print("SUCCESSFULLY ADDED A NEW ATTACKER %d!" % attacker.master_address)
 
     def _create_graph(self):
@@ -242,7 +240,7 @@ class Attackers(SubNetwork, Agent):
                                         routing_table=routing_table)
                 self.network.nodes[i]['subnetwork'] = n
             else: # the rest of the devices are users.
-                activity = random.random() / 4
+                activity = random.random()
 
                 self.network.nodes[i]['subnetwork'] = Attacker(activity=activity,
                                                                    address=self.address + i,
@@ -251,118 +249,3 @@ class Attackers(SubNetwork, Agent):
                                                                    routing_table=routing_table)
 
             self.children.append(self.network.nodes[i]['subnetwork'])
-
-
-
-# UNUSED
-# class LocalNetwork(SubNetwork):
-#
-#     def _create_graph(self):
-#         self.network = random_star_graph(self.num_devices, 0)
-#
-#     def _create_devices(self):
-#         self.children = []
-#         self.num_users = 0
-#         # create objects to be stored within the graph
-#         for i in range(len(self.network.nodes)):
-#             routing_table = self.shortest_paths[i]
-#             if i == self.local_gateway_address:  # if this is the gateway
-#                 n = NetworkDevice(address=self.address + i,
-#                                         parent=self,
-#                                         model=model,
-#                                         routing_table=routing_table)
-#                 self.network.nodes[i]['subnetwork'] = n
-#             else: # the rest of the devices are users.
-#                 self.num_users = get_subnetwork_user_count(self.num_devices)
-#                 activity = random.random() / 10
-#                 self.network.nodes[i]['subnetwork'] = User(activity=activity,
-#                                                            address=self.address + i,
-#                                                            parent=self,
-#                                                            model=model,
-#                                                            routing_table=routing_table)
-#                 self.children.append(self.network.nodes[i]['subnetwork'])
-#
-#
-# UNUSED
-# class ISP(SubNetwork):
-#
-#     def _create_graph(self):
-#         self.network = random_mesh_graph(self.num_devices, 2)
-#
-#     def _create_devices(self):
-#         self.children = []
-#         self.num_users = 0
-#         # create objects to be stored within the graph
-#         for i in range(len(self.network.nodes)):
-#             routing_table = self.shortest_paths[i]
-#             if i == self.local_gateway_address:  # if this is the gateway
-#                 n = NetworkDevice(address=self.address + i,
-#                                   parent=self,
-#                                   model=model,
-#                                   routing_table=routing_table)
-#
-#             else:
-#                 self.num_users = get_subnetwork_user_count(self.num_devices)
-#                 activity = random.random() / 10
-#                 n = User(activity=activity,
-#                    address=self.address + i,
-#                    parent=self,
-#                    model=model,
-#                    routing_table=routing_table)
-#             self.network.nodes[i]['subnetwork'] = n
-#             self.children.append(n)
-#
-# UNUSED
-# class Office(SubNetwork):
-#     def _create_graph(self):
-#         self.network = random_star_graph(self.num_devices, 1)
-#
-#     def _create_devices(self):
-#         self.children = []
-#         self.num_users = 0
-#         # create objects to be stored within the graph
-#         for i in range(len(self.network.nodes)):
-#             routing_table = self.shortest_paths[i]
-#             if i == self.local_gateway_address:  # if this is the gateway
-#                 n = NetworkDevice(address=self.address + i,
-#                                   parent=self,
-#                                   model=model,
-#                                   routing_table=routing_table)
-#             else:
-#                 n = LocalNetwork(
-#                        address=self.address + i,
-#                        parent=self,
-#                        model=model,
-#                        routing_table=routing_table,
-#                         num_devices=random.randint(2, 10))
-#
-#             self.network.nodes[i]['subnetwork'] = n
-#             self.children.append(n)
-#
-# UNUSED
-# class DataCenter(SubNetwork):
-#     def _create_graph(self):
-#         self.network = random_star_graph(self.num_devices, 1)
-#
-#     def _create_devices(self):
-#         self.children = []
-#         self.num_users = 0
-#         # create objects to be stored within the graph
-#         for i in range(len(self.network.nodes)):
-#             routing_table = self.shortest_paths[i]
-#             if i == self.local_gateway_address:  # if this is the gateway
-#                 n = NetworkDevice(address=self.address + i,
-#                                   parent=self,
-#                                   model=model,
-#                                   routing_table=routing_table)
-#             else:
-#                 n = LocalNetwork(
-#                        address=self.address + i,
-#                        parent=self,
-#                        model=model,
-#                        routing_table=routing_table,
-#                         num_devices=random.randint(2, 10))
-#
-#             self.network.nodes[i]['subnetwork'] = n
-#             self.children.append(n)
-#
