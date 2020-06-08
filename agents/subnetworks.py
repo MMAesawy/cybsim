@@ -3,6 +3,7 @@ from agents.agents import *
 from abc import ABC, abstractmethod
 from mesa.agent import Agent
 from collections import defaultdict
+import random
 import numpy as np
 
 
@@ -144,6 +145,12 @@ class Organization(SubNetwork, Agent):
     def step(self):
         pass
 
+    def advance(self):
+        pass
+
+    def share_information(self,org2): #TODO make decision based on trust factor between org2
+        return bool(random.getrandbits(1))
+
     def update_budget(self):
         pass
 
@@ -177,8 +184,6 @@ class Organization(SubNetwork, Agent):
                 self.users_on_subnetwork.append(self.network.nodes[i]['subnetwork'])
             self.children.append(self.network.nodes[i]['subnetwork'])
 
-    def advance(self):
-        pass
 
 
 class Attackers(SubNetwork, Agent):

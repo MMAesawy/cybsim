@@ -75,8 +75,9 @@ def network_portrayal(G):
 # chart = ChartModule([{'Label': 'Packets Received', 'Color': '#008000'},
 #                      {'Label': 'Packets Dropped', 'Color': '#FF0000'}])
 
-chart = ChartModule([{'Label': 'Compromised Devices', 'Color': '#ff4c4c'}])
+chart_1 = ChartModule([{'Label': 'Compromised Devices', 'Color': '#ff4c4c'}])
 
+chart_2 = ChartModule([{'Label': 'Share No Share', 'Color':'#FF000e'}])
 # pie = PieChartModule([{'Label': 'Safe Devices', 'Color': '#4ca64c'},
 #                      {'Label': 'Compromised Devices', 'Color': '#ff4c4c'}],
 #                      canvas_width=730)
@@ -137,12 +138,11 @@ model_params = {
 
 
 }
-
 network = NetworkModule(network_portrayal, 500, 730)
 text = VisualizationElement()
 
 
 
 
-server = ModularServer(CybCim, [network, MyTextElement(), chart], 'Computer Network', model_params)
+server = ModularServer(CybCim, [network, MyTextElement(), chart_1, chart_2], 'Computer Network', model_params)
 server.verbose = False
