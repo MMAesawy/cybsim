@@ -169,8 +169,9 @@ class Organization(SubNetwork, Agent):
             pass
 
     def set_utility(self): #TODO testing (cap 0 or not)
-        # self.utility = -(self.compromised_detected / len(self.children)) - self.security_budget
-        self.utility = -(self.security_budget**2) - (self.compromised_detected / len(self.children)) + 1 #TODO not correct # #TODO add sliders for serurity budget for testing
+        #self.utility = -(self.compromised_detected / len(self.children)) - self.security_budget
+        #self.utility = -(self.security_budget**2) - (self.compromised_detected / len(self.children)) + 1 #TODO not correct # #TODO add sliders for serurity budget for testing
+        self.utility = random.random()
 
     def _create_graph(self):
         self.network = random_star_graph(self.num_devices, 0)

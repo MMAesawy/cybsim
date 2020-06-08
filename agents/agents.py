@@ -168,8 +168,8 @@ class Attacker(GenericAttacker):
         if self._chosen_strategy == "infect":
             self._generate_communicators()
 
-        # for c in self.compromised: #TODO change the scope of the strategies to the attack object scope IMPOTANT!!!
-        self._chosen_strategy = self.choose_strategy() #TODO put organization object as param
+        for c in self.compromised: #TODO change the scope of the strategies to the attack object scope IMPOTANT!!!
+            self._chosen_strategy = self.choose_strategy(c.parent)
 
     def advance(self):
         super().advance()
@@ -186,9 +186,12 @@ class Attacker(GenericAttacker):
 
     def choose_strategy(self, org): #TODO calculations restricted to compromised for each organization
         comp_in_org = self.get_comp_in_org(org)
-        execute_utility = self.calculate_utility(comp_in_org/org.children, self._execute_risk)
-        spread_utility = self.calculate_utility(1 - (comp_in_org/org.children), self._spread_risk)
-        stay_utility = self.calculate_utility(0, self._stay_risk)
+        #execute_utility = self.calculate_utility(comp_in_org/org.children, self._execute_risk)
+        execute_utility = random.random()
+        #spread_utility = self.calculate_utility(1 - (comp_in_org/org.children), self._spread_risk)
+        spread_utility = random.random()
+        #stay_utility = self.calculate_utility(0, self._stay_risk)
+        stay_utility = random.random()
 
         if (execute_utility > spread_utility) and (execute_utility > stay_utility):
             self.utility = execute_utility
@@ -264,7 +267,12 @@ class Employee(GenericDefender):
         return self._security
 
     def is_attack_successful(self, attack): #detection function based chance
-        return not self.detect(attack)
+        if self.detect(attack):
+            attack.utility -= 0.5
+            return False
+        else:
+            attack.utility += 0.5
+            return True
 
     def detect(self, attack, passive=False):
         # added self security and attack strategy risk to the equation due to the scope of the detection
