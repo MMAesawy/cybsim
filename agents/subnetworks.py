@@ -148,8 +148,8 @@ class Organization(SubNetwork, Agent):
     def advance(self):
         pass
 
-    def share_information(self,org2): #TODO make decision based on trust factor between org2
-        return bool(random.getrandbits(1))
+    def share_information(self, closeness): #TODO make decision based on trust factor
+        return int(random.random() > closeness)
 
     def update_budget(self):
         pass

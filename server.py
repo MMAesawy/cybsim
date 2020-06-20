@@ -77,7 +77,7 @@ def network_portrayal(G):
 
 chart_1 = ChartModule([{'Label': 'Compromised Devices', 'Color': '#ff4c4c'}])
 
-chart_2 = ChartModule([{'Label': 'Share No Share', 'Color':'#FF000e'}])
+chart_2 = ChartModule([{'Label': 'Closeness', 'Color':'#FF000e'}])
 # pie = PieChartModule([{'Label': 'Safe Devices', 'Color': '#4ca64c'},
 #                      {'Label': 'Compromised Devices', 'Color': '#ff4c4c'}],
 #                      canvas_width=730)
@@ -135,6 +135,10 @@ model_params = {
     'target_detection_weight': UserSettableParameter(param_type='slider', name='Targeted detection weight', value=1.0,
                                                       min_value=0, max_value=1, step=0.005,
                                                       description='Affects difficulty of targeted attacker detection.'),
+    'reciprocity': UserSettableParameter(param_type='slider',name='Reciprocity',value=2, max_value=5,min_value=0, step=0.5,
+                                         description='Parameter representing how much organizations move closer or further from each other'),
+    'transitivity': UserSettableParameter(param_type='slider',name='Transitivity',value=2, max_value=5,min_value=0, step=0.5,
+                                         description='Parameter representing how much organizations are influenced by their cooperator\'s opinions')
 
 
 }

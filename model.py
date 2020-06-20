@@ -13,7 +13,11 @@ def get_total_compromised(model):
     return model.total_compromised
 
 def get_share(model):
-    return int(model.share_matrix[0,1])
+    avg = 0
+    for i in range(model.num_subnetworks - 1):
+        for j in range(i + 1, model.num_subnetworks - 1):
+            avg += model.closeness_matrix[i][j]
+    return avg / (model.num_subnetworks - 1)
 
 class CybCim(Model):
 
@@ -37,7 +41,9 @@ class CybCim(Model):
                  fisheye=True,
                  subgraph_type=True,
                  visualize=True,
-                 verbose=True):
+                 verbose=True,
+                 reciprocity=2,
+                 transitivity=2):
         global VERBOSE
         super().__init__()
 
@@ -51,7 +57,7 @@ class CybCim(Model):
         self.num_internet_devices = num_internet_devices
         self.num_subnetworks = num_subnetworks
         self.num_attackers = num_attackers
-        self.subnetworks = []
+        # self.subnetworks = []
 
         self.information_importance = information_importance
         self.device_security_deviation_width = device_security_deviation_width
@@ -101,14 +107,18 @@ class CybCim(Model):
         self.total_failure_count = 0
         self.total_compromised = 0
         self.packet_count = 1
+        self.initial_closeness = 0.5 # initial closeness between organizations
+        # can be parameterized
+        self.reciprocity = reciprocity
+        self.transitivity = transitivity
 
         #initialize a n*n matrix to store sharing decision disregarding attacker subnetwork
-        self.share_matrix = np.empty((self.num_subnetworks - 1,self.num_subnetworks - 1),dtype=bool)
+        self.closeness_matrix = np.full((self.num_subnetworks - 1, self.num_subnetworks - 1), 0.5)
 
         self.datacollector = DataCollector(
             {
              "Compromised Devices": get_total_compromised,
-            "Share No Share": get_share #testing
+            "Closeness": get_share #testing
             }
         )
 
@@ -153,15 +163,45 @@ class CybCim(Model):
             edge[2]["active"] = False
             edge[2]["malicious"] = False
 
-    def fill_share_matrix(self):
+    def update_closeness(self):
+        # n = random.randint(0, self.num_subnetworks - 1)
+        # m = random.randint(0, self.num_subnetworks - 1)
+        # while (n != m):
+        #     m = random.randint(0, self.num_subnetworks - 1)
+
         for i in range(self.num_subnetworks - 1):
-            for j in range(self.num_subnetworks - 1):
-                if i == j or self.subnetworks[i] is Attackers or self.subnetworks[j] is Attackers:
-                    continue
+            for j in range(i + 1, self.num_subnetworks - 1): # only visit top matrix triangle
+                # if i == j: # or type(self.subnetworks[i]) is Attackers or type(self.subnetworks[j]) is Attackers:
+                #     continue
+                # else:
+                r = random.random()
+                if (self.closeness_matrix[i][j] > r): #will interact
+                    closeness = self.closeness_matrix[i][j]
+                    r1, r2 = self.subnetworks[i].share_information(closeness), self.subnetworks[j].share_information(closeness)
+                    choice = [int(r1 > closeness), int(r2 > closeness)]
+                    if sum(choice) == 2:  # both cooperate
+                        self.closeness_matrix[i][j] = 1 - ((1 - closeness) / self.reciprocity)
+                        self.closeness_matrix[j][i] = 1 - ((1 - closeness) / self.reciprocity)
+                        self.adjust_closeness(i, j)
+                    elif sum(choice) == 0:  # both defect
+                        self.closeness_matrix[i][j] = closeness / self.reciprocity
+                        self.closeness_matrix[j][i] = closeness / self.reciprocity
+                    else:  # one defects and one cooperates #no change in closeness #TODO implement different behaviour?
+                        pass
+
+    def adjust_closeness(self, org1, org2):
+        for i in range(self.num_subnetworks - 1):
+            if i == org1 or i == org2:
+                continue
+            else:
+                if abs(0.5 - self.closeness_matrix[org1][i]) > abs(0.5 - self.closeness_matrix[org2][i]):
+                    self.closeness_matrix[org2][i] /= self.transitivity
                 else:
-                    self.share_matrix[i,j] = self.subnetworks[i].share_information(self.subnetworks[j])
+                    self.closeness_matrix[org1][i] /= self.transitivity
+
+
     def step(self):
-        self.fill_share_matrix()
+        self.update_closeness()
         self.reset_edge_data()
 
         # update agents
