@@ -13,11 +13,12 @@ def get_total_compromised(model):
     return model.total_compromised
 
 def get_share(model):
+    # np.mean(model.closeness_matrix)
     avg = 0
     for i in range(model.num_subnetworks - 1):
         for j in range(i + 1, model.num_subnetworks - 1):
             avg += model.closeness_matrix[i][j]
-    return avg / (model.num_subnetworks - 1)
+    return avg / ((model.num_subnetworks - 1)**2 - (model.num_subnetworks - 1)) / 2 
 
 class CybCim(Model):
 
