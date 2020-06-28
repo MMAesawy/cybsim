@@ -19,7 +19,7 @@ class SubNetwork(ABC):
 
     @abstractmethod
     def _create_devices(self):
-        of = self.of #'devices'
+        of = self.of  # 'devices'
         self.children = []
         self.num_users = 0
         # create objects to be stored within the graph
@@ -50,7 +50,6 @@ class SubNetwork(ABC):
                                                                         routing_table=routing_table)
                 self.children.append(self.network.nodes[i]['subnetwork'])
 
-
     def __init__(self, address, parent, model, routing_table, num_devices, of='subnetworks'):
         self.address = address
         self.parent = parent
@@ -75,13 +74,13 @@ class SubNetwork(ABC):
         Logic for sending a network packet.
         :param packet: the packet to send
         """
-        if self.address.is_share_subnetwork(packet.destination.address): # device is in the local network
+        if self.address.is_share_subnetwork(packet.destination.address):  # device is in the local network
             dest_local_address = packet.destination.address[len(self.address) - 1]
             next_device_address = self.routing_table[dest_local_address][1]
             next_device = self.parent.get_subnetwork_at(next_device_address).gateway_device()
         else:  # device is outside the local network, send to gateway:
             gateway_address = self.parent.gateway_local_address()
-             # if this is the gateway device: (propagate upwards)
+            # if this is the gateway device: (propagate upwards)
             if self.address[-1] == gateway_address:
                 next_device = self.parent.get_next_gateway(packet)
             else:  # this is not the gateway device:
@@ -137,22 +136,24 @@ class Organization(SubNetwork, Agent):
         Agent.__init__(self, address, model)
 
         self.attacks_list = defaultdict(lambda: 0)
-        self.compromised_detected = 0
+        # self.compromised_detected = 0
         # self.security_budget = random.random()  # This budget in percentage of total budget of company
-        self.security_budget = max(0, min(1, random.gauss(0.5, 1/6)))
+        self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
         self.utility = 0
         self.util_buffer = 0
         self.count = 0
         # self.company_security = get_company_security(num_devices) / 2
         model.subnetworks.append(self)
 
+    #TODO fix this
     def step(self):
         self.count += 1
-        self.set_utility()
+        # self.set_utility()
         if self.count == 10:
             self.count = 0
             self.update_budget()
-            self.compromised_detected = 0
+            self.utility -= len(self.children) * self.security_budget ** 2
+            # self.compromised_detected = 0
         else:
             pass
         # if self.compromised_detected/len(self.children) >= 0.1:
@@ -163,23 +164,25 @@ class Organization(SubNetwork, Agent):
     def advance(self):
         pass
 
-    def share_information(self, closeness): #TODO make decision based on trust factor
+    def share_information(self, closeness):  # TODO make decision based on trust factor
         return int(random.random() > closeness)
 
+    #TODO Fix this function
     def update_budget(self):
-        self.util_buffer = self.utility
-        if self.utility < 0:
-            self.security_budget += 0.05
-            self.set_utility()
-        elif self.util_buffer >= self.utility:
-            self.security_budget -= 0.05
-        elif self.util_buffer == 0:
-            pass
+        # self.util_buffer = self.utility
+        # if self.utility < 0:
+        #     self.security_budget += 0.05
+        #     # self.set_utility()
+        # elif self.util_buffer >= self.utility:
+        #     self.security_budget -= 0.05
+        # elif self.util_buffer == 0:
+        #     pass
+        self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
 
-    def set_utility(self): #TODO testing (cap 0 or not)
-        #self.utility = -(self.compromised_detected / len(self.children)) - self.security_budget
-        #self.utility = -(self.security_budget**2) - (self.compromised_detected / len(self.children)) + 1 #TODO not correct # #TODO add sliders for serurity budget for testing
-        self.utility = random.random()
+    # def set_utility(self):  # TODO testing (cap 0 or not)
+    #     # self.utility = -(self.compromised_detected / len(self.children)) - self.security_budget
+    #     # self.utility = -(self.security_budget**2) - (self.compromised_detected / len(self.children)) + 1 #TODO not correct # #TODO add sliders for serurity budget for testing
+    #     self.utility = random.random()
 
     def _create_graph(self):
         self.network = random_star_graph(self.num_devices, 0)
@@ -187,7 +190,7 @@ class Organization(SubNetwork, Agent):
     def _create_devices(self):
         self.children = []
         self.users_on_subnetwork = []  # keeping track of human users on subnetwork
-        self.num_users = len(self.network.nodes) - 1 # TODO num users thing
+        self.num_users = len(self.network.nodes) - 1  # TODO num users thing
         self.num_compromised = 0
         self.model.num_users += self.num_users
         # create objects to be stored within the graph
@@ -195,27 +198,27 @@ class Organization(SubNetwork, Agent):
             routing_table = self.shortest_paths[i]
             if i == self.local_gateway_address:  # if this is the gateway
                 n = NetworkDevice(address=self.address + i,
-                                        parent=self,
-                                        model=self.model,
-                                        routing_table=routing_table)
+                                  parent=self,
+                                  model=self.model,
+                                  routing_table=routing_table)
                 self.network.nodes[i]['subnetwork'] = n
-            else: # the rest of the devices are users.
+            else:  # the rest of the devices are users.
                 activity = random.random() / 10  # TODO think about the media presence role in determining who to attack.
 
                 self.network.nodes[i]['subnetwork'] = Employee(activity=activity,
-                                                                address=self.address + i,
-                                                                parent=self,
-                                                                model=self.model,
-                                                                routing_table=routing_table)
+                                                               address=self.address + i,
+                                                               parent=self,
+                                                               model=self.model,
+                                                               routing_table=routing_table)
 
                 self.users_on_subnetwork.append(self.network.nodes[i]['subnetwork'])
             self.children.append(self.network.nodes[i]['subnetwork'])
 
 
-
 class Attackers(SubNetwork, Agent):
 
-    def __init__(self, address, parent, model, routing_table, initial_attack_count, of='devices', avg_time_to_attack_gen=0):
+    def __init__(self, address, parent, model, routing_table, initial_attack_count, of='devices',
+                 avg_time_to_attack_gen=0):
         SubNetwork.__init__(self, address, parent, model, routing_table, initial_attack_count, of)
         Agent.__init__(self, address, model)
         self._p_attack_generation = 1 / (avg_time_to_attack_gen + 1) if avg_time_to_attack_gen else 0.0
@@ -239,12 +242,12 @@ class Attackers(SubNetwork, Agent):
         # print(len(self.shortest_paths[0]))
         activity = random.random()
         attacker = Attacker(activity=activity,
-                                   address=self.address + new_node_local_address,
-                                   parent=self,
-                                   model=self.model,
-                                   routing_table=self.shortest_paths[new_node_local_address])
+                            address=self.address + new_node_local_address,
+                            parent=self,
+                            model=self.model,
+                            routing_table=self.shortest_paths[new_node_local_address])
         # print(attacker.address)
-        for i in range(self.network.number_of_nodes()-1):
+        for i in range(self.network.number_of_nodes() - 1):
             self.network.nodes[i]['subnetwork'].routing_table = self.shortest_paths[i]
         self.network.nodes[new_node_local_address]['subnetwork'] = attacker
         self.children.append(attacker)
@@ -256,28 +259,28 @@ class Attackers(SubNetwork, Agent):
         # print("SUCCESSFULLY ADDED A NEW ATTACKER %d!" % attacker.master_address)
 
     def _create_graph(self):
-        self.network = random_star_graph(self.model.num_attackers+1, 0)
+        self.network = random_star_graph(self.model.num_attackers + 1, 0)
 
     def _create_devices(self):
         self.children = []
-        self.num_users = self.model.num_attackers # TODO num users thing
+        self.num_users = self.model.num_attackers  # TODO num users thing
         # create objects to be stored within the graph
         for i in range(len(self.network.nodes)):
             # company_security = get_company_security(self.num_devices)
             routing_table = self.shortest_paths[i]
             if i == self.local_gateway_address:  # if this is the gateway
                 n = NetworkDevice(address=self.address + i,
-                                        parent=self,
-                                        model=self.model,
-                                        routing_table=routing_table)
+                                  parent=self,
+                                  model=self.model,
+                                  routing_table=routing_table)
                 self.network.nodes[i]['subnetwork'] = n
-            else: # the rest of the devices are users.
+            else:  # the rest of the devices are users.
                 activity = random.random()
 
                 self.network.nodes[i]['subnetwork'] = Attacker(activity=activity,
-                                                                   address=self.address + i,
-                                                                   parent=self,
-                                                                   model=self.model,
-                                                                   routing_table=routing_table)
+                                                               address=self.address + i,
+                                                               parent=self,
+                                                               model=self.model,
+                                                               routing_table=routing_table)
 
             self.children.append(self.network.nodes[i]['subnetwork'])

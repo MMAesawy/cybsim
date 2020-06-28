@@ -28,12 +28,19 @@ class Attack:
         if not self.original_source:
             return False
         defender = destination
-        if defender.is_attack_successful(attack=self, targetted=source == self.original_source) \
-                and defender not in self.original_source.compromised:
-            self.original_source.infect(defender)
-            return True
+        if self.original_source._chosen_strategy == "infect" or self.original_source._chosen_strategy == "spread":
+            if defender.is_attack_successful(attack=self, targetted=source == self.original_source) \
+                    and defender not in self.original_source.compromised:
+                self.original_source.infect(defender)
+                return True
+            else:
+                return False
+        elif self.original_source._chosen_strategy == "execute":
+            self.original_source.utility += self.original_source.get_comp_in_org(destination.parent) ** 2
+            destination.parent.utility -= self.original_source.get_comp_in_org(destination.parent) ** 2
+            destination.clean_specific(self.original_source)
         else:
-            return False
+            pass
 
     def __str__(self):
         return "Attack of type: %s" % self.attack_type
