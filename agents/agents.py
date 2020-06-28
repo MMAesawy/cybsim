@@ -257,11 +257,11 @@ class Employee(GenericDefender):
         return self._security
 
     def is_attack_successful(self, attack, targetted): #detection function based chance
-        if self.detect(attack):
-            attack.utility -= 0.5
+        if self.detect(attack, targetted):
+            attack.original_source.utility -= 0.5
             return False
         else:
-            attack.utility += 0.5
+            attack.original_source.utility += 0.5
             return True
 
     def detect(self, attack, targetted, passive=False):

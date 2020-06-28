@@ -143,8 +143,7 @@ class Organization(SubNetwork, Agent):
         self.utility = 0
         self.util_buffer = 0
         self.count = 0
-        #TODO
-        self.company_security = get_company_security(num_devices) / 2
+        # self.company_security = get_company_security(num_devices) / 2
         model.subnetworks.append(self)
 
     def step(self):
