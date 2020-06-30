@@ -36,8 +36,9 @@ class Attack:
             else:
                 return False
         elif self.original_source._chosen_strategy == "execute":
-            self.original_source.utility += self.original_source.get_comp_in_org(destination.parent) ** 2
-            destination.parent.utility -= self.original_source.get_comp_in_org(destination.parent) ** 2
+            c_per_org = self.original_source.get_comp_in_org(destination.parent)
+            self.original_source.update_execute_utility(c_per_org)
+            destination.parent.update_execute_utility(c_per_org)
             destination.clean_specific(self.original_source)
         else:
             pass

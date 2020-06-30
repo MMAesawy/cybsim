@@ -116,6 +116,7 @@ class GenericAttacker(User):
         super().__init__(activity, address, parent, model, routing_table)
 
         self.compromised = []
+        self.compromised_org = []
 
     def infect(self, victim):
         """
@@ -124,6 +125,7 @@ class GenericAttacker(User):
         :param victim: the victim being attacked
         """
         self.compromised.append(victim)
+        self.compromised_org.append(victim.parent)
         victim.notify_infection(self)
 
     def notify_clean(self, defender):
@@ -134,6 +136,7 @@ class GenericAttacker(User):
         for i, c in enumerate(self.compromised):
             if c is defender:
                 self.compromised.pop(i)
+                self.compromised_org.pop(i)
                 break
 
     def notify_victim_packet_generation(self, packet):
@@ -168,6 +171,13 @@ class Attacker(GenericAttacker):
 
     def step(self):
         super().step()
+        print(self.compromised_org)
+        unique_orgs = list(dict.fromkeys(self.compromised_org))
+        print(unique_orgs)
+        for c_org in unique_orgs:
+            c_per_org = self.get_comp_in_org(c_org)
+            self.update_stay_utility(c_per_org)
+            c_org.update_stay_utility(c_per_org)
         # generate list of users to talk with
         # if self._chosen_strategy == "infect":
         self._generate_communicators()
@@ -217,15 +227,18 @@ class Attacker(GenericAttacker):
     # def calculate_utility(self, payoff, risk):
     #     return payoff-risk
 
-    def get_comp_in_org(self, org):
+    def get_comp_in_org(self, org): #returns number of compromised devices of an attacker to specific org. (utility per org)
         comp_in_org = 0
         for c in self.compromised:
             if c.parent is org:
                 comp_in_org += 1
         return comp_in_org
 
+    def update_stay_utility(self, c):
+        self.utility += c ** 2
 
-
+    def update_execute_utility(self, c):
+        self.utility += c
 
 class Employee(GenericDefender):
 
@@ -247,9 +260,7 @@ class Employee(GenericDefender):
                 # self.parent.compromised_detected += 1
                 self.clean_specific(c)
             else:
-                self.parent.utility -= c.get_comp_in_org(self.parent) ** 2
-                c.utility += c.get_comp_in_org(self.parent) ** 2 #TODO decide wether or not the attacker's utility is different for each org.
-
+                pass
     def advance(self):
         super().advance()
 

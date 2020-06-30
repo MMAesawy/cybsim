@@ -190,6 +190,9 @@ class CybCim(Model):
                         for attack, info in self.subnetworks[j].attacks_list.items():
                             self.subnetworks[i].attacks_list[attack] = get_new_information_cooperative(self.subnetworks[i].attacks_list[attack], info)
 
+                        self.subnetworks[i].update_information_utility()
+                        self.subnetworks[j].update_information_utility()
+
                     elif sum(choice) == 0:  # both defect
                         self.closeness_matrix[i][j] = closeness / self.reciprocity
                         self.closeness_matrix[j][i] = closeness / self.reciprocity
@@ -197,10 +200,11 @@ class CybCim(Model):
                         if choice[0] == 1:
                             for attack, info in self.subnetworks[i].attacks_list.items():
                                 self.subnetworks[j].attacks_list[attack] = get_new_information_selfish(self.subnetworks[j].attacks_list[attack], info)
+                            self.subnetworks[i].update_information_utility()
                         else:
                             for attack, info in self.subnetworks[j].attacks_list.items():
                                 self.subnetworks[i].attacks_list[attack] = get_new_information_selfish(self.subnetworks[i].attacks_list[attack], info)
-
+                            self.subnetworks[j].update_information_utility()
 
     def adjust_closeness(self, org1, org2):
         for i in range(self.num_subnetworks - 1):

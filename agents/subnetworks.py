@@ -142,17 +142,17 @@ class Organization(SubNetwork, Agent):
         self.utility = 0
         self.util_buffer = 0
         self.count = 0
+        self.risk_of_sharing = 0.3
         # self.company_security = get_company_security(num_devices) / 2
         model.subnetworks.append(self)
 
     #TODO fix this
     def step(self):
+        self.update_budget_utility()
         self.count += 1
-        # self.set_utility()
         if self.count == 10:
             self.count = 0
             self.update_budget()
-            self.utility -= len(self.children) * self.security_budget ** 2
             # self.compromised_detected = 0
         else:
             pass
@@ -179,10 +179,19 @@ class Organization(SubNetwork, Agent):
         #     pass
         self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
 
-    # def set_utility(self):  # TODO testing (cap 0 or not)
-    #     # self.utility = -(self.compromised_detected / len(self.children)) - self.security_budget
-    #     # self.utility = -(self.security_budget**2) - (self.compromised_detected / len(self.children)) + 1 #TODO not correct # #TODO add sliders for serurity budget for testing
-    #     self.utility = random.random()
+    def update_budget_utility(self):  # TODO testing (cap 0 or not)
+        # self.utility = -(self.compromised_detected / len(self.children)) - self.security_budget
+        # self.utility = -(self.security_budget**2) - (self.compromised_detected / len(self.children)) + 1 #TODO not correct # #TODO add sliders for serurity budget for testing
+        self.utility -= len(self.children) * self.security_budget ** 2
+
+    def update_execute_utility(self, c):
+        self.utility -= c
+
+    def update_stay_utility(self, c):
+        self.utility -= c ** 2
+
+    def update_information_utility(self):
+        self.utility -= self.risk_of_sharing
 
     def _create_graph(self):
         self.network = random_star_graph(self.num_devices, 0)
@@ -191,7 +200,6 @@ class Organization(SubNetwork, Agent):
         self.children = []
         self.users_on_subnetwork = []  # keeping track of human users on subnetwork
         self.num_users = len(self.network.nodes) - 1  # TODO num users thing
-        self.num_compromised = 0
         self.model.num_users += self.num_users
         # create objects to be stored within the graph
         for i in range(len(self.network.nodes)):
