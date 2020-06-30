@@ -1,2 +1,5 @@
 __pycache__/
 .idea/
+agents/__pycache__/
+visualization/__pycache__/
+requirements_full.txt

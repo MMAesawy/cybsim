@@ -45,6 +45,8 @@ var NetworkModule = function (svg_width, svg_height) {
     var nodes = null;
     var quadtree = null;
     var fisheye = null;
+    var node_count = 0;
+    var edge_count = 0;
 
     this.createGraph = function (data) {
         graph = JSON.parse(JSON.stringify(data));
@@ -76,66 +78,8 @@ var NetworkModule = function (svg_width, svg_height) {
                 }
         }
 
-
-        links = g.append("g")
-            .selectAll("line")
-            .data(graph.edges)
-            .join("line")
-            .attr("x1", function (d) {
-                return d.source.x;
-            })
-            .attr("y1", function (d) {
-                return d.source.y;
-            })
-            .attr("x2", function (d) {
-                return d.target.x;
-            })
-            .attr("y2", function (d) {
-                return d.target.y;
-            })
-            .attr("stroke-width", function (d) {
-                return d.width;
-            })
-            .attr("line-id", function (d) {
-                return d.id;
-            })
-            .attr("stroke", function (d) {
-                return d.color;
-            });
-
-
-        nodes = g.append("g")
-            .selectAll("circle")
-            .data(graph.nodes)
-            .join("circle")
-            .attr("cx", function (d) {
-                return d.x;
-            })
-            .attr("cy", function (d) {
-                return d.y;
-            })
-            .attr("r", function (d) {
-                return d.size;
-            })
-            .attr("fill", function (d) {
-                return d.color;
-            })
-            .attr("node-id", function (d) {
-                return d.id;
-            })
-            .on("mouseover", function (d) {
-                tooltip.transition()
-                    .duration(200)
-                    .style("opacity", .9);
-                tooltip.html(d.tooltip)
-                    .style("left", (d3.event.pageX) + "px")
-                    .style("top", (d3.event.pageY) + "px");
-            })
-            .on("mouseout", function () {
-                tooltip.transition()
-                    .duration(500)
-                    .style("opacity", 0);
-            });
+        this.add_edges(graph.edges);
+        this.add_nodes(graph.nodes);
 
         if (graph.interactive === 1)
             nodes.call(drag(simulation));
@@ -146,34 +90,127 @@ var NetworkModule = function (svg_width, svg_height) {
           .attr("cx", function(d) { return d.fisheye.x; })
           .attr("cy", function(d) { return d.fisheye.y; });
 
-      links.attr("x1", function(d) { return d.source.fisheye.x; })
-          .attr("y1", function(d) { return d.source.fisheye.y; })
-          .attr("x2", function(d) { return d.target.fisheye.x; })
-          .attr("y2", function(d) { return d.target.fisheye.y; });
-        });
+          links.attr("x1", function(d) { return d.source.fisheye.x; })
+              .attr("y1", function(d) { return d.source.fisheye.y; })
+              .attr("x2", function(d) { return d.target.fisheye.x; })
+              .attr("y2", function(d) { return d.target.fisheye.y; });
+            });
 
 
     };
 
+    this.add_edges = function(e){
+        let t;
+        if (links){
+            t = g.select("#glinks");
+        }
+        else{
+            t = g.append("g").attr("id", "glinks");
+        }
+        links = t
+            .selectAll("line")
+            .data(e)
+            .join("line")
+            .attr("x1", function (d) { return d.source.x;})
+            .attr("y1", function (d) { return d.source.y;})
+            .attr("x2", function (d) { return d.target.x;})
+            .attr("y2", function (d) { return d.target.y;})
+            .attr("stroke-width", function (d) { return d.width; })
+            .attr("line-id", function (d) { return d.id;})
+            .attr("stroke", function (d) { return d.color;});
+    };
 
+    this.add_nodes = function(n){
+        let t;
+        if (nodes){
+            t = g.select("#gnodes");
+        }
+        else{
+            t = g.append("g").attr("id", "gnodes");
+        }
+        nodes = t
+            .selectAll("circle")
+            .data(n)
+            .join("circle")
+            .attr("cx", function (d) { return d.x;})
+            .attr("cy", function (d) { return d.y;})
+            .attr("r", function (d) { return d.size;})
+            .attr("fill", function (d) { return d.color;})
+            .attr("node-id", function (d) { return d.id;})
+            .attr("tooltip", function(d) { return d.tooltip; });
+
+        t.selectAll("circle")
+            .on("mouseover", function (d, i) {
+                tooltip.transition()
+                    .duration(200)
+                    .style("opacity", .9);
+                tooltip.html(generate_bubble(d.tooltip))
+                    .style("left", (d3.event.pageX) + "px")
+                    .style("top", (d3.event.pageY) + "px");
+            })
+            .on("mouseout", function () {
+                tooltip.transition()
+                    .duration(500)
+                    .style("opacity", 0);
+            });
+    };
+    
     this.render = function (data) {
+        let i;
         var current_graph = JSON.parse(JSON.stringify(data));
         if (graph == null) {
             this.createGraph(data);
         }
+        else if (node_count < current_graph.nodes.length){
+            var existing_nodes = simulation.nodes();
+            for(var j = 0; j < existing_nodes.length;j++){
+                existing_nodes[j]['tooltip'] = current_graph.nodes[j].tooltip;
+                existing_nodes[j]['color'] = current_graph.nodes[j].color;
+                current_graph.nodes[j] = existing_nodes[j];
+                // current_graph.nodes[j]['index'] = existing_nodes[j].index;
+                // current_graph.nodes[j]['x'] = existing_nodes[j].x;
+                // current_graph.nodes[j]['y'] = existing_nodes[j].y;
+                // current_graph.nodes[j]['vx'] = existing_nodes[j].vx;
+                // current_graph.nodes[j]['vy'] = existing_nodes[j].vy;
+            }
+            // console.log(current_graph.nodes);
+            simulation.nodes(current_graph.nodes);
+            simulation.force("link").links(current_graph.edges);
+            simulation.alpha(0.1).restart();
 
-        var lines = $("line");
-        var i;
-        //console.log(lines);
-        for (i = 0; i < lines.length; i++) {
-            lines[i].setAttribute("stroke", current_graph.edges[i].color);
-        }
+            this.add_edges(current_graph.edges);
+            this.add_nodes(current_graph.nodes);
 
-        var circles = $("circle");
-        //console.log(circles.length);
-        for (i = 0; i < circles.length; i++) {
-            circles[i].setAttribute("fill", current_graph.nodes[i].color);
+            simulation.on("tick", () => {
+                nodes.each(function(d) { d.fisheye = fisheye(d); })
+                    .attr("cx", function(d) { return d.fisheye.x; })
+                    .attr("cy", function(d) { return d.fisheye.y; });
+
+            links.attr("x1", function(d) { return d.source.fisheye.x; })
+                .attr("y1", function(d) { return d.source.fisheye.y; })
+                .attr("x2", function(d) { return d.target.fisheye.x; })
+                .attr("y2", function(d) { return d.target.fisheye.y; });
+            });
         }
+        node_count = current_graph.nodes.length;
+        edge_count = current_graph.edges.length;
+
+        g.selectAll("line")
+            .attr("stroke",function (d, i) { return  current_graph.edges[i].color });
+        g.selectAll("circle")
+            .attr("fill",function (d, i) { return current_graph.nodes[i].color })
+            .attr("tooltip",function (d, i) { return current_graph.nodes[i].tooltip });
+
+        // TODO: Seamlessly update existing tooltips
+        // let t = svg.select("p#tooltip");
+        // if (t){
+        //     t.html(generate_bubble(current_graph.nodes[t.index].tooltip));
+        // }
+
+    };
+
+    generate_bubble = function(d){
+        return "<p id='tooltip' style='font-size:11pt'>" + d + "</p>";
     };
 
     drag = simulation => {
@@ -210,16 +247,14 @@ var NetworkModule = function (svg_width, svg_height) {
     };
 
     this.reset = function () {
-        reset();
-    };
-
-    function reset() {
         graph = null;
         simulation = null;
         links = null;
         nodes = null;
         quadtree = null;
         fisheye = null;
+        node_count = 0;
+        edge_count = 0;
 
         svg.selectAll("g")
             .remove();

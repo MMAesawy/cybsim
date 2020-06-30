@@ -2,6 +2,9 @@ import re
 import networkx as nx
 import random
 
+def random_string(length = 8):
+    return "".join([chr(random.randint(ord("a"), ord("z"))) for _ in range(length)])
+
 
 def random_star_graph(num_nodes, avg_node_degree):
     # calculate single edge probability between two nodes
@@ -42,19 +45,32 @@ def get_subnetwork_device_count(model):
 def get_subnetwork_user_count(devices_count):
     return random.randint(2, devices_count - int(devices_count/2))
 
-def get_company_security(device_count): #TODO change security ranges to be realistic
-
-    if 5 <= device_count <= 15:
-        return random.random() * 0.25
-    elif 16 <= device_count <= 25:
-        return 0.25 + random.random() * (0.35 - 0.25)
-    elif 26 <= device_count  <= 35:
-        return 0.35 + random.random() * (0.5 - 0.35)
-    elif 36 <= device_count  <= 50:
-        return 0.85 + random.random() * (0.85 - 0.5)
-    else:
-        return 0.4 + random.random() * (0.6 - 0.4)
-
 # def get_subnetwork_attacker_count():
 #     return random.randint(2, 10)
+
+def get_prob_detection(defense, attack):
+    return defense / (defense + attack + 1e-5)
+
+def get_prob_detection_v2(security, attack, information, info_weight=2):
+    return security / (security + info_weight * (1-information) * attack + 1e-5)
+
+def get_defense(total_security, information, information_weight=1):
+    x = 1 - total_security
+    y = 1 - information
+    b = information_weight
+    return (2 - x**0.5 * y**(0.5*b) - x * y**b) / 2
+
+def get_new_information_selfish(i1, i2):
+    return i1+i2*(1-i1)
+
+def get_new_information_cooperative(i1, i2):
+    return max(i1, i2)
+
+def get_new_information_detected(probability, old_information, w = 0.5):
+    x = old_information
+    y = probability
+    return min(1.0, x + y**2 * (1-x)*w)
+
+def get_total_security(security_budget, deviation_width):
+    return min(1, max(0, random.gauss(security_budget, deviation_width/6)))
 
