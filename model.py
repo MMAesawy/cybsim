@@ -184,11 +184,10 @@ class CybCim(Model):
                         self.closeness_matrix[i][j] = 1 - ((1 - closeness) / self.reciprocity)
                         self.closeness_matrix[j][i] = 1 - ((1 - closeness) / self.reciprocity)
                         self.adjust_closeness(i, j)
-                        for attack, info in self.subnetworks[i].attacks_list.items():
-                            self.subnetworks[j].attacks_list[attack] = get_new_information_cooperative(self.subnetworks[j].attacks_list[attack], info)
 
-                        for attack, info in self.subnetworks[j].attacks_list.items():
-                            self.subnetworks[i].attacks_list[attack] = get_new_information_cooperative(self.subnetworks[i].attacks_list[attack], info)
+                        self.share_information(self.subnetworks[i], self.subnetworks[j])
+                        self.share_information(self.subnetworks[j], self.subnetworks[i])
+
 
                         self.subnetworks[i].update_information_utility()
                         self.subnetworks[j].update_information_utility()
@@ -198,13 +197,15 @@ class CybCim(Model):
                         self.closeness_matrix[j][i] = closeness / self.reciprocity
                     else:  # one defects and one cooperates #no change in closeness #TODO implement different behaviour?
                         if choice[0] == 1:
-                            for attack, info in self.subnetworks[i].attacks_list.items():
-                                self.subnetworks[j].attacks_list[attack] = get_new_information_selfish(self.subnetworks[j].attacks_list[attack], info)
+                            self.share_information(self.subnetworks[i], self.subnetworks[j])
                             self.subnetworks[i].update_information_utility()
                         else:
-                            for attack, info in self.subnetworks[j].attacks_list.items():
-                                self.subnetworks[i].attacks_list[attack] = get_new_information_selfish(self.subnetworks[i].attacks_list[attack], info)
+                            self.share_information(self.subnetworks[j], self.subnetworks[i])
                             self.subnetworks[j].update_information_utility()
+
+    def share_information(self, org1, org2):
+        for attack, info in org1.attacks_list.items():
+            org2.attacks_list[attack] = get_new_information_selfish(org2.attacks_list[attack], info)
 
     def adjust_closeness(self, org1, org2):
         for i in range(self.num_subnetworks - 1):

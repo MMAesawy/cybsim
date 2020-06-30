@@ -1,7 +1,10 @@
 from agents.devices import NetworkDevice
 from agents.constructs import *
+from collections import defaultdict
 import helpers
 import random
+
+
 
 class User(NetworkDevice):
     def __init__(self, activity, address, parent, model, routing_table):
@@ -116,7 +119,7 @@ class GenericAttacker(User):
         super().__init__(activity, address, parent, model, routing_table)
 
         self.compromised = []
-        self.compromised_org = []
+        self.compromised_org = defaultdict(lambda: 0)
 
     def infect(self, victim):
         """
@@ -125,7 +128,7 @@ class GenericAttacker(User):
         :param victim: the victim being attacked
         """
         self.compromised.append(victim)
-        self.compromised_org.append(victim.parent)
+        self.compromised_org[victim.parent] += 1
         victim.notify_infection(self)
 
     def notify_clean(self, defender):
@@ -136,7 +139,7 @@ class GenericAttacker(User):
         for i, c in enumerate(self.compromised):
             if c is defender:
                 self.compromised.pop(i)
-                self.compromised_org.pop(i)
+                self.compromised_org[c.parent] -= 1
                 break
 
     def notify_victim_packet_generation(self, packet):
@@ -171,18 +174,13 @@ class Attacker(GenericAttacker):
 
     def step(self):
         super().step()
-        print(self.compromised_org)
-        unique_orgs = list(dict.fromkeys(self.compromised_org))
-        print(unique_orgs)
-        for c_org in unique_orgs:
-            c_per_org = self.get_comp_in_org(c_org)
-            self.update_stay_utility(c_per_org)
-            c_org.update_stay_utility(c_per_org)
+        for c_org, num_compromised in self.compromised_org.items():
+            self.update_stay_utility(num_compromised)
+            c_org.update_stay_utility(num_compromised)
         # generate list of users to talk with
         # if self._chosen_strategy == "infect":
         self._generate_communicators()
         #TODO where does the stay strategy happen?
-
 
         # for c in self.compromised: #TODO change the scope of the strategies to the attack object scope IMPOTANT!!!
         #     self._chosen_strategy = random.choice(self._strategies)
@@ -227,12 +225,12 @@ class Attacker(GenericAttacker):
     # def calculate_utility(self, payoff, risk):
     #     return payoff-risk
 
-    def get_comp_in_org(self, org): #returns number of compromised devices of an attacker to specific org. (utility per org)
-        comp_in_org = 0
-        for c in self.compromised:
-            if c.parent is org:
-                comp_in_org += 1
-        return comp_in_org
+    # def get_comp_in_org(self, org): #returns number of compromised devices of an attacker to specific org. (utility per org)
+    #     comp_in_org = 0
+    #     for c in self.compromised:
+    #         if c.parent is org:
+    #             comp_in_org += 1
+    #     return comp_in_org
 
     def update_stay_utility(self, c):
         self.utility += c ** 2
