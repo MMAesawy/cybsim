@@ -59,7 +59,7 @@ class GenericDefender(User):
                 self.compromisers.pop(i)
                 c.notify_clean(self)
                 break
-        if not self.is_compromised(): # if not compromised any more
+        if not self.is_compromised() and self.model.total_compromised > 0: # if not compromised any more
             self.model.total_compromised -= 1
 
     def clean_all(self): #unsed for now.
@@ -150,7 +150,7 @@ class Attacker(GenericAttacker):
     def __init__(self, activity, address, parent, model, routing_table):
         super().__init__(activity, address, parent, model, routing_table)
 
-        self._strategies = ["stay", "spread", "infect", "execute"] #TODO execute strategy to get payoff
+        self._strategies = ["stay", "spread", "execute", "infect"] #TODO execute strategy to get payoff
         self._stay_risk = random.uniform(0, 0.2)
         self._spread_risk = random.uniform(0.2, 0.5)
         self._execute_risk = random.uniform(0.5, 1)
@@ -171,9 +171,12 @@ class Attacker(GenericAttacker):
         # generate list of users to talk with
         # if self._chosen_strategy == "infect":
         self._generate_communicators()
+        #TODO where does the stay strategy happen?
 
-        for c in self.compromised: #TODO change the scope of the strategies to the attack object scope IMPOTANT!!!
-            self._chosen_strategy = self.choose_strategy(c.parent)
+
+        # for c in self.compromised: #TODO change the scope of the strategies to the attack object scope IMPOTANT!!!
+        #     self._chosen_strategy = random.choice(self._strategies)
+    #TODO implement the rest of the strategies' logic
 
     def advance(self):
         super().advance()
@@ -184,32 +187,35 @@ class Attacker(GenericAttacker):
             self._send(packet)
         self.communicate_to.clear()
 
+        self._chosen_strategy = random.choice(self._strategies)
+
     def notify_victim_packet_generation(self, packet):
         # if self._chosen_strategy == "spread": # TODO strategies
         packet.add_payload(self._attack_of_choice)
 
-    def choose_strategy(self, org): #TODO calculations restricted to compromised for each organization
-        comp_in_org = self.get_comp_in_org(org)
-        #execute_utility = self.calculate_utility(comp_in_org/org.children, self._execute_risk)
-        execute_utility = random.random()
-        #spread_utility = self.calculate_utility(1 - (comp_in_org/org.children), self._spread_risk)
-        spread_utility = random.random()
-        #stay_utility = self.calculate_utility(0, self._stay_risk)
-        stay_utility = random.random()
-
-        if (execute_utility > spread_utility) and (execute_utility > stay_utility):
-            self.utility = execute_utility
-            return "execute"
-        elif (spread_utility > execute_utility) and (spread_utility > stay_utility):
-            self.utility = execute_utility
-            return "spread"
-        else:
-            self.utility = stay_utility
-            return "stay"
+    # def choose_strategy(self, org): #TODO calculations restricted to compromised for each organization
+    #     comp_in_org = self.get_comp_in_org(org)
+    #     #execute_utility = self.calculate_utility(comp_in_org/org.children, self._execute_risk)
+    #     # execute_utility = random.random()
+    #     #spread_utility = self.calculate_utility(1 - (comp_in_org/org.children), self._spread_risk)
+    #     # spread_utility = random.random()
+    #     #stay_utility = self.calculate_utility(0, self._stay_risk)
+    #     # stay_utility = random.random()
+    #
+    #     #TODO fix this
+    #     if (execute_utility > spread_utility) and (execute_utility > stay_utility):
+    #         self.utility = execute_utility
+    #         return "execute"
+    #     elif (spread_utility > execute_utility) and (spread_utility > stay_utility):
+    #         self.utility = execute_utility
+    #         return "spread"
+    #     else:
+    #         self.utility = stay_utility
+    #         return "stay"
         #TODO add some sort of randomness
 
-    def calculate_utility(self, payoff, risk):
-        return payoff-risk
+    # def calculate_utility(self, payoff, risk):
+    #     return payoff-risk
 
     def get_comp_in_org(self, org):
         comp_in_org = 0
@@ -238,8 +244,11 @@ class Employee(GenericDefender):
         for c in self.compromisers:
             detected = self.detect(c._attack_of_choice, targetted=False, passive=True)
             if detected:
-                self.parent.compromised_detected += 1
+                # self.parent.compromised_detected += 1
                 self.clean_specific(c)
+            else:
+                self.parent.utility -= c.get_comp_in_org(self.parent) ** 2
+                c.utility += c.get_comp_in_org(self.parent) ** 2 #TODO decide wether or not the attacker's utility is different for each org.
 
     def advance(self):
         super().advance()
@@ -258,10 +267,9 @@ class Employee(GenericDefender):
 
     def is_attack_successful(self, attack, targetted): #detection function based chance
         if self.detect(attack, targetted):
-            attack.original_source.utility -= 0.5
+            # attack.original_source.utility -= 0.5
             return False
         else:
-            attack.original_source.utility += 0.5
             return True
 
     def detect(self, attack, targetted, passive=False):
