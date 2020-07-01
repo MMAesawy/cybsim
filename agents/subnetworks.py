@@ -148,11 +148,12 @@ class Organization(SubNetwork, Agent):
 
     #TODO fix this
     def step(self):
-        self.update_budget_utility()
+
         self.count += 1
         if self.count == 10:
             self.count = 0
             self.update_budget()
+            self.update_budget_utility()
             # self.compromised_detected = 0
         else:
             pass

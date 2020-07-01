@@ -18,7 +18,7 @@ class Attack:
     def __hash__(self):
         return hash(self.attack_type)
 
-    def execute(self, source, destination):
+    def carry_out_attack(self, source, destination):
         """
         Executes the attack. Will not execute if the original_source is not set.
         :param source: the sender of the packet (the attacker)
@@ -28,20 +28,13 @@ class Attack:
         if not self.original_source:
             return False
         defender = destination
-        if self.original_source._chosen_strategy == "infect" or self.original_source._chosen_strategy == "spread":
-            if defender.is_attack_successful(attack=self, targetted=source == self.original_source) \
-                    and defender not in self.original_source.compromised:
-                self.original_source.infect(defender)
-                return True
-            else:
-                return False
-        elif self.original_source._chosen_strategy == "execute":
-            num_compromised = self.original_source.compromised_org[destination.parent]
-            self.original_source.update_execute_utility(num_compromised)
-            destination.parent.update_execute_utility(num_compromised)
-            destination.clean_specific(self.original_source)
+        if defender.is_attack_successful(attack=self, targetted=source == self.original_source) \
+                and defender not in self.original_source.compromised:
+            self.original_source.infect(defender)
+            return True
         else:
-            pass
+            return False
+
 
     def __str__(self):
         return "Attack of type: %s" % self.attack_type
@@ -76,9 +69,9 @@ class Packet:
 
         if type(self.payload) is list:
             for p in self.payload:
-                p.execute(self.source, self.destination)
+                p.carry_out_attack(self.source, self.destination)
         elif self.payload is not None:
-            self.payload.execute(self.source, self.destination)
+            self.payload.carry_out_attack(self.source, self.destination)
 
 
 class AddressServer:
