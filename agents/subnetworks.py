@@ -168,6 +168,9 @@ class Organization(SubNetwork, Agent):
     def share_information(self, closeness):  # TODO make decision based on trust factor
         return int(random.random() > closeness)
 
+    def  adjust_information(self, attack):
+        self.attacks_list[attack] = 1
+
     #TODO Fix this function
     def update_budget(self):
         # self.util_buffer = self.utility

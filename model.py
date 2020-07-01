@@ -29,8 +29,8 @@ class CybCim(Model):
                  # max_hops=3,
                  # min_capacity=10,
                  # max_capacity=20,
-                 min_device_count=5,
-                 max_device_count=50,
+                 device_count=30,
+                 # max_device_count=50,
                  avg_time_to_new_attack=50,
                  information_importance=2,
                  device_security_deviation_width=0.25,
@@ -72,8 +72,10 @@ class CybCim(Model):
         # self.max_capacity = max_capacity
         self.num_users = 0
         self.avg_time_to_new_attack = avg_time_to_new_attack
-        self.min_device_count = min_device_count
-        self.max_device_count = max_device_count
+        self.device_count = device_count
+        # self.max_device_count = max_device_count
+        self.reciprocity = reciprocity
+        self.transitivity = transitivity
         self.verbose = verbose
         VERBOSE = verbose
 
@@ -109,9 +111,7 @@ class CybCim(Model):
         self.total_compromised = 0
         self.packet_count = 1
         self.initial_closeness = 0.5 # initial closeness between organizations
-        # can be parameterized
-        self.reciprocity = reciprocity
-        self.transitivity = transitivity
+
 
         #initialize a n*n matrix to store sharing decision disregarding attacker subnetwork
         self.closeness_matrix = np.full((self.num_subnetworks - 1, self.num_subnetworks - 1), 0.5)
@@ -119,7 +119,7 @@ class CybCim(Model):
         self.datacollector = DataCollector(
             {
              "Compromised Devices": get_total_compromised,
-            "Closeness": get_share #testing
+            "Closeness": get_share
             }
         )
 
@@ -173,9 +173,9 @@ class CybCim(Model):
                     r1, r2 = self.subnetworks[i].share_information(closeness), self.subnetworks[j].share_information(closeness)
                     choice = [int(r1 > closeness), int(r2 > closeness)]
                     if sum(choice) == 2:  # both cooperate
-                        # self.closeness_matrix[i][j] = get_reciprocity(sum(choice), closeness, self.reciprocity)
-                        # self.closeness_matrix[j][i] = get_reciprocity(sum(choice), closeness, self.reciprocity)
-                        self.adjust_closeness(i, j)
+                        self.closeness_matrix[i][j] = get_reciprocity(sum(choice), closeness, self.reciprocity)
+                        self.closeness_matrix[j][i] = get_reciprocity(sum(choice), closeness, self.reciprocity)
+                        self.adjust_transitivity(i, j)
 
                         self.share_info_cooperative(self.subnetworks[i], self.subnetworks[j])
                         self.share_info_cooperative(self.subnetworks[j], self.subnetworks[i])
@@ -183,9 +183,9 @@ class CybCim(Model):
                         self.subnetworks[i].update_information_utility()
                         self.subnetworks[j].update_information_utility()
 
-                    # elif sum(choice) == 0:  # both defect
-                    #     # self.closeness_matrix[i][j] = closeness / self.reciprocity
-                    #     # self.closeness_matrix[j][i] = closeness / self.reciprocity
+                    elif sum(choice) == 0:  # both defect
+                        self.closeness_matrix[i][j] = get_reciprocity(sum(choice), closeness, self.reciprocity)
+                        self.closeness_matrix[j][i] = get_reciprocity(sum(choice), closeness, self.reciprocity)
                     elif sum(choice) == 1: # one defects and one cooperates #no change in closeness #TODO implement different behaviour?
                         if choice[0] == 1:
                             self.share_info_selfish(self.subnetworks[i], self.subnetworks[j])
@@ -194,8 +194,7 @@ class CybCim(Model):
                             self.share_info_selfish(self.subnetworks[j], self.subnetworks[i])
                             self.subnetworks[j].update_information_utility()
 
-                    self.closeness_matrix[i][j] = get_reciprocity(sum(choice), closeness, self.reciprocity)
-                    self.closeness_matrix[j][i] = get_reciprocity(sum(choice), closeness, self.reciprocity)
+
 
 
     def share_info_selfish(self, org1, org2):
@@ -206,7 +205,7 @@ class CybCim(Model):
         for attack, info in org1.attacks_list.items():
             org2.attacks_list[attack] = get_new_information_cooperative(org2.attacks_list[attack], info)
 
-    def adjust_closeness(self, org1, org2):
+    def adjust_transitivity(self, org1, org2):
         for i in range(self.num_subnetworks - 1):
             if i == org1 or i == org2:
                 continue

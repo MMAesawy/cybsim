@@ -109,10 +109,10 @@ model_params = {
     #                                               description='Choose the minimum value for device capacity'),
     # 'max_capacity': UserSettableParameter(param_type='slider', name='Maximum capacity for device', value=20, min_value=20, max_value=30, step=1,
     #                                               description='Choose the maximum value for device capacity'),
-    'min_device_count': UserSettableParameter(param_type='slider', name='Minimum subnetwork device count', value=10, min_value=1, max_value=30, step=1,
-                                                  description='Choose the minimum number of devices for a subnetwork'),
-    'max_device_count': UserSettableParameter(param_type='slider', name='Maximum subnetwork device count', value=30, min_value=30, max_value=100, step=1,
-                                                  description='Choose the maximum number of devices for a subnetwork'),
+    'device_count': UserSettableParameter(param_type='slider', name='Device count for organization', value=30, min_value=10, max_value=100, step=1,
+                                                  description='Choose the number of devices for an organization'),
+    # 'max_device_count': UserSettableParameter(param_type='slider', name='Maximum subnetwork device count', value=30, min_value=30, max_value=100, step=1,
+    #                                               description='Choose the maximum number of devices for a subnetwork'),
     # 'avg_time_to_new_attack': UserSettableParameter(param_type='number', name='Average time for new attack', value=50,
     'avg_time_to_new_attack': UserSettableParameter(param_type='slider', name='Average time for new attack', value=500, min_value=0, max_value=1000, step=1,
                                                   description='Choose the average time for the generation of a new attack on the network'),
@@ -135,9 +135,9 @@ model_params = {
     'target_detection_weight': UserSettableParameter(param_type='slider', name='Targeted detection weight', value=1.0,
                                                       min_value=0, max_value=1, step=0.005,
                                                       description='Affects difficulty of targeted attacker detection.'),
-    'reciprocity': UserSettableParameter(param_type='slider',name='Reciprocity',value=2, max_value=5,min_value=0, step=0.5,
+    'reciprocity': UserSettableParameter(param_type='slider',name='Reciprocity',value=2, max_value=5,min_value=1, step=0.5,
                                          description='Parameter representing how much organizations move closer or further from each other'),
-    'transitivity': UserSettableParameter(param_type='slider',name='Transitivity',value=2, max_value=5,min_value=0, step=0.5,
+    'transitivity': UserSettableParameter(param_type='slider',name='Transitivity',value=2, max_value=5,min_value=1, step=0.5,
                                          description='Parameter representing how much organizations are influenced by their cooperator\'s opinions')
 
 

@@ -30,7 +30,7 @@ class User(NetworkDevice):
         while self._is_active():
             # make sure the user is not self
             user = random.choice(self.model.users)
-            while user == self:
+            while user == self or self.parent != user.parent:
                 user = random.choice(self.model.users)
 
             self.communicate_to.append(user)
@@ -100,9 +100,9 @@ class GenericDefender(User):
         """
         packet = super()._generate_packet(destination=destination)
         #only allow spreading of attacks in same organization
-        if destination.parent == self.parent:
-            for c in self.compromisers:
-                c.notify_victim_packet_generation(victim=self,packet=packet)
+        # if destination.parent == self.parent:
+        for c in self.compromisers:
+            c.notify_victim_packet_generation(victim=self,packet=packet)
         return packet
 
     def _receive(self, packet):
@@ -130,8 +130,7 @@ class GenericAttacker(User):
         while self._is_active():
             # make sure the user is not self
             user = random.choice(self.model.users)
-
-            while user == self or user in self.compromised_org:
+            while user == self or user.parent in self.compromised_org:
                 user = random.choice(self.model.users)
 
             self.communicate_to.append(user)
@@ -189,6 +188,7 @@ class Attacker(GenericAttacker):
 
     def step(self):
         super().step()
+        self._generate_communicators()
         for c_org, num_compromised in self.compromised_org.items():
             strategy_for_org = random.choice(self._strategies)
             if strategy_for_org == "stay":
@@ -197,7 +197,8 @@ class Attacker(GenericAttacker):
             elif strategy_for_org == "execute":
                 self.update_execute_utility(num_compromised)
                 c_org.update_execute_utility(num_compromised)
-                # destination.clean_specific(self.original_source) #TODO cleaning
+                c_org.adjust_information(self._attack_of_choice)
+
 
             elif strategy_for_org == "spread":
                 self.spread_to.append(c_org)
@@ -206,7 +207,7 @@ class Attacker(GenericAttacker):
 
         # generate list of users to talk with
         # if self._chosen_strategy == "infect":
-        self._generate_communicators()
+
         #TODO where does the stay strategy happen?
 
         # for c in self.compromised: #TODO change the scope of the strategies to the attack object scope IMPOTANT!!!

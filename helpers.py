@@ -39,7 +39,8 @@ def random_mesh_graph(num_nodes, m=3):
 
 
 def get_subnetwork_device_count(model):
-    return random.randint(model.min_device_count, model.max_device_count)
+    return model.device_count
+    # return random.randint(model.min_device_count, model.max_device_count)
 
 
 def get_subnetwork_user_count(devices_count):
@@ -69,7 +70,7 @@ def get_new_information_cooperative(i1, i2):
 def get_reciprocity(choice, c, r):
     if choice == 2:
         return 1 - ((1 - c) / r)
-    elif choice == 1:
+    elif choice == 0:
         return c / r
 def get_new_information_detected(probability, old_information, w = 0.5):
     x = old_information
