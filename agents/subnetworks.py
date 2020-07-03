@@ -155,8 +155,8 @@ class Organization(SubNetwork, Agent):
             self.update_budget()
             self.update_budget_utility()
             # self.compromised_detected = 0
-        else:
-            pass
+        # else:
+        #     pass
         # if self.compromised_detected/len(self.children) >= 0.1:
         #     self.update_budget()
         # else:

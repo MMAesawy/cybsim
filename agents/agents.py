@@ -154,6 +154,8 @@ class GenericAttacker(User):
             if c is defender:
                 self.compromised.pop(i)
                 self.compromised_org[c.parent] -= 1
+                if self.compromised_org[c.parent] == 0:
+                    del self.compromised_org[c.parent]
                 break
 
     def notify_victim_packet_generation(self, victim, packet):
@@ -197,7 +199,7 @@ class Attacker(GenericAttacker):
             elif strategy_for_org == "execute":
                 self.update_execute_utility(num_compromised)
                 c_org.update_execute_utility(num_compromised)
-                c_org.adjust_information(self._attack_of_choice)
+                c_org.adjust_information(self._attack_of_choice) #TODO adjust
 
 
             elif strategy_for_org == "spread":
