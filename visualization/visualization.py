@@ -94,8 +94,6 @@ class TabSelectorView(VisualizationElement):
 
         self.elements = elements
 
-        # IMPORTANT: weights will NOT scale vertically properly, unless the items also have proportional heights!!!
-        # e.g items with weights of [2, 1] should have heights with the same proportions (like [400, 200])
         if not element_names:
             self.element_names = ["View %d" % i for i in range(1, len(elements) + 1)]
         else:
@@ -107,8 +105,8 @@ class TabSelectorView(VisualizationElement):
         visualization elements supplied by Mesa. Obviously this clashes with the purpose of this class, as
         you'd want these elements to be contained within this class.
 
-        HorizontalCompositeContainer gets around this by cloning these DOM elements, removing them from the
-        page, then re-adding them to the DOM tree as a child of the HorizontalCompositeContainer's node.
+        TabSelectorView gets around this by cloning these DOM elements, removing them from the
+        page, then re-adding them to the DOM tree as a child of the TabSelectorView's node.
         As such, the code for the container must be called AFTER the code for the contained items are called.
         """
 
