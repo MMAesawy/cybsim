@@ -12,12 +12,11 @@ class TabSelectorView{
         visualization elements supplied by Mesa. Obviously this clashes with the purpose of this class, as
         you'd want these elements to be contained within this class.
 
-        HorizontalCompositeContainer gets around this by cloning these DOM elements, removing them from the
-        page, then re-adding them to the DOM tree as a child of the HorizontalCompositeContainer's node.
+        TabSelectorView gets around this by cloning these DOM elements, removing them from the
+        page, then re-adding them to the DOM tree as a child of the TabSelectorView's node.
          */
         for (let i = 0; i < elementCount; i++){
             let node = vizSection.lastElementChild; // select last child of #elements
-            //node.removeAttribute("width"); // needed so children won't "overflow"
             this.childNodes.push(node);
             node.remove();
         }
@@ -33,8 +32,8 @@ class TabSelectorView{
             button.tabIndex = i;
             button.innerText = elementNames[i];
             button.className = "button";
+            // add event listener. binding is required to be able to reference this specific JS object
             button.addEventListener('click', this.switchTabs.bind(this));
-            //button.onclick = this.switchTabs.bind(this);
             this.tabBar.appendChild(button);
         }
         this.tag.appendChild(this.tabBar);
@@ -97,7 +96,7 @@ class TabSelectorView{
         `;
         document.getElementsByTagName('head')[0].appendChild(style);
 
-        // click first tab as default load:
+        // click first tab as to load it by default
         this.tabBar.childNodes[0].click();
     }
 
