@@ -62,7 +62,7 @@ class GenericDefender(User):
                 self.compromisers.pop(i)
                 c.notify_clean(self)
                 break
-        if not self.is_compromised() and self.model.total_compromised > 0: # if not compromised any more
+        if not self.is_compromised() : # if not compromised any more
             self.model.total_compromised -= 1
 
     def clean_all(self): #unsed for now.
@@ -172,7 +172,7 @@ class Attacker(GenericAttacker):
     def __init__(self, activity, address, parent, model, routing_table):
         super().__init__(activity, address, parent, model, routing_table)
 
-        self._strategies = ["stay", "spread", "execute"] #TODO execute strategy to get payoff
+        self._strategies = ["stay", "spread"] #TODO execute strategy to get payoff
         self._stay_risk = random.uniform(0, 0.2)
         self._spread_risk = random.uniform(0.2, 0.5)
         self._execute_risk = random.uniform(0.5, 1)
@@ -196,10 +196,11 @@ class Attacker(GenericAttacker):
             if strategy_for_org == "stay":
                 self.update_stay_utility(num_compromised)
                 c_org.update_stay_utility(num_compromised)
+
             elif strategy_for_org == "execute":
                 self.update_execute_utility(num_compromised)
                 c_org.update_execute_utility(num_compromised)
-                c_org.adjust_information(self._attack_of_choice) #TODO adjust
+                # c_org.adjust_information(self._attack_of_choice) #TODO adjust
 
 
             elif strategy_for_org == "spread":
@@ -284,13 +285,8 @@ class Employee(GenericDefender):
     def step(self):
         super().step()
         self._generate_communicators()
-        for c in self.compromisers:
-            detected = self.detect(c._attack_of_choice, targetted=False, passive=True)
-            if detected:
-                # self.parent.compromised_detected += 1
-                self.clean_specific(c)
-            else:
-                pass
+
+
     def advance(self):
         super().advance()
 
@@ -299,6 +295,12 @@ class Employee(GenericDefender):
             packet = self._generate_packet(destination=c)
             self._send(packet)
         self.communicate_to.clear()
+
+        for c in self.compromisers:
+            detected = self.detect(c._attack_of_choice, targetted=False, passive=True)
+            if detected:
+                # self.parent.compromised_detected += 1
+                self.clean_specific(c)
 
     def _get_security(self):
         if self._security is None:
