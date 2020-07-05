@@ -1,6 +1,6 @@
 class HorizontalCompositeContainer{
 
-    constructor(svg_width, svg_height, elementCount, weights, gap_size=5){
+    constructor(width, height, elementCount, weights, gap_size=5){
         let childNodes = [];
         let vizSection = document.getElementById("elements");
         this.elementCount = elementCount;
@@ -24,6 +24,8 @@ class HorizontalCompositeContainer{
         childNodes.reverse(); // reverse to match element ordering in server
 
         this.tag = document.createElement("div");
+        this.tag.style.width = width;
+        this.tag.style.height = height;
         this.tag.style.display = "flex";
         //this.tag.style.minHeight = "max-content";
         this.tag.style.flexDirection = "row";
