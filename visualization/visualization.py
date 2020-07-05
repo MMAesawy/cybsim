@@ -1,4 +1,18 @@
 from mesa.visualization.ModularVisualization import VisualizationElement
+import re
+
+r1 = re.compile(r"\d+(px|%)")
+r2 = re.compile(r"\d+")
+
+
+def validate_css_dimension(dim, default):
+    if dim:
+        dim = str(dim)
+        if r1.match(dim):
+            return dim
+        elif r2.match(dim):
+            return dim + "px"
+    return default
 
 class NetworkModule(VisualizationElement):
     local_includes = ["./visualization/d3.v5.min.js",
@@ -21,7 +35,7 @@ class NetworkModule(VisualizationElement):
 class HorizontalCompositeContainer(VisualizationElement):
     local_includes = ["./visualization/HorizontalCompositeContainer.js"]
 
-    def __init__(self, elements, weights=None, canvas_height=200, canvas_width=500, gap_size=5):
+    def __init__(self, elements, weights=None, height=None, width=None, gap_size=5):
         super().__init__()
 
         if weights and len(elements) != len(weights):
@@ -31,8 +45,8 @@ class HorizontalCompositeContainer(VisualizationElement):
         if not isinstance(elements, list):
             raise AttributeError("elements is not a list.")
 
-        self.canvas_height = canvas_height
-        self.canvas_width = canvas_width
+        self.width = validate_css_dimension(width, "100%")
+        self.height = validate_css_dimension(height, "100%")
 
         self.elements = elements
 
@@ -61,8 +75,8 @@ class HorizontalCompositeContainer(VisualizationElement):
             self.package_includes += e.package_includes
             self.js_code += e.js_code + "\n"  # is newline char necessary?
 
-        new_element = ("new HorizontalCompositeContainer({}, {}, {}, {}, {})".
-                       format(self.canvas_width, self.canvas_height, len(self.elements), self.weights, gap_size))
+        new_element = ("new HorizontalCompositeContainer('{}', '{}', {}, {}, {})".
+                       format(self.width, self.height, len(self.elements), self.weights, gap_size))
         self.js_code += "elements.push(" + new_element + ");"
 
     def render(self, model):
@@ -79,7 +93,7 @@ class HorizontalCompositeContainer(VisualizationElement):
 class TabSelectorView(VisualizationElement):
     local_includes = ["./visualization/TabSelectorView.js"]
 
-    def __init__(self, elements, element_names=None, canvas_height=200, canvas_width=500):
+    def __init__(self, elements, element_names=None, height=None, width=None):
         super().__init__()
 
         if element_names and len(elements) != len(element_names):
@@ -89,8 +103,8 @@ class TabSelectorView(VisualizationElement):
         if not isinstance(elements, list):
             raise AttributeError("elements is not a list.")
 
-        self.canvas_height = canvas_height
-        self.canvas_width = canvas_width
+        self.width = validate_css_dimension(width, "100%")
+        self.height = validate_css_dimension(height, "100%")
 
         self.elements = elements
 
@@ -117,8 +131,8 @@ class TabSelectorView(VisualizationElement):
             self.package_includes += e.package_includes
             self.js_code += e.js_code + "\n"  # is newline char necessary?
 
-        new_element = ("new TabSelectorView({}, {}, {}, {})".
-                       format(self.canvas_width, self.canvas_height, len(self.elements), self.element_names))
+        new_element = ("new TabSelectorView('{}', '{}', {}, {})".
+                       format(self.width, self.height, len(self.elements), self.element_names))
         self.js_code += "elements.push(" + new_element + ");"
 
     def render(self, model):

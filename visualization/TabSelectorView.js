@@ -1,6 +1,6 @@
 class TabSelectorView{
 
-    constructor(svg_width, svg_height, elementCount, elementNames){
+    constructor(width, height, elementCount, elementNames){
         let vizSection = document.getElementById("elements");
 
         this.elementCount = elementCount;
@@ -23,6 +23,8 @@ class TabSelectorView{
         this.childNodes.reverse(); // reverse to match element ordering in server
 
         this.tag = document.createElement("div");
+        this.tag.style.width = width;
+        this.tag.style.height = height;
 
         this.tabBar = document.createElement("div");
         this.tabBar.className = "tabBar";
