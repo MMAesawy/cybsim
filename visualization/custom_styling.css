@@ -1,0 +1,16 @@
+        /* Controls width of the main interface (parameter controls + visual elements) */
+        .container{
+            width: 1400px;
+        }
+
+        /* Controls width of the paramater controls section. */
+        #sidebar{
+            width: 300px;
+            float: left;
+        }
+
+        /* Controls width of the visual elements section. */
+        #elements{
+            width: 1000px;
+            float: right;
+        }
