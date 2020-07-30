@@ -3,6 +3,7 @@ from mesa.space import NetworkGrid
 from mesa.time import SimultaneousActivation
 from mesa.datacollection import DataCollector
 from agents.subnetworks import *
+import math
 
 import numpy as np
 
@@ -13,12 +14,12 @@ def get_total_compromised(model):
     return model.total_compromised
 
 def get_share(model):
-    # np.mean(model.closeness_matrix)
     avg = 0
     for i in range(model.num_subnetworks - 1):
         for j in range(i + 1, model.num_subnetworks - 1):
             avg += model.closeness_matrix[i][j]
-    return avg / ((model.num_subnetworks - 1)**2 - (model.num_subnetworks - 1)) / 2 
+    n = model.num_subnetworks - 1
+    return avg / (n * (n-1) / 2)  # avg / n choose 2
 
 class CybCim(Model):
 
@@ -49,34 +50,34 @@ class CybCim(Model):
         super().__init__()
 
         self.G = nx.Graph()  # master graph
-        self.G.graph['interactive'] = interactive
-        self.G.graph['fisheye'] = fisheye
-        self.G.graph['visualize'] = visualize
+        self.G.graph['interactive'] = interactive  # adjustable parameter, affects network visualization
+        self.G.graph['fisheye'] = fisheye  # adjustable parameter, affects network visualization
+        self.G.graph['visualize'] = visualize  # adjustable parameter, affects network visualization
 
         self.address_server = AddressServer()
 
-        self.num_internet_devices = num_internet_devices
-        self.num_subnetworks = num_subnetworks
-        self.num_attackers = num_attackers
+        self.num_internet_devices = num_internet_devices  # adjustable parameter, possibly useless?
+        self.num_subnetworks = num_subnetworks  # adjustable parameter
+        self.num_attackers = num_attackers  # adjustable parameter
         # self.subnetworks = []
 
-        self.information_importance = information_importance
-        self.device_security_deviation_width = device_security_deviation_width
-        self.information_gain_weight = information_gain_weight
-        self.passive_detection_weight = passive_detection_weight
-        self.spread_detection_weight = spread_detection_weight
-        self.target_detection_weight = target_detection_weight
+        self.information_importance = information_importance  # adjustable parameter
+        self.device_security_deviation_width = device_security_deviation_width  # adjustable parameter
+        self.information_gain_weight = information_gain_weight  # adjustable parameter
+        self.passive_detection_weight = passive_detection_weight  # adjustable parameter
+        self.spread_detection_weight = spread_detection_weight  # adjustable parameter
+        self.target_detection_weight = target_detection_weight  # adjustable parameter
 
         # self.max_hops = max_hops
         # self.min_capacity = min_capacity
         # self.max_capacity = max_capacity
         self.num_users = 0
-        self.avg_time_to_new_attack = avg_time_to_new_attack
-        self.device_count = device_count
+        self.avg_time_to_new_attack = avg_time_to_new_attack  # adjustable parameter
+        self.device_count = device_count  # adjustable parameter
         # self.max_device_count = max_device_count
-        self.reciprocity = reciprocity
-        self.transitivity = transitivity
-        self.verbose = verbose
+        self.reciprocity = reciprocity  # adjustable parameter
+        self.transitivity = transitivity  # adjustable parameter TODO: turn off permanently?
+        self.verbose = verbose  # adjustable parameter
         VERBOSE = verbose
 
         # avg_node_degree = 3
@@ -87,7 +88,6 @@ class CybCim(Model):
 
         # create graph and compute pairwise shortest paths
         self._create_graph()
-
         self.shortest_paths = dict(nx.all_pairs_shortest_path(self.network))
 
         # construct subnetworks that compose the main network
@@ -106,15 +106,17 @@ class CybCim(Model):
             self.schedule.add(d)
         for o in self.subnetworks:
             self.schedule.add(o)
-        self.total_packets_received = 0
-        self.total_failure_count = 0
+        self.total_packets_received = 0  # unneccessary
+        self.total_failure_count = 0  # unneccessary
         self.total_compromised = 0
-        self.packet_count = 1
-        self.initial_closeness = 0.5 # initial closeness between organizations
+        self.packet_count = 1  # maybe have it do something with org productivity?
 
+        # TODO make parameter?
+        self.initial_closeness = 0.5  # initial closeness between organizations
 
-        #initialize a n*n matrix to store sharing decision disregarding attacker subnetwork
-        self.closeness_matrix = np.full((self.num_subnetworks - 1, self.num_subnetworks - 1), 0.5)
+        # TODO possibly move to own function
+        # initialize a n*n matrix to store sharing decision disregarding attacker subnetwork
+        self.closeness_matrix = np.full((self.num_subnetworks - 1, self.num_subnetworks - 1), self.initial_closeness)
 
         self.datacollector = DataCollector(
             {
@@ -125,7 +127,7 @@ class CybCim(Model):
 
         self.running = True
         self.datacollector.collect(self)
-        if VERBOSE:
+        if VERBOSE:  # TODO: change to use a dedicated logging class/logger
             print("Starting!")
             print("Number of devices: %d" % len(self.devices))
 
@@ -136,7 +138,7 @@ class CybCim(Model):
         for i in range(len(self.network.nodes)):
             routing_table = self.shortest_paths[i]
 
-            n = get_subnetwork_device_count(self)
+            n = get_subnetwork_device_count(self)  # randomly generates device count
             of = 'devices' if subgraph_type else 'subnetworks'
 
             if len(self.network.nodes) == i + 1:  # the last node of the network is always an attackers subnetwork
@@ -165,14 +167,15 @@ class CybCim(Model):
             edge[2]["malicious"] = False
 
     def update_closeness(self):
+        # TODO: implement trust factor
         for i in range(self.num_subnetworks - 1):
             for j in range(i + 1, self.num_subnetworks - 1): # only visit top matrix triangle
                 r = random.random()
-                if (self.closeness_matrix[i][j] > r): #will interact
+                if self.closeness_matrix[i][j] > r:  # will interact event
                     closeness = self.closeness_matrix[i][j]
                     r1, r2 = self.subnetworks[i].share_information(closeness), self.subnetworks[j].share_information(closeness)
-                    choice = [int(r1 > closeness), int(r2 > closeness)]
-                    if sum(choice) == 2:  # both cooperate
+                    choice = [r1, r2]
+                    if sum(choice) == 2:  # both cooperate/share
                         self.closeness_matrix[i][j] = get_reciprocity(sum(choice), closeness, self.reciprocity)
                         self.closeness_matrix[j][i] = get_reciprocity(sum(choice), closeness, self.reciprocity)
                         self.adjust_transitivity(i, j)
@@ -194,9 +197,6 @@ class CybCim(Model):
                             self.share_info_selfish(self.subnetworks[j], self.subnetworks[i])
                             self.subnetworks[j].update_information_utility()
 
-
-
-
     def share_info_selfish(self, org1, org2):
         for attack, info in org1.attacks_list.items():
             org2.attacks_list[attack] = get_new_information_selfish(org2.attacks_list[attack], info)
@@ -211,13 +211,15 @@ class CybCim(Model):
                 continue
             else:
                 if abs(0.5 - self.closeness_matrix[org1][i]) > abs(0.5 - self.closeness_matrix[org2][i]):
+                    # if org1's opinion is more "extreme" than org2
                     self.closeness_matrix[org2][i] /= self.transitivity
                 else:
+                    # otherwise
                     self.closeness_matrix[org1][i] /= self.transitivity
 
 
     def step(self):
-        self.update_closeness()
+        self.update_closeness()  # TODO: move after agent step???
         self.reset_edge_data()
 
         # update agents

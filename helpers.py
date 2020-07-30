@@ -68,10 +68,12 @@ def get_new_information_cooperative(i1, i2):
     return max(i1, i2)
 
 def get_reciprocity(choice, c, r):
+    # TODO: don't use magic numbers
     if choice == 2:
         return 1 - ((1 - c) / r)
     elif choice == 0:
-        return c / r
+        return c
+
 def get_new_information_detected(probability, old_information, w = 0.5):
     x = old_information
     y = probability
