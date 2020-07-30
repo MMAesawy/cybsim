@@ -138,7 +138,6 @@ class Organization(SubNetwork, Agent):
         self.attacks_list = defaultdict(lambda: 0)
         self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
         self.utility = 0
-        self.util_buffer = 0  # TODO: not used?
         self.count = 0
         self.risk_of_sharing = 0.3  # TODO: parametrize, possibly update in update_utility_sharing or whatever
         model.subnetworks.append(self)
@@ -175,14 +174,13 @@ class Organization(SubNetwork, Agent):
         self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
 
     def update_budget_utility(self):
-        # TODO: why is number of children used? isn't it fixed for all orgs?
-        self.utility -= len(self.children) * self.security_budget ** 2
+        self.utility -= self.security_budget ** 2
 
-    def update_execute_utility(self, c):
-        self.utility -= c
+    def update_execute_utility(self, num_compromised):
+        self.utility -= num_compromised
 
-    def update_stay_utility(self, c):
-        self.utility -= c ** 2
+    def update_stay_utility(self, num_compromised):
+        self.utility -= num_compromised ** 2
 
     def update_information_utility(self):
         self.utility -= self.risk_of_sharing
@@ -205,7 +203,7 @@ class Organization(SubNetwork, Agent):
                                   routing_table=routing_table)
                 self.network.nodes[i]['subnetwork'] = n
             else:  # the rest of the devices are users.
-                activity = random.random() / 10  # TODO think about the media presence role in determining who to attack.
+                activity = random.random() / 10  # TODO parametrize
 
                 self.network.nodes[i]['subnetwork'] = Employee(activity=activity,
                                                                address=self.address + i,

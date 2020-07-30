@@ -50,7 +50,7 @@ class GenericDefender(User):
         """Returns whether or not the defender is compromised"""
         return len(self.compromisers) > 0
 
-    def clean_specific(self, attacker): #TODO find a better way to access the attack of choice #unsed for now
+    def clean_specific(self, attacker):
         """
         Cleans the user from a specific attacker. Notifies the attacker.
         :param attacker: the attacker to clean
@@ -64,14 +64,14 @@ class GenericDefender(User):
         if not self.is_compromised() and self.model.total_compromised > 0:  # if not compromised any more
             self.model.total_compromised -= 1
 
-    def clean_all(self): #unsed for now.
+    def clean_all(self):
         """Cleans the user from a specific attacker. Notifies each attacker."""
         for c in self.compromisers:
             c.notify_clean(self)
         self.compromisers.clear()
         self.model.total_compromised -= 1
 
-    def notify_infection(self, attacker): #TODO send organization object to attacker or number of children
+    def notify_infection(self, attacker):
         """
         Notifies this user that it has been infected.
         :param attacker: the attacker infecting this device
@@ -181,7 +181,7 @@ class Attacker(GenericAttacker):
         packet.add_payload(self._attack_of_choice)
         return packet
 
-    def step(self):
+    def step(self):  # TODO rework due to strategy/decision making removal
         super().step()
         self._generate_communicators()
         for c_org, num_compromised in self.compromised_org.items():
@@ -261,13 +261,8 @@ class Employee(GenericDefender):
             return True
 
     def detect(self, attack, targetted, passive=False):
-        # added self security and attack strategy risk to the equation due to the scope of the detection
-        #TODO refine probabilities
         information = self.parent.attacks_list[attack]
         security = self._get_security()
-        # defense = helpers.get_defense(security, information)
-        # prob = helpers.get_prob_detection(defense, attack.effectiveness)
-        # prob = helpers.get_prob_detection_v2(security, attack.effectiveness, information)
 
         if passive:
             security *= self.model.passive_detection_weight

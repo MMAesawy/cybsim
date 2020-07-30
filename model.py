@@ -27,11 +27,7 @@ class CybCim(Model):
                  num_internet_devices=100,
                  num_subnetworks=15,
                  num_attackers=5,
-                 # max_hops=3,
-                 # min_capacity=10,
-                 # max_capacity=20,
                  device_count=30,
-                 # max_device_count=50,
                  avg_time_to_new_attack=50,
                  information_importance=2,
                  device_security_deviation_width=0.25,
@@ -45,7 +41,7 @@ class CybCim(Model):
                  visualize=True,
                  verbose=True,
                  reciprocity=2,
-                 transitivity=2):
+                 transitivity=1):
         global VERBOSE
         super().__init__()
 
@@ -59,7 +55,6 @@ class CybCim(Model):
         self.num_internet_devices = num_internet_devices  # adjustable parameter, possibly useless?
         self.num_subnetworks = num_subnetworks  # adjustable parameter
         self.num_attackers = num_attackers  # adjustable parameter
-        # self.subnetworks = []
 
         self.information_importance = information_importance  # adjustable parameter
         self.device_security_deviation_width = device_security_deviation_width  # adjustable parameter
@@ -68,23 +63,17 @@ class CybCim(Model):
         self.spread_detection_weight = spread_detection_weight  # adjustable parameter
         self.target_detection_weight = target_detection_weight  # adjustable parameter
 
-        # self.max_hops = max_hops
-        # self.min_capacity = min_capacity
-        # self.max_capacity = max_capacity
         self.num_users = 0
         self.avg_time_to_new_attack = avg_time_to_new_attack  # adjustable parameter
         self.device_count = device_count  # adjustable parameter
-        # self.max_device_count = max_device_count
         self.reciprocity = reciprocity  # adjustable parameter
         self.transitivity = transitivity  # adjustable parameter TODO: turn off permanently?
         self.verbose = verbose  # adjustable parameter
         VERBOSE = verbose
 
-        # avg_node_degree = 3
         self.devices = []
         self.subnetworks = []
         self.users = []  # keeping track of human users in all networks
-        # self.active_correspondences = []
 
         # create graph and compute pairwise shortest paths
         self._create_graph()
