@@ -127,7 +127,7 @@ model_params = {
                                                       description='Affects difficulty of targeted attacker detection.'),
     'reciprocity': UserSettableParameter(param_type='slider',name='Reciprocity',value=2, max_value=5,min_value=1, step=0.5,
                                          description='Parameter representing how much organizations move closer or further from each other'),
-    'transitivity': UserSettableParameter(param_type='slider',name='Transitivity',value=2, max_value=5,min_value=1, step=0.5,
+    'transitivity': UserSettableParameter(param_type='slider',name='Transitivity',value=1, max_value=5,min_value=1, step=0.5,
                                          description='Parameter representing how much organizations are influenced by their cooperator\'s opinions')
 
 

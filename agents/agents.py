@@ -27,12 +27,11 @@ class User(NetworkDevice):
 
     def _generate_communicators(self):
         # generate list of users to talk with
-        while self._is_active():
+        while len(self.parent.children) > 2 and self._is_active():  # make sure parent has more than one user
             # make sure the user is not self
-            user = random.choice(self.model.users)
-            while user == self or self.parent != user.parent:
-                user = random.choice(self.model.users)
-
+            user = random.choice(self.parent.children)  # only communicate within network
+            while user.address == self.address or not isinstance(user, User):
+                user = random.choice(self.parent.children)
             self.communicate_to.append(user)
 
     def get_tooltip(self):
@@ -51,7 +50,7 @@ class GenericDefender(User):
         """Returns whether or not the defender is compromised"""
         return len(self.compromisers) > 0
 
-    def clean_specific(self, attacker): #TODO find a better way to access the attack of choice #unsed for now
+    def clean_specific(self, attacker):
         """
         Cleans the user from a specific attacker. Notifies the attacker.
         :param attacker: the attacker to clean
@@ -62,17 +61,17 @@ class GenericDefender(User):
                 self.compromisers.pop(i)
                 c.notify_clean(self)
                 break
-        if not self.is_compromised() : # if not compromised any more
+        if not self.is_compromised() and self.model.total_compromised > 0:  # if not compromised any more
             self.model.total_compromised -= 1
 
-    def clean_all(self): #unsed for now.
+    def clean_all(self):
         """Cleans the user from a specific attacker. Notifies each attacker."""
         for c in self.compromisers:
             c.notify_clean(self)
         self.compromisers.clear()
         self.model.total_compromised -= 1
 
-    def notify_infection(self, attacker): #TODO send organization object to attacker or number of children
+    def notify_infection(self, attacker):
         """
         Notifies this user that it has been infected.
         :param attacker: the attacker infecting this device
@@ -99,8 +98,6 @@ class GenericDefender(User):
         :return: Generated packet
         """
         packet = super()._generate_packet(destination=destination)
-        #only allow spreading of attacks in same organization
-        # if destination.parent == self.parent:
         for c in self.compromisers:
             c.notify_victim_packet_generation(victim=self,packet=packet)
         return packet
@@ -121,7 +118,7 @@ class GenericAttacker(User):
         super().__init__(activity, address, parent, model, routing_table)
 
         self.compromised = []
-        self.compromised_org = defaultdict(lambda: 0)
+        self.compromised_org = defaultdict(lambda: 0)  # number of compromised devices in each org
         self.spread_to = []
 
     # only try to communicate with non infilterated organizations
@@ -130,7 +127,7 @@ class GenericAttacker(User):
         while self._is_active():
             # make sure the user is not self
             user = random.choice(self.model.users)
-            while user == self or user.parent in self.compromised_org:
+            while user.parent.address == self.parent.address or self.compromised_org[user.parent] > 0:
                 user = random.choice(self.model.users)
 
             self.communicate_to.append(user)
@@ -154,14 +151,13 @@ class GenericAttacker(User):
             if c is defender:
                 self.compromised.pop(i)
                 self.compromised_org[c.parent] -= 1
-                if self.compromised_org[c.parent] == 0:
-                    del self.compromised_org[c.parent]
                 break
 
     def notify_victim_packet_generation(self, victim, packet):
         """
         Notifies this attacker that a victim is generating a packet. Allows the attacker to modify
         the packet and embed payloads.
+        :param victim: the user who is sending the packet
         :param packet: the packet to be (potentially) modified
         """
         pass
@@ -172,10 +168,7 @@ class Attacker(GenericAttacker):
     def __init__(self, activity, address, parent, model, routing_table):
         super().__init__(activity, address, parent, model, routing_table)
 
-        self._strategies = ["stay", "spread"] #TODO execute strategy to get payoff
-        self._stay_risk = random.uniform(0, 0.2)
-        self._spread_risk = random.uniform(0.2, 0.5)
-        self._execute_risk = random.uniform(0.5, 1)
+        self._strategies = ["stay", "spread", "execute"] #TODO remove
         # self._chosen_strategy = "infect"
         self._attack_of_choice = Attack(self)
         self.utility = 0
@@ -188,7 +181,7 @@ class Attacker(GenericAttacker):
         packet.add_payload(self._attack_of_choice)
         return packet
 
-    def step(self):
+    def step(self):  # TODO rework due to strategy/decision making removal
         super().step()
         self._generate_communicators()
         for c_org, num_compromised in self.compromised_org.items():
@@ -196,26 +189,14 @@ class Attacker(GenericAttacker):
             if strategy_for_org == "stay":
                 self.update_stay_utility(num_compromised)
                 c_org.update_stay_utility(num_compromised)
-
             elif strategy_for_org == "execute":
                 self.update_execute_utility(num_compromised)
                 c_org.update_execute_utility(num_compromised)
-                # c_org.adjust_information(self._attack_of_choice) #TODO adjust
-
-
+                c_org.adjust_information(self._attack_of_choice) #TODO adjust
             elif strategy_for_org == "spread":
                 self.spread_to.append(c_org)
                 self.update_stay_utility(num_compromised)
                 c_org.update_stay_utility(num_compromised)
-
-        # generate list of users to talk with
-        # if self._chosen_strategy == "infect":
-
-        #TODO where does the stay strategy happen?
-
-        # for c in self.compromised: #TODO change the scope of the strategies to the attack object scope IMPOTANT!!!
-        #     self._chosen_strategy = random.choice(self._strategies)
-    #TODO implement the rest of the strategies' logic
 
     def advance(self):
         super().advance()
@@ -226,44 +207,10 @@ class Attacker(GenericAttacker):
             self._send(packet)
         self.communicate_to.clear()
 
-        # self._chosen_strategy = random.choice(self._strategies)
-
     def notify_victim_packet_generation(self, victim, packet):
-        # if self._chosen_strategy == "spread": # TODO strategies
-        if (victim.parent in self.spread_to):
+        if victim.parent in self.spread_to:
             packet.add_payload(self._attack_of_choice)
         self.spread_to.clear()
-
-    # def choose_strategy(self, org): #TODO calculations restricted to compromised for each organization
-    #     comp_in_org = self.get_comp_in_org(org)
-    #     #execute_utility = self.calculate_utility(comp_in_org/org.children, self._execute_risk)
-    #     # execute_utility = random.random()
-    #     #spread_utility = self.calculate_utility(1 - (comp_in_org/org.children), self._spread_risk)
-    #     # spread_utility = random.random()
-    #     #stay_utility = self.calculate_utility(0, self._stay_risk)
-    #     # stay_utility = random.random()
-    #
-    #     #TODO fix this
-    #     if (execute_utility > spread_utility) and (execute_utility > stay_utility):
-    #         self.utility = execute_utility
-    #         return "execute"
-    #     elif (spread_utility > execute_utility) and (spread_utility > stay_utility):
-    #         self.utility = execute_utility
-    #         return "spread"
-    #     else:
-    #         self.utility = stay_utility
-    #         return "stay"
-        #TODO add some sort of randomness
-
-    # def calculate_utility(self, payoff, risk):
-    #     return payoff-risk
-
-    # def get_comp_in_org(self, org): #returns number of compromised devices of an attacker to specific org. (utility per org)
-    #     comp_in_org = 0
-    #     for c in self.compromised:
-    #         if c.parent is org:
-    #             comp_in_org += 1
-    #     return comp_in_org
 
     def update_stay_utility(self, c):
         self.utility += c ** 2
@@ -285,7 +232,11 @@ class Employee(GenericDefender):
     def step(self):
         super().step()
         self._generate_communicators()
-
+        for c in self.compromisers:
+            detected = self.detect(c._attack_of_choice, targetted=False, passive=True)  # TODO: do not access private variable
+            if detected:
+                # self.parent.compromised_detected += 1
+                self.clean_specific(c)
 
     def advance(self):
         super().advance()
@@ -295,12 +246,6 @@ class Employee(GenericDefender):
             packet = self._generate_packet(destination=c)
             self._send(packet)
         self.communicate_to.clear()
-
-        for c in self.compromisers:
-            detected = self.detect(c._attack_of_choice, targetted=False, passive=True)
-            if detected:
-                # self.parent.compromised_detected += 1
-                self.clean_specific(c)
 
     def _get_security(self):
         if self._security is None:
@@ -316,13 +261,8 @@ class Employee(GenericDefender):
             return True
 
     def detect(self, attack, targetted, passive=False):
-        # added self security and attack strategy risk to the equation due to the scope of the detection
-        #TODO refine probabilities
         information = self.parent.attacks_list[attack]
         security = self._get_security()
-        # defense = helpers.get_defense(security, information)
-        # prob = helpers.get_prob_detection(defense, attack.effectiveness)
-        # prob = helpers.get_prob_detection_v2(security, attack.effectiveness, information)
 
         if passive:
             security *= self.model.passive_detection_weight
@@ -341,16 +281,6 @@ class Employee(GenericDefender):
             return True
         else:
             return False
-
-    def get_atk_strategy_risk(self, attack): #basic implementation
-        atk_strategy = attack.original_source._chosen_strategy
-        if atk_strategy == "infect":
-            return 0.01
-        elif atk_strategy == "stay":
-            return 0.001
-        elif atk_strategy == "spread":
-            return 0.005
-        return 0
 
 
 

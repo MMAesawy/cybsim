@@ -136,43 +136,33 @@ class Organization(SubNetwork, Agent):
         Agent.__init__(self, address, model)
 
         self.attacks_list = defaultdict(lambda: 0)
-        # self.compromised_detected = 0
-        # self.security_budget = random.random()  # This budget in percentage of total budget of company
         self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
         self.utility = 0
-        self.util_buffer = 0
         self.count = 0
-        self.risk_of_sharing = 0.3
-        # self.company_security = get_company_security(num_devices) / 2
+        self.risk_of_sharing = 0.3  # TODO: parametrize, possibly update in update_utility_sharing or whatever
         model.subnetworks.append(self)
 
     #TODO fix this
     def step(self):
 
         self.count += 1
-        if self.count == 10:
+        if self.count == 10:  # TODO parametrize
             self.count = 0
             self.update_budget()
             self.update_budget_utility()
-            # self.compromised_detected = 0
-        # else:
-        #     pass
-        # if self.compromised_detected/len(self.children) >= 0.1:
-        #     self.update_budget()
-        # else:
-        #     pass
 
     def advance(self):
         pass
 
-    def share_information(self, closeness):  # TODO make decision based on trust factor
-        return int(random.random() > closeness)
+    def share_information(self, closeness):
+        """Returns whether or not to share information according to other party."""
+        # TODO make decision based on trust factor, pass other org object instead of just closeness
+        return random.random() < closeness
 
     def  adjust_information(self, attack):
         self.attacks_list[attack] = 1
 
-    #TODO Fix this function
-    def update_budget(self):
+    def update_budget(self):  # TODO: decision making?
         # self.util_buffer = self.utility
         # if self.utility < 0:
         #     self.security_budget += 0.05
@@ -183,16 +173,14 @@ class Organization(SubNetwork, Agent):
         #     pass
         self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
 
-    def update_budget_utility(self):  # TODO testing (cap 0 or not)
-        # self.utility = -(self.compromised_detected / len(self.children)) - self.security_budget
-        # self.utility = -(self.security_budget**2) - (self.compromised_detected / len(self.children)) + 1 #TODO not correct # #TODO add sliders for serurity budget for testing
-        self.utility -= len(self.children) * self.security_budget ** 2
+    def update_budget_utility(self):
+        self.utility -= self.security_budget ** 2
 
-    def update_execute_utility(self, c):
-        self.utility -= c
+    def update_execute_utility(self, num_compromised):
+        self.utility -= num_compromised
 
-    def update_stay_utility(self, c):
-        self.utility -= c ** 2
+    def update_stay_utility(self, num_compromised):
+        self.utility -= num_compromised ** 2
 
     def update_information_utility(self):
         self.utility -= self.risk_of_sharing
@@ -215,7 +203,7 @@ class Organization(SubNetwork, Agent):
                                   routing_table=routing_table)
                 self.network.nodes[i]['subnetwork'] = n
             else:  # the rest of the devices are users.
-                activity = random.random() / 10  # TODO think about the media presence role in determining who to attack.
+                activity = random.random() / 10  # TODO parametrize
 
                 self.network.nodes[i]['subnetwork'] = Employee(activity=activity,
                                                                address=self.address + i,
@@ -247,28 +235,32 @@ class Attackers(SubNetwork, Agent):
             self._is_generate_new_attack = False
 
     def _generate_new_attacker(self):
-        new_node_local_address = self.network.number_of_nodes()
-        self.network.add_node(new_node_local_address)
-        self.network.add_edge(self.network.graph['gateway'], new_node_local_address)
-        self.shortest_paths = dict(nx.all_pairs_shortest_path(self.network))
-        # print(len(self.shortest_paths[0]))
+        # if VERBOSE:
+        #     print("Generating new attacker!")
+
+        new_node_local_address = self.network.number_of_nodes()  # get new address
+        self.network.add_node(new_node_local_address)  # add node to graph
+        self.network.add_edge(self.network.graph['gateway'], new_node_local_address)  # add edge to gateway
+        self.shortest_paths = dict(nx.all_pairs_shortest_path(self.network))  # re-compute routing table
+
         activity = random.random()
         attacker = Attacker(activity=activity,
                             address=self.address + new_node_local_address,
                             parent=self,
                             model=self.model,
                             routing_table=self.shortest_paths[new_node_local_address])
-        # print(attacker.address)
+
+        # reset shortest paths for all children
         for i in range(self.network.number_of_nodes() - 1):
             self.network.nodes[i]['subnetwork'].routing_table = self.shortest_paths[i]
-        self.network.nodes[new_node_local_address]['subnetwork'] = attacker
+
+        self.network.nodes[new_node_local_address]['subnetwork'] = attacker  # add attacker object to graph data
         self.children.append(attacker)
-        self.merge_with_master_graph()
-        self.model.merge_with_master_graph()
+        self.merge_with_master_graph()  # needed to deal with visualization
+        self.model.merge_with_master_graph()  # needed to deal with visualization
         self.model.grid.G.node[attacker.master_address]['agent'] = list()  # necessary evil
         self.model.grid.place_agent(attacker, attacker.master_address)
         self.model.schedule.add(attacker)
-        # print("SUCCESSFULLY ADDED A NEW ATTACKER %d!" % attacker.master_address)
 
     def _create_graph(self):
         self.network = random_star_graph(self.model.num_attackers + 1, 0)
