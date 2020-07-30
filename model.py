@@ -52,6 +52,9 @@ class CybCim(Model):
 
         self.address_server = AddressServer()
 
+        # For batch runner
+        self.running = True
+
         self.num_internet_devices = num_internet_devices  # adjustable parameter, possibly useless?
         self.num_subnetworks = num_subnetworks  # adjustable parameter
         self.num_attackers = num_attackers  # adjustable parameter
