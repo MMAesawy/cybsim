@@ -72,7 +72,21 @@ def get_reciprocity(choice, c, r):
     if choice == 2:
         return 1 - ((1 - c) / r)
     elif choice == 0:
-        return c
+        return c / r
+
+
+def increase_trust(ct, tf):
+    """ ct: the current trust between the two organizations
+        tf: the trust factor
+    """
+    # TODO possibly change function to show certain behaviour
+    return 1 - ((1 - ct) / tf)
+
+def decrease_trust(ct, tf):
+    """ ct: the current trust between the two organizations
+        tf: the trust factor
+    """
+    return ct / tf
 
 def get_new_information_detected(probability, old_information, w = 0.5):
     x = old_information

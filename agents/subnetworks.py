@@ -154,10 +154,10 @@ class Organization(SubNetwork, Agent):
     def advance(self):
         pass
 
-    def share_information(self, closeness):
+    def share_decision(self, trust):
         """Returns whether or not to share information according to other party."""
         # TODO make decision based on trust factor, pass other org object instead of just closeness
-        return random.random() < closeness
+        return random.random() < trust
 
     def  adjust_information(self, attack):
         self.attacks_list[attack] = 1

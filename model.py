@@ -41,7 +41,8 @@ class CybCim(Model):
                  visualize=True,
                  verbose=True,
                  reciprocity=2,
-                 transitivity=1):
+                 transitivity=1,
+                 trust_factor=2):
         global VERBOSE
         super().__init__()
 
@@ -68,6 +69,7 @@ class CybCim(Model):
         self.device_count = device_count  # adjustable parameter
         self.reciprocity = reciprocity  # adjustable parameter
         self.transitivity = transitivity  # adjustable parameter TODO: turn off permanently?
+        self.trust_factor = trust_factor # adjustable parameter
         self.verbose = verbose  # adjustable parameter
         VERBOSE = verbose
 
@@ -102,10 +104,13 @@ class CybCim(Model):
 
         # TODO make parameter?
         self.initial_closeness = 0.5  # initial closeness between organizations
-
+        self.initial_trust = 0.5  # initial trust between organizations
         # TODO possibly move to own function
-        # initialize a n*n matrix to store sharing decision disregarding attacker subnetwork
+        # initialize a n*n matrix to store organization closeness disregarding attacker subnetwork
         self.closeness_matrix = np.full((self.num_subnetworks - 1, self.num_subnetworks - 1), self.initial_closeness)
+        # initialize a n*n matrix to store organization's trust towards each other disregarding attacker subnetwork
+        self.trust_matrix = np.full((self.num_subnetworks - 1, self.num_subnetworks - 1), self.initial_trust)
+        np.fill_diagonal(self.trust_matrix, 0) # makes the trust factor between an organization and itself
 
         self.datacollector = DataCollector(
             {
@@ -160,13 +165,19 @@ class CybCim(Model):
         for i in range(self.num_subnetworks - 1):
             for j in range(i + 1, self.num_subnetworks - 1): # only visit top matrix triangle
                 r = random.random()
-                if self.closeness_matrix[i][j] > r:  # will interact event
+                if self.closeness_matrix[i, j] > r:  # will interact event
                     closeness = self.closeness_matrix[i][j]
-                    r1, r2 = self.subnetworks[i].share_information(closeness), self.subnetworks[j].share_information(closeness)
+                    t1 = self.trust_matrix[i, j]
+                    t2 = self.trust_matrix[j, i]
+                    r1, r2 = self.subnetworks[i].share_decision(t1), self.subnetworks[j].share_decision(t2)
                     choice = [r1, r2]
                     if sum(choice) == 2:  # both cooperate/share
-                        self.closeness_matrix[i][j] = get_reciprocity(sum(choice), closeness, self.reciprocity)
-                        self.closeness_matrix[j][i] = get_reciprocity(sum(choice), closeness, self.reciprocity)
+                        self.closeness_matrix[i, j] = get_reciprocity(sum(choice), closeness, self.reciprocity)
+                        self.closeness_matrix[j, i] = get_reciprocity(sum(choice), closeness, self.reciprocity)
+                        # trust will increase for both organizations
+                        self.trust_matrix[i, j] = increase_trust(t1, self.trust_factor)
+                        self.trust_matrix[j, i] = increase_trust(t2, self.trust_factor)
+
                         self.adjust_transitivity(i, j)
 
                         self.share_info_cooperative(self.subnetworks[i], self.subnetworks[j])
@@ -176,15 +187,22 @@ class CybCim(Model):
                         self.subnetworks[j].update_information_utility()
 
                     elif sum(choice) == 0:  # both defect
-                        self.closeness_matrix[i][j] = get_reciprocity(sum(choice), closeness, self.reciprocity)
-                        self.closeness_matrix[j][i] = get_reciprocity(sum(choice), closeness, self.reciprocity)
-                    elif sum(choice) == 1: # one defects and one cooperates #no change in closeness #TODO implement different behaviour?
-                        if choice[0] == 1:
+                        self.closeness_matrix[i, j] = get_reciprocity(sum(choice), closeness, self.reciprocity)
+                        self.closeness_matrix[j, i] = get_reciprocity(sum(choice), closeness, self.reciprocity)
+                        # trust will not be affected in this case
+
+                    # one defects and one cooperates #no change in closeness #TODO implement different behaviour?
+                    elif sum(choice) == 1:
+                        if choice[0] == 1: # only org i shares
                             self.share_info_selfish(self.subnetworks[i], self.subnetworks[j])
                             self.subnetworks[i].update_information_utility()
-                        else:
+                            self.trust_matrix[i,j] = decrease_trust(t1, self.trust_factor) # org i will trust org j less
+                            # org j will nto update its trust
+                        else: # org j shares
                             self.share_info_selfish(self.subnetworks[j], self.subnetworks[i])
                             self.subnetworks[j].update_information_utility()
+                            self.trust_matrix[j, i] = decrease_trust(t2, self.trust_factor) # org j will trust org i less
+                            #org i will not update its trust
 
     def share_info_selfish(self, org1, org2):
         for attack, info in org1.attacks_list.items():

@@ -128,7 +128,9 @@ model_params = {
     'reciprocity': UserSettableParameter(param_type='slider',name='Reciprocity',value=2, max_value=5,min_value=1, step=0.5,
                                          description='Parameter representing how much organizations move closer or further from each other'),
     'transitivity': UserSettableParameter(param_type='slider',name='Transitivity',value=1, max_value=5,min_value=1, step=0.5,
-                                         description='Parameter representing how much organizations are influenced by their cooperator\'s opinions')
+                                         description='Parameter representing how much organizations are influenced by their cooperator\'s opinions'),
+    'trust_factor': UserSettableParameter(param_type='slider',name='Initial trust',value=2, max_value=5,min_value=1, step=0.5,
+                                         description='Parameter representing how much organizations are initially trusting of each other to share information')
 
 
 }
