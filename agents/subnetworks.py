@@ -134,7 +134,7 @@ class Organization(SubNetwork, Agent):
     def __init__(self, address, parent, model, routing_table, num_devices, of='subnetworks'):
         SubNetwork.__init__(self, address, parent, model, routing_table, num_devices, of)
         Agent.__init__(self, address, model)
-
+        self.utility_buffer = 0
         self.attacks_list = defaultdict(lambda: 0)
         self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
         self.utility = 0
@@ -146,10 +146,15 @@ class Organization(SubNetwork, Agent):
     def step(self):
 
         self.count += 1
+        print("before:", self.security_budget)
+        print(self.count)
+        print("utility:", self.utility)
         if self.count == 10:  # TODO parametrize
             self.count = 0
             self.update_budget()
             self.update_budget_utility()
+        self.utility_buffer = self.utility + self.security_budget #remove effect of security budget
+        print("after:" , self.security_budget)
 
     def advance(self):
         pass
@@ -159,19 +164,19 @@ class Organization(SubNetwork, Agent):
         # TODO make decision based on trust factor, pass other org object instead of just closeness
         return random.random() < closeness
 
-    def  adjust_information(self, attack):
+    def adjust_information(self, attack):
         self.attacks_list[attack] = 1
 
     def update_budget(self):  # TODO: decision making?
-        # self.util_buffer = self.utility
-        # if self.utility < 0:
-        #     self.security_budget += 0.05
-        #     # self.set_utility()
-        # elif self.util_buffer >= self.utility:
-        #     self.security_budget -= 0.05
-        # elif self.util_buffer == 0:
-        #     pass
-        self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
+        self.utility += self.security_budget #remove effect of security budget
+        utility_drop = self.utility_buffer - self.utility
+        print("Drop", utility_drop)
+        if utility_drop >= 0.5:
+            self.security_budget += 0.1
+        else:
+            self.security_budget -= 0.1
+        self.security_budget = max(0, min(1, self.security_budget))
+        # self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
 
     def update_budget_utility(self):
         self.utility -= self.security_budget ** 2
