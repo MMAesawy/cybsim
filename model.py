@@ -9,21 +9,27 @@ import numpy as np
 
 VERBOSE = True
 
-
+# Data collector function for total compromised
 def get_total_compromised(model):
     return model.total_compromised
 
-def get_share(model):
+# Data collector function for closeness between organization
+def get_avg_closeness(model):
     avg = 0
     for i in range(model.num_subnetworks - 1):
         for j in range(i + 1, model.num_subnetworks - 1):
-            avg += model.closeness_matrix[i][j]
+            avg += model.closeness_matrix[i, j]
     n = model.num_subnetworks - 1
     return avg / (n * (n-1) / 2)  # avg / n choose 2
 
 class CybCim(Model):
 
     def __init__(self,
+                 interactive=True,
+                 fisheye=True,
+                 subgraph_type=True,
+                 visualize=True,
+                 verbose=True,
                  num_internet_devices=100,
                  num_subnetworks=15,
                  num_attackers=5,
@@ -35,14 +41,12 @@ class CybCim(Model):
                  passive_detection_weight=0.125,
                  spread_detection_weight=0.25,
                  target_detection_weight=1.0,
-                 interactive=True,
-                 fisheye=True,
-                 subgraph_type=True,
-                 visualize=True,
-                 verbose=True,
                  reciprocity=2,
                  transitivity=1,
-                 trust_factor=2):
+                 trust_factor=2,
+                 initial_closeness=0.5,
+                 initial_trust=0.5):
+
         global VERBOSE
         super().__init__()
 
@@ -50,29 +54,28 @@ class CybCim(Model):
         self.G.graph['interactive'] = interactive  # adjustable parameter, affects network visualization
         self.G.graph['fisheye'] = fisheye  # adjustable parameter, affects network visualization
         self.G.graph['visualize'] = visualize  # adjustable parameter, affects network visualization
-
+        self.verbose = verbose  # adjustable parameter
+        VERBOSE = verbose
         self.address_server = AddressServer()
 
         self.num_internet_devices = num_internet_devices  # adjustable parameter, possibly useless?
         self.num_subnetworks = num_subnetworks  # adjustable parameter
         self.num_attackers = num_attackers  # adjustable parameter
-
+        self.device_count = device_count  # adjustable parameter
+        self.avg_time_to_new_attack = avg_time_to_new_attack  # adjustable parameter
         self.information_importance = information_importance  # adjustable parameter
         self.device_security_deviation_width = device_security_deviation_width  # adjustable parameter
         self.information_gain_weight = information_gain_weight  # adjustable parameter
         self.passive_detection_weight = passive_detection_weight  # adjustable parameter
         self.spread_detection_weight = spread_detection_weight  # adjustable parameter
         self.target_detection_weight = target_detection_weight  # adjustable parameter
-
-        self.num_users = 0
-        self.avg_time_to_new_attack = avg_time_to_new_attack  # adjustable parameter
-        self.device_count = device_count  # adjustable parameter
         self.reciprocity = reciprocity  # adjustable parameter
         self.transitivity = transitivity  # adjustable parameter TODO: turn off permanently?
         self.trust_factor = trust_factor # adjustable parameter
-        self.verbose = verbose  # adjustable parameter
-        VERBOSE = verbose
+        self.initial_closeness = initial_closeness # adjustable parameter
+        self.initial_trust = initial_trust # adjustable parameter
 
+        self.num_users = 0
         self.devices = []
         self.subnetworks = []
         self.users = []  # keeping track of human users in all networks
@@ -100,22 +103,24 @@ class CybCim(Model):
         self.total_packets_received = 0  # unneccessary
         self.total_failure_count = 0  # unneccessary
         self.total_compromised = 0
-        self.packet_count = 1  # maybe have it do something with org productivity?
+        self.packet_count = 1  # TODO maybe have it do something with org productivity?
 
-        # TODO make parameter?
-        self.initial_closeness = 0.5  # initial closeness between organizations
-        self.initial_trust = 0.5  # initial trust between organizations
+
         # TODO possibly move to own function
         # initialize a n*n matrix to store organization closeness disregarding attacker subnetwork
         self.closeness_matrix = np.full((self.num_subnetworks - 1, self.num_subnetworks - 1), self.initial_closeness)
+
         # initialize a n*n matrix to store organization's trust towards each other disregarding attacker subnetwork
         self.trust_matrix = np.full((self.num_subnetworks - 1, self.num_subnetworks - 1), self.initial_trust)
-        np.fill_diagonal(self.trust_matrix, 0) # makes the trust factor between an organization and itself
 
+        # makes the trust factor between an organization and itself zero in order to avoid any average calculation errors
+        np.fill_diagonal(self.trust_matrix, 0)
+
+        # data needed for making any graphs
         self.datacollector = DataCollector(
             {
              "Compromised Devices": get_total_compromised,
-            "Closeness": get_share
+             "Closeness": get_avg_closeness
             }
         )
 
@@ -125,6 +130,8 @@ class CybCim(Model):
             print("Starting!")
             print("Number of devices: %d" % len(self.devices))
 
+
+    # <------ creating the graph and defining respective organization/attacker subnetworks ------>
     def _create_graph(self):
         self.network = random_mesh_graph(self.num_subnetworks)
 
@@ -180,8 +187,8 @@ class CybCim(Model):
 
                         self.adjust_transitivity(i, j)
 
-                        self.share_info_cooperative(self.subnetworks[i], self.subnetworks[j])
-                        self.share_info_cooperative(self.subnetworks[j], self.subnetworks[i])
+                        share_info_cooperative(self.subnetworks[i], self.subnetworks[j])
+                        share_info_cooperative(self.subnetworks[j], self.subnetworks[i])
 
                         self.subnetworks[i].update_information_utility()
                         self.subnetworks[j].update_information_utility()
@@ -194,23 +201,16 @@ class CybCim(Model):
                     # one defects and one cooperates #no change in closeness #TODO implement different behaviour?
                     elif sum(choice) == 1:
                         if choice[0] == 1: # only org i shares
-                            self.share_info_selfish(self.subnetworks[i], self.subnetworks[j])
+                            share_info_selfish(self.subnetworks[i], self.subnetworks[j])
                             self.subnetworks[i].update_information_utility()
                             self.trust_matrix[i,j] = decrease_trust(t1, self.trust_factor) # org i will trust org j less
                             # org j will nto update its trust
                         else: # org j shares
-                            self.share_info_selfish(self.subnetworks[j], self.subnetworks[i])
+                            share_info_selfish(self.subnetworks[j], self.subnetworks[i])
                             self.subnetworks[j].update_information_utility()
                             self.trust_matrix[j, i] = decrease_trust(t2, self.trust_factor) # org j will trust org i less
                             #org i will not update its trust
 
-    def share_info_selfish(self, org1, org2):
-        for attack, info in org1.attacks_list.items():
-            org2.attacks_list[attack] = get_new_information_selfish(org2.attacks_list[attack], info)
-
-    def share_info_cooperative(self, org1, org2):
-        for attack, info in org1.attacks_list.items():
-            org2.attacks_list[attack] = get_new_information_cooperative(org2.attacks_list[attack], info)
 
     def adjust_transitivity(self, org1, org2):
         for i in range(self.num_subnetworks - 1):

@@ -96,3 +96,11 @@ def get_new_information_detected(probability, old_information, w = 0.5):
 def get_total_security(security_budget, deviation_width):
     return min(1, max(0, random.gauss(security_budget, deviation_width/6)))
 
+def share_info_selfish(org1, org2):
+    for attack, info in org1.attacks_list.items():
+        org2.attacks_list[attack] = get_new_information_selfish(org2.attacks_list[attack], info)
+
+def share_info_cooperative(org1, org2):
+    for attack, info in org1.attacks_list.items():
+        org2.attacks_list[attack] = get_new_information_cooperative(org2.attacks_list[attack], info)
+

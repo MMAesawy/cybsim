@@ -129,8 +129,12 @@ model_params = {
                                          description='Parameter representing how much organizations move closer or further from each other'),
     'transitivity': UserSettableParameter(param_type='slider',name='Transitivity',value=1, max_value=5,min_value=1, step=0.5,
                                          description='Parameter representing how much organizations are influenced by their cooperator\'s opinions'),
-    'trust_factor': UserSettableParameter(param_type='slider',name='Initial trust',value=2, max_value=5,min_value=1, step=0.5,
-                                         description='Parameter representing how much organizations are initially trusting of each other to share information')
+    'trust_factor': UserSettableParameter(param_type='slider',name='Trust Factor',value=2, max_value=5,min_value=1, step=0.5,
+                                         description='Parameter representing how much organizations trust each other less/more after interacting'),
+    'initial_trust': UserSettableParameter(param_type='slider', name='Initial trust', value=0.5, max_value=1, min_value=0,
+                                          step=0.1,description='Parameter representing how much organizations are initially trusting of each other to share information'),
+    'initial_closeness': UserSettableParameter(param_type='slider', name='Initial closeness', value=0.5, max_value=1, min_value=0,
+                                          step=0.1,description='Parameter representing how much organizations are initially close with each other representing their likelihood to interact')
 
 
 }
