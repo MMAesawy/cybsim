@@ -140,6 +140,7 @@ class Organization(SubNetwork, Agent):
         self.utility = 0
         self.count = 0
         self.risk_of_sharing = 0.3  # TODO: parametrize, possibly update in update_utility_sharing or whatever
+        self.model = model
         model.subnetworks.append(self)
 
     #TODO fix this
@@ -149,12 +150,14 @@ class Organization(SubNetwork, Agent):
         print("before:", self.security_budget)
         print(self.count)
         print("utility:", self.utility)
+        # organization updates its security budget every n steps based on previous step utility in order to improve its utility
         if self.count == 10:  # TODO parametrize
             self.count = 0
             self.update_budget()
             self.update_budget_utility()
         self.utility_buffer = self.utility + self.security_budget #remove effect of security budget
         print("after:" , self.security_budget)
+        self.model.org_utility += self.utility # adds organization utility to model's utility of all organizations
 
     def advance(self):
         pass
@@ -171,7 +174,7 @@ class Organization(SubNetwork, Agent):
         self.utility += self.security_budget #remove effect of security budget
         utility_drop = self.utility_buffer - self.utility
         print("Drop", utility_drop)
-        if utility_drop >= 0.5:
+        if utility_drop >= 0.5: # TODO possibly increase threshold
             self.security_budget += 0.1
         else:
             self.security_budget -= 0.1
@@ -181,15 +184,16 @@ class Organization(SubNetwork, Agent):
     def update_budget_utility(self):
         self.utility -= self.security_budget ** 2
 
-    def update_execute_utility(self, num_compromised):
+    def update_execute_utility(self, num_compromised): # TODO possibly useless now?
         self.utility -= num_compromised
 
-    def update_stay_utility(self, num_compromised):
+    def update_stay_utility(self, num_compromised): # TODO possibly useless now?
         self.utility -= num_compromised ** 2
 
     def update_information_utility(self):
         self.utility -= self.risk_of_sharing
 
+    # <----- creating the devices and users in the subnetwork ----->
     def _create_graph(self):
         self.network = random_star_graph(self.num_devices, 0)
 

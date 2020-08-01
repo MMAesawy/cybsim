@@ -104,3 +104,15 @@ def share_info_cooperative(org1, org2):
     for attack, info in org1.attacks_list.items():
         org2.attacks_list[attack] = get_new_information_cooperative(org2.attacks_list[attack], info)
 
+def adjust_transitivity(model, org1, org2):
+    for i in range(model.num_subnetworks - 1):
+        if i == org1 or i == org2:
+            continue
+        else:
+            if abs(0.5 - model.closeness_matrix[org1][i]) > abs(0.5 - model.closeness_matrix[org2][i]):
+                # if org1's opinion is more "extreme" than org2
+                model.closeness_matrix[org2][i] /= model.transitivity
+            else:
+                # otherwise
+                model.closeness_matrix[org1][i] /= model.transitivity
+

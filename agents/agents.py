@@ -44,7 +44,7 @@ class GenericDefender(User):
     def __init__(self, activity, address, parent, model, routing_table):
         super().__init__(activity, address, parent, model, routing_table)
 
-        self.compromisers = []
+        self.compromisers = [] # list to store all attackers that successfully infected device
 
     def is_compromised(self):
         """Returns whether or not the defender is compromised"""
@@ -61,6 +61,7 @@ class GenericDefender(User):
                 self.compromisers.pop(i)
                 c.notify_clean(self)
                 break
+
         if not self.is_compromised() and self.model.total_compromised > 0:  # if not compromised any more
             self.model.total_compromised -= 1
 

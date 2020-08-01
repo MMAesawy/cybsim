@@ -147,8 +147,10 @@ chart_1 = ChartModule([{'Label': 'Compromised Devices', 'Color': '#505050', 'Poi
 
 chart_2 = ChartModule([{'Label': 'Closeness', 'Color':'#505050'}], canvas_height=200)
 
-composite_view = TabSelectorView([chart_1, chart_2],
-                                 element_names=["Compromised Devices", "Organization Closeness"],
+chart_3 = ChartModule([{'Label': 'Utility', 'Color':'#505050'}], canvas_height=200)
+
+composite_view = TabSelectorView([chart_1, chart_2, chart_3],
+                                 element_names=["Compromised Devices", "Organization Closeness","Organization Utility"],
                                  width=1000)
 
 # required in order to load visualization/modular_template.html

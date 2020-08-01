@@ -22,6 +22,11 @@ def get_avg_closeness(model):
     n = model.num_subnetworks - 1
     return avg / (n * (n-1) / 2)  # avg / n choose 2
 
+def get_avg_utility(model):
+    avg = model.org_utility / (model.num_subnetworks - 1)
+    model.org_utility = 0
+    return avg
+
 class CybCim(Model):
 
     def __init__(self,
@@ -105,6 +110,8 @@ class CybCim(Model):
         self.total_compromised = 0
         self.packet_count = 1  # TODO maybe have it do something with org productivity?
 
+        self.org_utility = 0
+
 
         # TODO possibly move to own function
         # initialize a n*n matrix to store organization closeness disregarding attacker subnetwork
@@ -120,7 +127,8 @@ class CybCim(Model):
         self.datacollector = DataCollector(
             {
              "Compromised Devices": get_total_compromised,
-             "Closeness": get_avg_closeness
+             "Closeness": get_avg_closeness,
+             "Utility": get_avg_utility
             }
         )
 
@@ -167,35 +175,42 @@ class CybCim(Model):
             edge[2]["active"] = False
             edge[2]["malicious"] = False
 
-    def update_closeness(self):
+    def information_sharing_game(self):
         # TODO: implement trust factor
         for i in range(self.num_subnetworks - 1):
             for j in range(i + 1, self.num_subnetworks - 1): # only visit top matrix triangle
                 r = random.random()
                 if self.closeness_matrix[i, j] > r:  # will interact event
-                    closeness = self.closeness_matrix[i][j]
                     t1 = self.trust_matrix[i, j]
                     t2 = self.trust_matrix[j, i]
+                    closeness = self.closeness_matrix[i][j]
+                    # get each organization's decision to share or not based on its trust towards the other
                     r1, r2 = self.subnetworks[i].share_decision(t1), self.subnetworks[j].share_decision(t2)
                     choice = [r1, r2]
                     if sum(choice) == 2:  # both cooperate/share
+                        # come closer to each other for both orgs (symmetric matrix)
                         self.closeness_matrix[i, j] = get_reciprocity(sum(choice), closeness, self.reciprocity)
                         self.closeness_matrix[j, i] = get_reciprocity(sum(choice), closeness, self.reciprocity)
+
                         # trust will increase for both organizations
                         self.trust_matrix[i, j] = increase_trust(t1, self.trust_factor)
                         self.trust_matrix[j, i] = increase_trust(t2, self.trust_factor)
 
-                        self.adjust_transitivity(i, j)
+                        adjust_transitivity(self, i, j)
 
+                        # actually gain information for both organizations
                         share_info_cooperative(self.subnetworks[i], self.subnetworks[j])
                         share_info_cooperative(self.subnetworks[j], self.subnetworks[i])
 
+                        # lose some utility when sharing due to privacy loss etc
                         self.subnetworks[i].update_information_utility()
                         self.subnetworks[j].update_information_utility()
 
                     elif sum(choice) == 0:  # both defect
+                        # grow further away from each other for both orgs (symmetric matrix)
                         self.closeness_matrix[i, j] = get_reciprocity(sum(choice), closeness, self.reciprocity)
                         self.closeness_matrix[j, i] = get_reciprocity(sum(choice), closeness, self.reciprocity)
+
                         # trust will not be affected in this case
 
                     # one defects and one cooperates #no change in closeness #TODO implement different behaviour?
@@ -203,8 +218,9 @@ class CybCim(Model):
                         if choice[0] == 1: # only org i shares
                             share_info_selfish(self.subnetworks[i], self.subnetworks[j])
                             self.subnetworks[i].update_information_utility()
-                            self.trust_matrix[i,j] = decrease_trust(t1, self.trust_factor) # org i will trust org j less
+                            self.trust_matrix[i, j] = decrease_trust(t1, self.trust_factor) # org i will trust org j less
                             # org j will nto update its trust
+
                         else: # org j shares
                             share_info_selfish(self.subnetworks[j], self.subnetworks[i])
                             self.subnetworks[j].update_information_utility()
@@ -212,21 +228,9 @@ class CybCim(Model):
                             #org i will not update its trust
 
 
-    def adjust_transitivity(self, org1, org2):
-        for i in range(self.num_subnetworks - 1):
-            if i == org1 or i == org2:
-                continue
-            else:
-                if abs(0.5 - self.closeness_matrix[org1][i]) > abs(0.5 - self.closeness_matrix[org2][i]):
-                    # if org1's opinion is more "extreme" than org2
-                    self.closeness_matrix[org2][i] /= self.transitivity
-                else:
-                    # otherwise
-                    self.closeness_matrix[org1][i] /= self.transitivity
-
 
     def step(self):
-        self.update_closeness()  # TODO: move after agent step???
+        self.information_sharing_game()  # TODO: move after agent step???
         self.reset_edge_data()
 
         # update agents
