@@ -12,7 +12,7 @@ batch_run = BatchRunner(CybCim,
                         max_steps=100,
                         model_reporters={
                              "Compromised Devices": get_total_compromised,
-                             "Closeness": get_share
+                             "Closeness": get_avg_closeness
                          })
 batch_run.run_all()
 
