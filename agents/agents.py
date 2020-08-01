@@ -169,10 +169,10 @@ class Attacker(GenericAttacker):
     def __init__(self, activity, address, parent, model, routing_table):
         super().__init__(activity, address, parent, model, routing_table)
 
-        self._strategies = ["stay", "spread", "execute"] #TODO remove
+        # self._strategies = ["stay", "spread", "execute"] #TODO remove
         # self._chosen_strategy = "infect"
         self._attack_of_choice = Attack(self)
-        self.utility = 0
+        # self.utility = 0
 
     def get_tooltip(self):
         return super().get_tooltip() + ("\nattack effectiveness: %.2f" % self._attack_of_choice.effectiveness)
@@ -186,18 +186,18 @@ class Attacker(GenericAttacker):
         super().step()
         self._generate_communicators()
         for c_org, num_compromised in self.compromised_org.items():
-            strategy_for_org = random.choice(self._strategies)
-            if strategy_for_org == "stay":
-                self.update_stay_utility(num_compromised)
-                c_org.update_stay_utility(num_compromised)
-            elif strategy_for_org == "execute":
-                self.update_execute_utility(num_compromised)
-                c_org.update_execute_utility(num_compromised)
-                c_org.adjust_information(self._attack_of_choice) #TODO adjust
-            elif strategy_for_org == "spread":
-                self.spread_to.append(c_org)
-                self.update_stay_utility(num_compromised)
-                c_org.update_stay_utility(num_compromised)
+            # # strategy_for_org = random.choice(self._strategies)
+            # if strategy_for_org == "stay":
+            #     self.update_stay_utility(num_compromised)
+            #     c_org.update_stay_utility(num_compromised)
+            # elif strategy_for_org == "execute":
+            #     self.update_execute_utility(num_compromised)
+            #     c_org.update_execute_utility(num_compromised)
+            #     c_org.adjust_information(self._attack_of_choice) #TODO adjust
+            # elif strategy_for_org == "spread":
+            self.spread_to.append(c_org)
+            # self.update_stay_utility(num_compromised)
+            c_org.update_stay_utility(num_compromised)
 
     def advance(self):
         super().advance()
@@ -213,11 +213,11 @@ class Attacker(GenericAttacker):
             packet.add_payload(self._attack_of_choice)
         self.spread_to.clear()
 
-    def update_stay_utility(self, c):
-        self.utility += c ** 2
-
-    def update_execute_utility(self, c):
-        self.utility += c
+    # def update_stay_utility(self, c):
+    #     self.utility += c ** 2
+    #
+    # def update_execute_utility(self, c):
+    #     self.utility += c
 
 class Employee(GenericDefender):
 
