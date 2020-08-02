@@ -119,19 +119,26 @@ class GenericAttacker(User):
         super().__init__(activity, address, parent, model, routing_table)
 
         self.compromised = []
-        self.compromised_org = defaultdict(lambda: 0)  # number of compromised devices in each org
         self.spread_to = []
+        self.compromised_org = defaultdict(lambda: 0)  # storing compromised organization with the # compromised devices in each org
+        self.compromised_org_count = 0
+        self.model = model
 
     # only try to communicate with non infilterated organizations
     def _generate_communicators(self):
         # generate list of users to talk with
         while self._is_active():
-            # make sure the user is not self
-            user = random.choice(self.model.users)
-            while user.parent.address == self.parent.address or self.compromised_org[user.parent] > 0:
-                user = random.choice(self.model.users)
 
-            self.communicate_to.append(user)
+            if self.compromised_org_count < (self.model.num_subnetworks - 1):
+                # make sure the user is not self
+                user = random.choice(self.model.users)
+                while user.parent.address == self.parent.address or self.compromised_org[user.parent] > 0:
+                    user = random.choice(self.model.users)
+
+                self.communicate_to.append(user)
+            else:
+                if self.model.verbose:
+                    print("Attacker ", self.address, " has compromised all organizations")
 
     def infect(self, victim):
         """
@@ -141,6 +148,7 @@ class GenericAttacker(User):
         """
         self.compromised.append(victim)
         self.compromised_org[victim.parent] += 1
+        self.compromised_org_count += 1
         victim.notify_infection(self)
 
     def notify_clean(self, defender):
@@ -152,6 +160,7 @@ class GenericAttacker(User):
             if c is defender:
                 self.compromised.pop(i)
                 self.compromised_org[c.parent] -= 1
+                self.compromised_org_count -= 1
                 break
 
     def notify_victim_packet_generation(self, victim, packet):
