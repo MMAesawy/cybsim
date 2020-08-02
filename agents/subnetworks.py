@@ -63,6 +63,7 @@ class SubNetwork(ABC):
 
         self.shortest_paths = dict(nx.all_pairs_shortest_path(self.network))
         self.local_gateway_address = self.network.graph['gateway']
+        model.subnetworks.append(self)
 
         self._create_devices()
 
@@ -131,16 +132,23 @@ class SubNetwork(ABC):
 
 
 class Organization(SubNetwork, Agent):
+    organization_count = 0
+
     def __init__(self, address, parent, model, routing_table, num_devices, of='subnetworks'):
         SubNetwork.__init__(self, address, parent, model, routing_table, num_devices, of)
         Agent.__init__(self, address, model)
 
         self.attacks_list = defaultdict(lambda: 0)
+        self.attacks_compromised_counts = defaultdict(lambda: 0)
         self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
+        self.num_compromised = 0
         self.utility = 0
         self.count = 0
         self.risk_of_sharing = 0.3  # TODO: parametrize, possibly update in update_utility_sharing or whatever
-        model.subnetworks.append(self)
+        model.organizations.append(self)
+        # set and increment id
+        self.id = Organization.organization_count
+        Organization.organization_count += 1
 
     #TODO fix this
     def step(self):
@@ -185,6 +193,18 @@ class Organization(SubNetwork, Agent):
     def update_information_utility(self):
         self.utility -= self.risk_of_sharing
 
+    def get_percent_compromised(self, attack=None):
+        """Returns the percentage of users compromised for each attack (or the total if `attack` is None)"""
+        if not self.num_users:
+            return 0
+        if attack:
+            return self.attacks_compromised_counts[attack] / self.num_users
+        return self.num_compromised / self.num_users
+
+    def get_info(self, attack):
+        return self.attacks_list[attack]
+
+
     def _create_graph(self):
         self.network = random_star_graph(self.num_devices, 0)
 
@@ -223,7 +243,6 @@ class Attackers(SubNetwork, Agent):
         Agent.__init__(self, address, model)
         self._p_attack_generation = 1 / (avg_time_to_attack_gen + 1) if avg_time_to_attack_gen else 0.0
         self._is_generate_new_attack = False
-        model.subnetworks.append(self)
 
     def step(self):
         super().step()

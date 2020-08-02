@@ -53,7 +53,7 @@ def get_prob_detection(defense, attack):
     return defense / (defense + attack + 1e-5)
 
 def get_prob_detection_v2(security, attack, information, info_weight=2):
-    return security / (security + info_weight * (1-information) * attack + 1e-5)
+    return security / (security + info_weight * (1-information) * attack + 1e-1)
 
 def get_defense(total_security, information, information_weight=1):
     x = 1 - total_security

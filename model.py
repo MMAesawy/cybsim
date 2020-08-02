@@ -73,7 +73,9 @@ class CybCim(Model):
 
         self.devices = []
         self.subnetworks = []
+        self.organizations = []
         self.users = []  # keeping track of human users in all networks
+        self.attackers = []
 
         # create graph and compute pairwise shortest paths
         self._create_graph()
@@ -101,7 +103,7 @@ class CybCim(Model):
         self.packet_count = 1  # maybe have it do something with org productivity?
 
         # TODO make parameter?
-        self.initial_closeness = 0.5  # initial closeness between organizations
+        self.initial_closeness = 0.1  # initial closeness between organizations
 
         # TODO possibly move to own function
         # initialize a n*n matrix to store sharing decision disregarding attacker subnetwork
@@ -193,6 +195,11 @@ class CybCim(Model):
     def share_info_cooperative(self, org1, org2):
         for attack, info in org1.attacks_list.items():
             org2.attacks_list[attack] = get_new_information_cooperative(org2.attacks_list[attack], info)
+
+    def get_closeness(self, i, j):
+        if i > j:
+            j, i = i, j
+        return self.closeness_matrix[i, j]
 
     def adjust_transitivity(self, org1, org2):
         for i in range(self.num_subnetworks - 1):

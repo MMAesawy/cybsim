@@ -32,6 +32,43 @@ class NetworkModule(VisualizationElement):
     def render(self, model):
         return self.portrayal_method(model.G)
 
+class OrganizationCardModule(VisualizationElement):
+    local_includes = [
+        #"./visualization/d3.v5.min.js",
+        "./visualization/d3.v5.js", # for debugging
+        "./visualization/OrganizationCardModule.js"]
+
+    def __init__(self, canvas_height=500, canvas_width=1000):
+        super().__init__()
+
+        self.canvas_height = canvas_height
+        self.canvas_width = canvas_width
+        new_element = ("new OrganizationCardModule({}, {})".
+                       format(self.canvas_width, self.canvas_height))
+        self.js_code = "elements.push(" + new_element + ");"
+
+    def render(self, model):
+        portrayal = dict()
+        portrayal['num_attackers'] = len(model.attackers)
+        portrayal['num_organizations'] = len(model.organizations)
+        portrayal['nodes'] = [{
+                                'id':      org.id,
+                                'utility': org.utility,
+                                'sec_bud': org.security_budget,
+                                'frac_compromised': org.get_percent_compromised(),
+                                'attack_data': [{"frac_comp": org.get_percent_compromised(a.attack_of_choice),
+                                                "frac_info": org.get_info(a.attack_of_choice)}
+                                                for a in model.attackers]
+                               }
+                              for org in model.organizations]
+        portrayal['closeness'] = []
+        for i in range(1, model.closeness_matrix.shape[0]):
+            for j in range(i-1, -1, -1):
+                portrayal['closeness'].append( {'source': i,
+                                                'target': j,
+                                                'value': model.get_closeness(i,j)})
+        return portrayal
+
 class HorizontalCompositeContainer(VisualizationElement):
     local_includes = ["./visualization/HorizontalCompositeContainer.js"]
 

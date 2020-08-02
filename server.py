@@ -134,19 +134,19 @@ model_params = {
 }
 # NOTE ABOUT WIDTHS: a width of 1000 -> full stretch across the visual elements section
 
-network = NetworkModule(network_portrayal, canvas_width=1000)
+#network = NetworkModule(network_portrayal, canvas_width=1000)
 text = VisualizationElement()
 
-chart_1 = ChartModule([{'Label': 'Compromised Devices', 'Color': '#505050', 'PointRadius':0}], canvas_height=200)
+chart_1 = ChartModule([{'Label': 'Compromised Devices', 'Color': '#505050', 'PointRadius':0}], canvas_height=300)
 
-chart_2 = ChartModule([{'Label': 'Closeness', 'Color':'#505050'}], canvas_height=200)
+chart_2 = ChartModule([{'Label': 'Closeness', 'Color':'#505050'}], canvas_height=300)
 
-composite_view = TabSelectorView([chart_1, chart_2],
-                                 element_names=["Compromised Devices", "Organization Closeness"],
-                                 width=1000)
+card_view = OrganizationCardModule()
+#tabbed_view = TabSelectorView([ network, card_view], ["Org Card View", "Network View"], width=1000)
+composite_view = HorizontalCompositeContainer([chart_1, chart_2], width=1000)
 
 # required in order to load visualization/modular_template.html
 ModularServer.settings["template_path"] = 'visualization/'
 
-server = ModularServer(CybCim, [network, MyTextElement(), composite_view], 'Computer Network', model_params)
+server = ModularServer(CybCim, [card_view, MyTextElement(), composite_view], 'Computer Network', model_params)
 server.verbose = False
