@@ -65,9 +65,9 @@ class OrganizationCardModule{
     }
 
     orgEnter(newGroups, orgData){
-        console.log(newGroups.size());
+        //console.log(newGroups.size());
         if (!newGroups.size()) return;
-        console.log("Entering...");
+        //console.log("Entering...");
         let cardLayers = newGroups.append("svg")
             .attr("class", "orgcard")
             .attr("id", function(d) { return d.id; })
@@ -406,6 +406,7 @@ class OrganizationCardModule{
             .attr("height", d => this.y(0) - this.y(d.value))
             .attr("class", d => this.color(d.key));
 
+        // ====================== COMMENT OUT TO REMOVE EFFECTIVENESS GRAPH ===================================
         // add and update effectiveness bar graph
         this.cardLayer
             .selectAll("svg")
@@ -416,13 +417,14 @@ class OrganizationCardModule{
             .data(data.attack_effectiveness.map(d => d*0.999+0.001))
             .join("rect")
             .transition()
-            .attr("debug", d=>console.log(d))
+            // .attr("debug", d=>console.log(d))
             .attr("x", (d, i) => this.x0(i+1))
             .attr("y", d => this.y2(d))
             .attr("width", this.x0.bandwidth())
             .attr("height", d => this.y2(0) - this.y2(d))
             .attr("class", "bar-graph-attack")
             .attr("opacity", OrganizationCardModule.properties.EFFECTIVENESS_BAR_OPACITY);
+        // ====================================================================================================
 
 
         // update links
