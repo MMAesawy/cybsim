@@ -62,15 +62,19 @@ class GenericDefender(User):
                 c.notify_clean(self)
                 break
 
+        self.parent.attacks_compromised_counts[attacker.attack_of_choice] -= 1
         if not self.is_compromised() and self.model.total_compromised > 0:  # if not compromised any more
             self.model.total_compromised -= 1
+            self.parent.num_compromised -= 1
 
     def clean_all(self):
         """Cleans the user from a specific attacker. Notifies each attacker."""
         for c in self.compromisers:
             c.notify_clean(self)
+            self.parent.attacks_compromised_counts[c.attack_of_choice] -= 1
         self.compromisers.clear()
         self.model.total_compromised -= 1
+        self.parent.num_compromised -= 1
 
     def notify_infection(self, attacker):
         """
@@ -81,6 +85,8 @@ class GenericDefender(User):
             raise ValueError("Compromiser is not an instance of GenericAttacker")
         if not self.is_compromised():
             self.model.total_compromised += 1
+            self.parent.num_compromised += 1
+        self.parent.attacks_compromised_counts[attacker.attack_of_choice] += 1
         self.compromisers.append(attacker)
 
     def is_attack_successful(self, attack, targetted):
@@ -117,7 +123,8 @@ class GenericAttacker(User):
 
     def __init__(self, activity, address, parent, model, routing_table):
         super().__init__(activity, address, parent, model, routing_table)
-
+        model.attackers.append(self)
+        self.attack_of_choice = Attack(self)
         self.compromised = []
         self.spread_to = []
         self.compromised_org = defaultdict(lambda: 0)  # storing compromised organization with the # compromised devices in each org
@@ -184,11 +191,11 @@ class Attacker(GenericAttacker):
         # self.utility = 0
 
     def get_tooltip(self):
-        return super().get_tooltip() + ("\nattack effectiveness: %.2f" % self._attack_of_choice.effectiveness)
+        return super().get_tooltip() + ("\nattack effectiveness: %.2f" % self.attack_of_choice.effectiveness)
 
     def _generate_packet(self, destination):
         packet = super()._generate_packet(destination=destination)
-        packet.add_payload(self._attack_of_choice)
+        packet.add_payload(self.attack_of_choice)
         return packet
 
     def step(self):  # TODO rework due to strategy/decision making removal
@@ -219,7 +226,7 @@ class Attacker(GenericAttacker):
 
     def notify_victim_packet_generation(self, victim, packet):
         if victim.parent in self.spread_to:
-            packet.add_payload(self._attack_of_choice)
+            packet.add_payload(self.attack_of_choice)
         self.spread_to.clear()
 
     # def update_stay_utility(self, c):
@@ -243,7 +250,7 @@ class Employee(GenericDefender):
         super().step()
         self._generate_communicators()
         for c in self.compromisers:
-            detected = self.detect(c._attack_of_choice, targetted=False, passive=True)  # TODO: do not access private variable
+            detected = self.detect(c.attack_of_choice, targetted=False, passive=True)
             if detected:
                 # self.parent.compromised_detected += 1
                 self.clean_specific(c)

@@ -153,8 +153,11 @@ composite_view = TabSelectorView([chart_1, chart_2, chart_3],
                                  element_names=["Compromised Devices", "Organization Closeness","Organization Utility"],
                                  width=1000)
 
+card_view = OrganizationCardModule()
+tabbed_view = TabSelectorView([network, card_view], ["Network View", "Organization View"], width=1000)
+
 # required in order to load visualization/modular_template.html
 ModularServer.settings["template_path"] = 'visualization/'
 
-server = ModularServer(CybCim, [network, MyTextElement(), composite_view], 'Computer Network', model_params)
+server = ModularServer(CybCim, [tabbed_view, MyTextElement(), composite_view], 'Computer Network', model_params)
 server.verbose = False

@@ -86,7 +86,9 @@ class CybCim(Model):
         self.num_users = 0
         self.devices = []
         self.subnetworks = []
+        self.organizations = []
         self.users = []  # keeping track of human users in all networks
+        self.attackers = []
 
         # create graph and compute pairwise shortest paths
         self._create_graph()
@@ -114,7 +116,6 @@ class CybCim(Model):
         self.packet_count = 1  # TODO maybe have it do something with org productivity?
 
         self.org_utility = 0
-
 
         # TODO possibly move to own function
         # initialize a n*n matrix to store organization closeness disregarding attacker subnetwork
@@ -230,7 +231,10 @@ class CybCim(Model):
                             self.trust_matrix[j, i] = decrease_trust(t2, self.trust_factor) # org j will trust org i less
                             #org i will not update its trust
 
-
+    def get_closeness(self, i, j):
+        if i > j:
+            j, i = i, j
+        return self.closeness_matrix[i, j]
 
     def step(self):
         self.information_sharing_game()  # TODO: move after agent step???
