@@ -24,9 +24,10 @@ class OrganizationCardModule{
         COMP_ARC_POS_Y: 180,
         Y_AXIS_START: 25,
         BARGRAPH_TOP_MARGIN: 15,
-        BARGRAPH_RIGHT_MARGIN: 5,
+        BARGRAPH_SIDE_MARGIN: 4,
         GRIDLINE_OPACITY: "15%",
 
+        EFFECTIVENESS_BAR_OPACITY: "10%",
         LINKS_BASE_OPACITY: 0.05,
         LINKS_STROKE_MIN: 1,
         LINKS_STROKE_MAX: 4,
@@ -146,9 +147,23 @@ class OrganizationCardModule{
             .attr("dy", OrganizationCardModule.properties.UTIL_LABEL_POS_Y)
             .text("Utility");
 
+        // add `E` label
+        // lots of magic numbers and inappropriate classes here, but it works for now and nobody will change this anyways
+        cardLayers.append("text")
+            .attr("class", "cardtext utilitylabel")
+            .attr("dx", 12.5)
+            .attr("dy",OrganizationCardModule.properties.BOTTOM_SEPARATOR_HEIGHT
+                + (OrganizationCardModule.properties.TOP_SEPARATOR_HEIGHT
+                    - OrganizationCardModule.properties.BOTTOM_SEPARATOR_HEIGHT)/2 + 4)
+            .text("E");
+
         // add bottom bar graph layer
         cardLayers.append("g")
             .attr("class", "bottomBarGraph");
+
+        // add effectiveness bar graph layer
+        cardLayers.append("g")
+            .attr("class", "effectBarGraph");
 
         // add y axis
         this.yAxis = cardLayers.append("g")
@@ -281,9 +296,10 @@ class OrganizationCardModule{
             this.x0 = d3.scaleBand()
                     .domain(this.consecutiveArrayFactory(this.numAttackers))
                     .rangeRound([
-                        OrganizationCardModule.properties.Y_AXIS_START,
+                        OrganizationCardModule.properties.Y_AXIS_START
+                        + OrganizationCardModule.properties.BARGRAPH_SIDE_MARGIN,
                         OrganizationCardModule.properties.ORG_CARD_WIDTH
-                        - OrganizationCardModule.properties.BARGRAPH_RIGHT_MARGIN
+                        - OrganizationCardModule.properties.BARGRAPH_SIDE_MARGIN
                     ])
                     .paddingInner(0.1);
             this.x1 = d3.scaleBand()
@@ -295,6 +311,12 @@ class OrganizationCardModule{
                         .rangeRound([
                             OrganizationCardModule.properties.TOP_SEPARATOR_HEIGHT,
                             OrganizationCardModule.properties.BARGRAPH_TOP_MARGIN
+                        ]);
+            this.y2 = d3.scaleLinear()
+                        .domain([0, 1])
+                        .rangeRound([
+                            OrganizationCardModule.properties.BOTTOM_SEPARATOR_HEIGHT,
+                            OrganizationCardModule.properties.TOP_SEPARATOR_HEIGHT
                         ]);
             if (this.xAxis)
                 this.xAxis
@@ -384,6 +406,24 @@ class OrganizationCardModule{
             .attr("height", d => this.y(0) - this.y(d.value))
             .attr("class", d => this.color(d.key));
 
+        // add and update effectiveness bar graph
+        this.cardLayer
+            .selectAll("svg")
+            .select("g.effectBarGraph") // one g for each org svg
+            //.attr("transform", (d, i) => `translate(${this.x0(i+1)},0)`) // move grouping to margin start
+            //.attr("debug", d=>console.log(d))       // if you're lost, try enabling these debug attr to view data
+            .selectAll("rect")
+            .data(data.attack_effectiveness.map(d => d*0.999+0.001))
+            .join("rect")
+            .transition()
+            .attr("debug", d=>console.log(d))
+            .attr("x", (d, i) => this.x0(i+1))
+            .attr("y", d => this.y2(d))
+            .attr("width", this.x0.bandwidth())
+            .attr("height", d => this.y2(0) - this.y2(d))
+            .attr("class", "bar-graph-attack")
+            .attr("opacity", OrganizationCardModule.properties.EFFECTIVENESS_BAR_OPACITY);
+
 
         // update links
         this.simulation
@@ -405,6 +445,7 @@ class OrganizationCardModule{
         this.x0 = null;
         this.x1 = null;
         this.y = null;
+        this.y2 = null;
         this.yAxis = null;
         this.xAxis = null;
         this.numAttackers = 0;

@@ -61,6 +61,7 @@ class OrganizationCardModule(VisualizationElement):
                                                 for a in model.attackers]
                                }
                               for org in model.organizations]
+        portrayal['attack_effectiveness'] = [a.attack_of_choice.effectiveness for a in model.attackers]
         portrayal['closeness'] = []
         for i in range(1, model.closeness_matrix.shape[0]):
             for j in range(i-1, -1, -1):
