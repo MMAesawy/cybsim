@@ -58,6 +58,7 @@ class SubNetwork(ABC):
         self.of = of
         self.num_devices = num_devices
         self.current_packets = []
+        self.users = []
 
         self._create_graph()
 
@@ -146,7 +147,6 @@ class Organization(SubNetwork, Agent):
         self.count = 0
         self.risk_of_sharing = 0.3  # TODO: parametrize, possibly update in update_utility_sharing or whatever
 
-        model.subnetworks.append(self)
         model.organizations.append(self)
         # set and increment id
         self.id = Organization.organization_count
@@ -175,9 +175,6 @@ class Organization(SubNetwork, Agent):
         """Returns whether or not to share information according to other party."""
         # TODO make decision based on trust factor, pass other org object instead of just closeness
         return random.random() < trust
-
-    def adjust_information(self, attack):
-        self.attacks_list[attack] = 1
 
     def update_budget(self):  # TODO: decision making?
         self.utility += self.security_budget #remove effect of security budget

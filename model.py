@@ -118,6 +118,7 @@ class CybCim(Model):
         self.packet_count = 1  # TODO maybe have it do something with org productivity?
 
         self.org_utility = 0
+        Organization.organization_count = 0  # reset organization count
 
         # TODO possibly move to own function
         # initialize a n*n matrix to store organization closeness disregarding attacker subnetwork

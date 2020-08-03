@@ -3,7 +3,7 @@ from agents.constructs import *
 from collections import defaultdict
 import helpers
 import random
-
+import numpy as np
 
 
 class User(NetworkDevice):
@@ -12,6 +12,7 @@ class User(NetworkDevice):
         self.activity = activity
         self.total_utility = 0
         self.communicate_to = []
+        self.parent.users.append(self)
         model.users.append(self)  # append user into model's user list
 
     def _is_active(self):
@@ -127,25 +128,23 @@ class GenericAttacker(User):
         self.attack_of_choice = Attack(self)
         self.compromised = []
         self.spread_to = []
-        self.compromised_org = defaultdict(lambda: 0)  # storing compromised organization with the # compromised devices in each org
-        self.compromised_org_count = 0
+        self.compromised_counts = np.zeros(self.model.num_subnetworks - 1, dtype=np.float)
         self.model = model
 
     # only try to communicate with non infilterated organizations
     def _generate_communicators(self):
         # generate list of users to talk with
-        while self._is_active():
+        non_infected_orgs = np.arange(len(self.model.organizations), dtype=np.int)[self.compromised_counts == 0]
+        orgs_to_attack_count = 0
+        while self._is_active() and orgs_to_attack_count < len(non_infected_orgs):
+            orgs_to_attack_count += 1
 
-            if self.compromised_org_count < (self.model.num_subnetworks - 1):
-                # make sure the user is not self
-                user = random.choice(self.model.users)
-                while user.parent.address == self.parent.address or self.compromised_org[user.parent] > 0:
-                    user = random.choice(self.model.users)
-
-                self.communicate_to.append(user)
-            else:
-                if self.model.verbose:
-                    print("Attacker ", self.address, " has compromised all organizations")
+        orgs_to_attack = np.random.choice(non_infected_orgs, orgs_to_attack_count, replace=False)
+        for i in orgs_to_attack:
+            user = random.choice(self.model.organizations[i].users)
+            self.communicate_to.append(user)
+        if not orgs_to_attack_count and self.model.verbose:
+            print("Attacker ", self.address, " has compromised all organizations")
 
     def infect(self, victim):
         """
@@ -154,8 +153,7 @@ class GenericAttacker(User):
         :param victim: the victim being attacked
         """
         self.compromised.append(victim)
-        self.compromised_org[victim.parent] += 1
-        self.compromised_org_count += 1
+        self.compromised_counts[victim.parent.id] += 1
         victim.notify_infection(self)
 
     def notify_clean(self, defender):
@@ -166,8 +164,7 @@ class GenericAttacker(User):
         for i, c in enumerate(self.compromised):
             if c is defender:
                 self.compromised.pop(i)
-                self.compromised_org[c.parent] -= 1
-                self.compromised_org_count -= 1
+                self.compromised_counts[c.parent.id] -= 1
                 break
 
     def notify_victim_packet_generation(self, victim, packet):
@@ -201,18 +198,9 @@ class Attacker(GenericAttacker):
     def step(self):  # TODO rework due to strategy/decision making removal
         super().step()
         self._generate_communicators()
-        for c_org, num_compromised in self.compromised_org.items():
-            # # strategy_for_org = random.choice(self._strategies)
-            # if strategy_for_org == "stay":
-            #     self.update_stay_utility(num_compromised)
-            #     c_org.update_stay_utility(num_compromised)
-            # elif strategy_for_org == "execute":
-            #     self.update_execute_utility(num_compromised)
-            #     c_org.update_execute_utility(num_compromised)
-            #     c_org.adjust_information(self._attack_of_choice) #TODO adjust
-            # elif strategy_for_org == "spread":
+        for i, num_compromised in enumerate(self.compromised_counts):
+            c_org = self.model.organizations[i]
             self.spread_to.append(c_org)
-            # self.update_stay_utility(num_compromised)
             c_org.update_stay_utility(num_compromised)
 
     def advance(self):
