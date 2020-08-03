@@ -35,6 +35,7 @@ class CybCim(Model):
                  subgraph_type=True,
                  visualize=True,
                  verbose=True,
+                 information_sharing=True,
                  num_internet_devices=100,
                  num_subnetworks=15,
                  num_attackers=5,
@@ -79,9 +80,10 @@ class CybCim(Model):
         self.target_detection_weight = target_detection_weight  # adjustable parameter
         self.reciprocity = reciprocity  # adjustable parameter
         self.transitivity = transitivity  # adjustable parameter TODO: turn off permanently?
-        self.trust_factor = trust_factor # adjustable parameter
-        self.initial_closeness = initial_closeness # adjustable parameter
-        self.initial_trust = initial_trust # adjustable parameter
+        self.trust_factor = trust_factor  # adjustable parameter
+        self.initial_closeness = initial_closeness  # adjustable parameter
+        self.initial_trust = initial_trust  # adjustable parameter
+        self.information_sharing = information_sharing  # adjustable parameter
 
         self.num_users = 0
         self.devices = []
@@ -119,10 +121,10 @@ class CybCim(Model):
 
         # TODO possibly move to own function
         # initialize a n*n matrix to store organization closeness disregarding attacker subnetwork
-        self.closeness_matrix = np.full((self.num_subnetworks - 1, self.num_subnetworks - 1), self.initial_closeness)
+        self.closeness_matrix = np.full((self.num_subnetworks - 1, self.num_subnetworks - 1), self.initial_closeness, dtype=np.float)
 
         # initialize a n*n matrix to store organization's trust towards each other disregarding attacker subnetwork
-        self.trust_matrix = np.full((self.num_subnetworks - 1, self.num_subnetworks - 1), self.initial_trust)
+        self.trust_matrix = np.full((self.num_subnetworks - 1, self.num_subnetworks - 1), self.initial_trust, dtype=np.float)
 
         # makes the trust factor between an organization and itself zero in order to avoid any average calculation errors
         np.fill_diagonal(self.trust_matrix, 0)
@@ -237,7 +239,8 @@ class CybCim(Model):
         return self.closeness_matrix[i, j]
 
     def step(self):
-        self.information_sharing_game()  # TODO: move after agent step???
+        if self.information_sharing:
+            self.information_sharing_game()  # TODO: move after agent step???
         self.reset_edge_data()
 
         # update agents

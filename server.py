@@ -81,6 +81,8 @@ model_params = {
                                                   description='Choose whether to visualize the graph'),
     'verbose': UserSettableParameter(param_type='checkbox', name='Verbose', value=False,
                                        description='Choose whether the model is verbose (in the terminal)'),
+    'information_sharing': UserSettableParameter(param_type='checkbox', name='Information Sharing', value=True,
+                                       description='Choose whether or not information sharing is turned on.'),
     'interactive': UserSettableParameter(param_type='checkbox', name='Interactive graph', value=True,
                                                   description='Choose whether the graph is interactive'),
     'fisheye': UserSettableParameter(param_type='checkbox', name='Fisheye effect', value=True,
