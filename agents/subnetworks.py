@@ -139,7 +139,8 @@ class Organization(SubNetwork, Agent):
         SubNetwork.__init__(self, address, parent, model, routing_table, num_devices, of)
         Agent.__init__(self, address, model)
         self.utility_buffer = 0
-        self.attacks_list = defaultdict(lambda: 0)
+        self.old_attacks_list = defaultdict(lambda: 0)
+        self.new_attacks_list = defaultdict(lambda : 0)
         self.attacks_compromised_counts = defaultdict(lambda: 0)
         self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
         self.num_compromised = 0
@@ -169,7 +170,8 @@ class Organization(SubNetwork, Agent):
         self.model.org_utility += self.utility # adds organization utility to model's utility of all organizations
 
     def advance(self):
-        pass
+        for attack, info in self.new_attacks_list.items():
+            self.old_attacks_list[attack] = self.new_attacks_list[attack]
 
     def share_decision(self, trust):
         """Returns whether or not to share information according to other party."""
@@ -208,7 +210,7 @@ class Organization(SubNetwork, Agent):
         return self.num_compromised / self.num_users
 
     def get_info(self, attack):
-        return self.attacks_list[attack]
+        return self.old_attacks_list[attack]
 
     # <----- creating the devices and users in the subnetwork ----->
     def _create_graph(self):
