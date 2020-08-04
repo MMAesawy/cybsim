@@ -118,9 +118,11 @@ model_params = {
     'avg_time_to_new_attack': UserSettableParameter(param_type='slider', name='Average time for new attack', value=500, min_value=0, max_value=1000, step=1,
                                                   description='Choose the average time for the generation of a new attack on the network'),
 
-    'information_importance': UserSettableParameter(param_type='slider', name='Information importance', value=2, min_value=1, max_value=10, step=0.5,
-                                                  description='Controls the importance of information in determining probability of detection.'
-                                                              ' Higher values means detection is harder WITHOUT information.'),
+    # 'information_importance': UserSettableParameter(param_type='slider', name='Information importance', value=2, min_value=1, max_value=10, step=0.5,
+    #                                               description='Controls the importance of information in determining probability of detection.'
+    #                                                           ' Higher values means detection is harder WITHOUT information.'),
+    'detection_func_stability': UserSettableParameter(param_type='slider', name='Detection Stability (1e-x)', value=3, min_value=0, max_value=5, step=1,
+                                                   description='Controls the magnitude of the stability factor added to the detection probability function.'),
     'device_security_deviation_width': UserSettableParameter(param_type='slider', name='Security deviation width', value=0.25,
                                                     min_value=0, max_value=1, step=0.005,
                                                     description='Controls the deviation of devices\' security around the organization\'s security budget '),

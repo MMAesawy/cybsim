@@ -280,9 +280,9 @@ class Employee(GenericDefender):
         else:
             security *= self.model.spread_detection_weight
 
-        prob = helpers.get_prob_detection_v2(security, attack.effectiveness,
-                                             information, info_weight=self.model.information_importance)
-
+        prob = helpers.get_prob_detection_v3(security, attack.effectiveness,
+                                             information, stability=self.model.detection_func_stability)
+        print("PROB:", prob)
         if random.random() < prob:  # attack is detected, gain information
             info = self.parent.old_attacks_list[attack]
             self.parent.new_attacks_list[attack] = \

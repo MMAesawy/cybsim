@@ -47,7 +47,8 @@ class CybCim(Model):
                  num_attackers=5,
                  device_count=30,
                  avg_time_to_new_attack=50,
-                 information_importance=2,
+                 # information_importance=2,
+                 detection_func_stability=3,
                  device_security_deviation_width=0.25,
                  information_gain_weight=0.5,
                  passive_detection_weight=0.125,
@@ -79,7 +80,8 @@ class CybCim(Model):
         self.num_attackers = num_attackers  # adjustable parameter
         self.device_count = device_count  # adjustable parameter
         self.avg_time_to_new_attack = avg_time_to_new_attack  # adjustable parameter
-        self.information_importance = information_importance  # adjustable parameter
+        # self.information_importance = information_importance  # adjustable parameter
+        self.detection_func_stability = 10**(-detection_func_stability)  # adjustable parameter
         self.device_security_deviation_width = device_security_deviation_width  # adjustable parameter
         self.information_gain_weight = information_gain_weight  # adjustable parameter
         self.passive_detection_weight = passive_detection_weight  # adjustable parameter
