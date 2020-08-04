@@ -58,7 +58,8 @@ class CybCim(Model):
                  initial_closeness=0.5,
                  initial_trust=0.5,
                  sharing_factor=2,
-                 security_update_interval=10):
+                 security_update_interval=10,
+                 acceptable_threshold=0.8):
 
         global VERBOSE
         super().__init__()
@@ -92,6 +93,7 @@ class CybCim(Model):
         self.information_sharing = information_sharing  # adjustable parameter
         self.sharing_factor = sharing_factor # adjustable
         self.security_update_interval = security_update_interval  # adjustable parameter
+        self.acceptable_threshold = acceptable_threshold # adjustable parameter
 
 
         self.num_users = 0

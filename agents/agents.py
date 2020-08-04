@@ -253,10 +253,12 @@ class Employee(GenericDefender):
             prob = helpers.get_prob_detection_v3(aggregate_security, attack.effectiveness,
                                                  stability=self.model.detection_func_stability)
             # print("PROB:", prob)
+            self.parent.num_attempts += 1
             if random.random() < prob:  # attack is detected, gain information
                 info = self.parent.old_attacks_list[attack]
                 self.parent.new_attacks_list[attack] = \
                     helpers.get_new_information_detected(prob, info, w=self.model.information_gain_weight)
+                self.parent.num_detect += 1
                 return True
             else:
                 return False

@@ -130,7 +130,9 @@ model_params = {
     'sharing_factor': UserSettableParameter(param_type='slider', name='Sharing Factor', value=2, max_value=10, min_value=1,
                                           step=0.2,description='Parameter representing the amount of information gained when players both cooperate'),
     'security_update_interval': UserSettableParameter(param_type='slider', name='Security Update Interval', value=10, max_value=50, min_value=1,
-                                          step=0.2,description='Parameter representing interval at which organizations update their security')
+                                          step=0.2,description='Parameter representing interval at which organizations update their security'),
+    'acceptable_threshold': UserSettableParameter(param_type='slider', name='Acceptable Threshold', value=0.8, max_value=1, min_value=0,
+                                          step=0.1,description='Parameter representing threshold of changing security budget')
 }
 # NOTE ABOUT WIDTHS: a width of 1000 -> full stretch across the visual elements section
 

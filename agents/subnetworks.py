@@ -1,3 +1,4 @@
+import math
 from helpers import *
 from agents.agents import *
 from abc import ABC, abstractmethod
@@ -149,6 +150,8 @@ class Organization(SubNetwork, Agent):
         self.risk_of_sharing = 0.3  # TODO: parametrize, possibly update in update_utility_sharing or whatever
         self.info_in = 0
         self.info_out = 0
+        self.num_detect = 0
+        self.num_attempts = 0
 
         model.organizations.append(self)
         # set and increment id
@@ -166,6 +169,8 @@ class Organization(SubNetwork, Agent):
         if self.count == self.model.security_update_interval:
             self.count = 0
             self.update_budget()
+            self.num_attempts = 0
+            self.num_detect = 0
             self.old_utility = self.utility
             self.update_budget_utility()
         self.model.org_utility += self.utility # adds organization utility to model's utility of all organizations
@@ -187,10 +192,15 @@ class Organization(SubNetwork, Agent):
         print("Drop", utility_drop)
         print("Old Security", self.security_budget)
 
-        if utility_drop > 0:  # people got infected since last security budget update
-            self.security_budget += (1 - self.security_budget) / 2
+        # if utility_drop > 0:  # people got infected since last security budget update
+        #     self.security_budget += (1 - self.security_budget) / 2
+        # else:
+        #     self.security_budget -= self.security_budget / 2
+        ratio = self.num_detect / self.num_attempts
+        if self.num_detect / self.num_attempts < self.model.acceptable_threshold:
+            self.security_budget += math.exp(-5*(ratio))
         else:
-            self.security_budget -= self.security_budget / 2
+            self.security_budget -= math.exp(-5*(ratio))
 
         self.security_budget = max(0, min(1, self.security_budget))
         print("New security", self.security_budget)
