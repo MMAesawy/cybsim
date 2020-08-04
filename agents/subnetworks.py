@@ -138,13 +138,13 @@ class Organization(SubNetwork, Agent):
     def __init__(self, address, parent, model, routing_table, num_devices, of='subnetworks'):
         SubNetwork.__init__(self, address, parent, model, routing_table, num_devices, of)
         Agent.__init__(self, address, model)
-        self.utility_buffer = 0
+        self.old_utility = 0
+        self.utility = 0
         self.old_attacks_list = defaultdict(lambda: 0)
         self.new_attacks_list = defaultdict(lambda : 0)
         self.attacks_compromised_counts = defaultdict(lambda: 0)
         self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
         self.num_compromised = 0
-        self.utility = 0
         self.count = 0
         self.risk_of_sharing = 0.3  # TODO: parametrize, possibly update in update_utility_sharing or whatever
         self.info_in = 0
@@ -158,7 +158,7 @@ class Organization(SubNetwork, Agent):
     #TODO fix this
     def step(self):
 
-        for c in self.attacks_compromised_counts:
+        for c in self.attacks_compromised_counts.values():
             self.update_stay_utility(c)
 
         self.count += 1
@@ -166,8 +166,8 @@ class Organization(SubNetwork, Agent):
         if self.count == self.model.security_update_interval:
             self.count = 0
             self.update_budget()
+            self.old_utility = self.utility
             self.update_budget_utility()
-        self.utility_buffer = self.utility + self.security_budget #remove effect of security budget
         self.model.org_utility += self.utility # adds organization utility to model's utility of all organizations
 
     def advance(self):
@@ -182,25 +182,30 @@ class Organization(SubNetwork, Agent):
         # TODO make decision based on trust factor, pass other org object instead of just closeness
         return random.random() < trust
 
-    def update_budget(self):  # TODO: decision making?
-        self.utility += self.security_budget #remove effect of security budget
-        utility_drop = self.utility_buffer - self.utility
+    def update_budget(self):
+        utility_drop = -(self.utility - self.old_utility)
         print("Drop", utility_drop)
-        if utility_drop >= 0.5: # TODO possibly increase threshold
-            self.security_budget += 0.1
+        print("Old Security", self.security_budget)
+
+        if utility_drop > 0:  # people got infected since last security budget update
+            self.security_budget += (1 - self.security_budget) / 2
         else:
-            self.security_budget -= 0.1
+            self.security_budget -= self.security_budget / 2
+
         self.security_budget = max(0, min(1, self.security_budget))
+        print("New security", self.security_budget)
         # self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
 
     def update_budget_utility(self):
-        self.utility -= self.security_budget ** 2
+        # self.utility -= self.security_budget ** 2
+        pass
 
-    def update_stay_utility(self, num_compromised): # TODO possibly useless now?
-        self.utility -= num_compromised ** 2
+    def update_stay_utility(self, num_compromised):
+        self.utility -= (num_compromised/self.num_users) ** 2
 
     def update_information_utility(self):
-        self.utility -= self.risk_of_sharing
+        # self.utility -= self.risk_of_sharing
+        pass
 
     def get_percent_compromised(self, attack=None):
         """Returns the percentage of users compromised for each attack (or the total if `attack` is None)"""

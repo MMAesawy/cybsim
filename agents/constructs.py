@@ -28,13 +28,16 @@ class Attack:
         if not self.original_source:
             return False
         defender = destination
-        if defender.is_attack_successful(attack=self, targeted=source == self.original_source) \
-                and defender not in self.original_source.compromised:
-            self.original_source.infect(defender)
-            return True
-        else:
-            return False
-
+        targeted = source == self.original_source
+        if defender.is_attack_successful(attack=self, targeted=targeted):
+            if defender not in self.original_source.compromised:  # defender is not compromised by this attacker
+                self.original_source.infect(defender)
+                return True
+            else:
+                return False
+        elif not targeted:
+            source.clean_specific(self.original_source)
+        return False
 
     def __str__(self):
         return "Attack of type: %s" % self.attack_type

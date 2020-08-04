@@ -58,7 +58,7 @@ class GenericDefender(User):
                 break
 
         self.parent.attacks_compromised_counts[attacker.attack_of_choice] -= 1
-        if not self.is_compromised() and self.model.total_compromised > 0:  # if not compromised any more
+        if not self.is_compromised():  # if not compromised any more
             self.model.total_compromised -= 1
             self.parent.num_compromised -= 1
 
@@ -169,13 +169,12 @@ class Attacker(GenericAttacker):
 
     def __init__(self, activity, address, parent, model, routing_table):
         super().__init__(activity, address, parent, model, routing_table)
-        self._attack_of_choice = Attack(self)
 
     def get_tooltip(self):
         return super().get_tooltip() + ("\nattack effectiveness: %.2f" % self.attack_of_choice.effectiveness)
 
     def get_effectiveness(self):
-        return self._attack_of_choice.effectiveness
+        return self.attack_of_choice.effectiveness
 
     def _generate_packet(self, destination):
         packet = super()._generate_packet(destination=destination)
@@ -212,16 +211,20 @@ class Employee(GenericDefender):
     def step(self):
         super().step()
         self._generate_communicators()
-        for c in self.compromisers:
-            detected = self.detect(c.attack_of_choice, targeted=False, passive=True)
-            if detected:
-                self.to_clean.append(c)
+        # for c in self.compromisers:
+        #     detected = self.detect(c.attack_of_choice, targeted=False)
+        #     if detected:
+        #         self.to_clean.append(c)
+                # #self.clean_specific(c)
+                # for u in self.parent.users:
+                #     u.clean_specific(c)
 
     def advance(self):
         super().advance()
 
         for c in self.to_clean:
             self.clean_specific(c)
+        self.to_clean.clear()
 
         # actually send packets
         for c in self.communicate_to:
@@ -239,18 +242,17 @@ class Employee(GenericDefender):
         else:
             return True
 
-    def detect(self, attack, targeted, passive=False):
-        if targeted:  # direct attack
+    def detect(self, attack, targeted):
             information = self.parent.old_attacks_list[attack]
             security = self._get_security()
             aggregate_security = (security + information)
 
-            if passive:
+            if not targeted:
                 aggregate_security *= self.model.passive_detection_weight
 
             prob = helpers.get_prob_detection_v3(aggregate_security, attack.effectiveness,
                                                  stability=self.model.detection_func_stability)
-            print("PROB:", prob)
+            # print("PROB:", prob)
             if random.random() < prob:  # attack is detected, gain information
                 info = self.parent.old_attacks_list[attack]
                 self.parent.new_attacks_list[attack] = \
@@ -258,5 +260,3 @@ class Employee(GenericDefender):
                 return True
             else:
                 return False
-        else:  # spreading
-            return False
