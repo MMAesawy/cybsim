@@ -64,8 +64,10 @@ def get_defense(total_security, information, information_weight=1):
 def get_new_information_selfish(i1, i2):
     return i1+i2*(1-i1)
 
-def get_new_information_cooperative(i1, i2):
-    return max(i1, i2)
+def get_new_information_cooperative(i1, i2, sp):
+    # i2 > i1
+    return i1 + ((i2 - i1) / sp)
+    # return max(i1, i2)
 
 def get_reciprocity(choice, c, r):
     # TODO: don't use magic numbers
@@ -97,12 +99,13 @@ def get_total_security(security_budget, deviation_width):
     return min(1, max(0, random.gauss(security_budget, deviation_width/6)))
 
 def share_info_selfish(org1, org2):
-    for attack, info in org1.attacks_list.items():
-        org2.attacks_list[attack] = get_new_information_selfish(org2.attacks_list[attack], info)
+    for attack, info in org1.old_attacks_list.items():
+        org2.new_attacks_list[attack] = get_new_information_selfish(org2.old_attacks_list[attack], info)
 
-def share_info_cooperative(org1, org2):
-    for attack, info in org1.attacks_list.items():
-        org2.attacks_list[attack] = get_new_information_cooperative(org2.attacks_list[attack], info)
+def share_info_cooperative(org1, org2, sp):
+    for attack, info in org1.old_attacks_list.items():
+        if info > org2.old_attacks_list[attack]:
+            org2.new_attacks_list[attack] = get_new_information_cooperative(org2.old_attacks_list[attack], info, sp)
 
 def adjust_transitivity(model, org1, org2):
     for i in range(model.num_subnetworks - 1):
