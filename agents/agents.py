@@ -9,14 +9,10 @@ import numpy as np
 class User(NetworkDevice):
     def __init__(self, activity, address, parent, model, routing_table):
         super().__init__(address, parent, model, routing_table)
-        self.activity = activity
         self.total_utility = 0
         self.communicate_to = []
         self.parent.users.append(self)
         model.users.append(self)  # append user into model's user list
-
-    def _is_active(self):
-        return random.random() < self.activity
 
     def _generate_packet(self, destination):
         """
@@ -28,15 +24,13 @@ class User(NetworkDevice):
 
     def _generate_communicators(self):
         # generate list of users to talk with
-        while len(self.parent.children) > 2 and self._is_active():  # make sure parent has more than one user
-            # make sure the user is not self
-            user = random.choice(self.parent.children)  # only communicate within network
-            while user.address == self.address or not isinstance(user, User):
-                user = random.choice(self.parent.children)
-            self.communicate_to.append(user)
+        user = random.choice(self.parent.users)
+        while user is self:
+            user = random.choice(self.parent.users)
+        self.communicate_to.append(user)
 
     def get_tooltip(self):
-        return super().get_tooltip() + ("\nactivity: %.2f" % self.activity)
+        return super().get_tooltip()
 
 
 class GenericDefender(User):
@@ -135,17 +129,10 @@ class GenericAttacker(User):
     def _generate_communicators(self):
         # generate list of users to talk with
         non_infected_orgs = np.arange(len(self.model.organizations), dtype=np.int)[self.compromised_counts == 0]
-        orgs_to_attack_count = 0
-        while self._is_active() and orgs_to_attack_count < len(non_infected_orgs):
-            orgs_to_attack_count += 1
 
-        if orgs_to_attack_count != 0:
-            orgs_to_attack = np.random.choice(non_infected_orgs, orgs_to_attack_count, replace=False)
-            for i in orgs_to_attack:
-                user = random.choice(self.model.organizations[i].users)
-                self.communicate_to.append(user)
-            if not orgs_to_attack_count and self.model.verbose:
-                print("Attacker ", self.address, " has compromised all organizations")
+        for i in non_infected_orgs:
+            user = random.choice(self.model.organizations[i].users)
+            self.communicate_to.append(user)
 
     def infect(self, victim):
         """
@@ -182,11 +169,7 @@ class Attacker(GenericAttacker):
 
     def __init__(self, activity, address, parent, model, routing_table):
         super().__init__(activity, address, parent, model, routing_table)
-
-        # self._strategies = ["stay", "spread", "execute"] #TODO remove
-        # self._chosen_strategy = "infect"
         self._attack_of_choice = Attack(self)
-        # self.utility = 0
 
     def get_tooltip(self):
         return super().get_tooltip() + ("\nattack effectiveness: %.2f" % self.attack_of_choice.effectiveness)
@@ -202,50 +185,6 @@ class Attacker(GenericAttacker):
     def step(self):  # TODO rework due to strategy/decision making removal
         super().step()
         self._generate_communicators()
-        for i, num_compromised in enumerate(self.compromised_counts):
-            c_org = self.model.organizations[i]
-            self.spread_to.append(c_org)
-            c_org.update_stay_utility(num_compromised)
-
-    def advance(self):
-        super().advance()
-
-        # actually send packets
-        for c in self.communicate_to: #will always try to spread
-            packet = self._generate_packet(destination=c)
-            self._send(packet)
-        self.communicate_to.clear()
-
-    def notify_victim_packet_generation(self, victim, packet):
-        if victim.parent in self.spread_to:
-            packet.add_payload(self.attack_of_choice)
-        self.spread_to.clear()
-
-    # def update_stay_utility(self, c):
-    #     self.utility += c ** 2
-    #
-    # def update_execute_utility(self, c):
-    #     self.utility += c
-
-class Employee(GenericDefender):
-
-    def __init__(self, activity, address, parent, model, routing_table):
-        super().__init__(activity, address, parent, model, routing_table)
-
-        self._security = None  # gets initialized as soon as _get_security is called.
-        # do NOT use this variable directly
-
-    def get_tooltip(self):
-        return super().get_tooltip() + ("\nsecurity: %.2f" % self._get_security())
-
-    def step(self):
-        super().step()
-        self._generate_communicators()
-        for c in self.compromisers:
-            detected = self.detect(c.attack_of_choice, targetted=False, passive=True)
-            if detected:
-                # self.parent.compromised_detected += 1
-                self.clean_specific(c)
 
     def advance(self):
         super().advance()
@@ -256,40 +195,68 @@ class Employee(GenericDefender):
             self._send(packet)
         self.communicate_to.clear()
 
+    def notify_victim_packet_generation(self, victim, packet):
+        packet.add_payload(self.attack_of_choice)
+
+class Employee(GenericDefender):
+
+    def __init__(self, activity, address, parent, model, routing_table):
+        super().__init__(activity, address, parent, model, routing_table)
+        self.to_clean = []
+        self._security = None  # gets initialized as soon as _get_security is called.
+        # do NOT use this variable directly
+
+    def get_tooltip(self):
+        return super().get_tooltip() + ("\nsecurity: %.2f" % self._get_security())
+
+    def step(self):
+        super().step()
+        self._generate_communicators()
+        for c in self.compromisers:
+            detected = self.detect(c.attack_of_choice, targeted=False, passive=True)
+            if detected:
+                self.to_clean.append(c)
+
+    def advance(self):
+        super().advance()
+
+        for c in self.to_clean:
+            self.clean_specific(c)
+
+        # actually send packets
+        for c in self.communicate_to:
+            packet = self._generate_packet(destination=c)
+            self._send(packet)
+        self.communicate_to.clear()
+
     def _get_security(self):
-        if self._security is None:
-            self._security = helpers.get_total_security(
+        return helpers.get_total_security(
                 self.parent.security_budget, deviation_width=self.model.device_security_deviation_width)
-        return self._security
 
-    def is_attack_successful(self, attack, targetted): #detection function based chance
-        if self.detect(attack, targetted):
-            # attack.original_source.utility -= 0.5
+    def is_attack_successful(self, attack, targeted):
+        if self.detect(attack, targeted):
             return False
         else:
             return True
 
-    def detect(self, attack, targetted, passive=False):
-        information = self.parent.old_attacks_list[attack]
-        security = self._get_security()
+    def detect(self, attack, targeted, passive=False):
+        if targeted:  # direct attack
+            information = self.parent.old_attacks_list[attack]
+            security = self._get_security()
+            aggregate_security = (security + information)
 
-        if passive:
-            security *= self.model.passive_detection_weight
-        elif targetted:
-            security *= self.model.target_detection_weight
-        else:
-            security *= self.model.spread_detection_weight
+            if passive:
+                aggregate_security *= self.model.passive_detection_weight
 
-        prob = helpers.get_prob_detection_v3(security, attack.effectiveness,
-                                             information, stability=self.model.detection_func_stability)
-        print("PROB:", prob)
-        if random.random() < prob:  # attack is detected, gain information
-            info = self.parent.old_attacks_list[attack]
-            self.parent.new_attacks_list[attack] = \
-                helpers.get_new_information_detected(prob, info, w=self.model.information_gain_weight)
-            return True
-        else:
+            prob = helpers.get_prob_detection_v3(aggregate_security, attack.effectiveness,
+                                                 stability=self.model.detection_func_stability)
+            print("PROB:", prob)
+            if random.random() < prob:  # attack is detected, gain information
+                info = self.parent.old_attacks_list[attack]
+                self.parent.new_attacks_list[attack] = \
+                    helpers.get_new_information_detected(prob, info, w=self.model.information_gain_weight)
+                return True
+            else:
+                return False
+        else:  # spreading
             return False
-
-
-

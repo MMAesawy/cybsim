@@ -28,7 +28,7 @@ class Attack:
         if not self.original_source:
             return False
         defender = destination
-        if defender.is_attack_successful(attack=self, targetted=source == self.original_source) \
+        if defender.is_attack_successful(attack=self, targeted=source == self.original_source) \
                 and defender not in self.original_source.compromised:
             self.original_source.infect(defender)
             return True

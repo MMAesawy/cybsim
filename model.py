@@ -51,15 +51,14 @@ class CybCim(Model):
                  detection_func_stability=3,
                  device_security_deviation_width=0.25,
                  information_gain_weight=0.5,
-                 passive_detection_weight=0.125,
-                 spread_detection_weight=0.25,
-                 target_detection_weight=1.0,
+                 passive_detection_weight=0.1,
                  reciprocity=2,
                  transitivity=1,
                  trust_factor=2,
                  initial_closeness=0.5,
                  initial_trust=0.5,
-                 sharing_factor=2):
+                 sharing_factor=2,
+                 security_update_interval=10):
 
         global VERBOSE
         super().__init__()
@@ -85,15 +84,14 @@ class CybCim(Model):
         self.device_security_deviation_width = device_security_deviation_width  # adjustable parameter
         self.information_gain_weight = information_gain_weight  # adjustable parameter
         self.passive_detection_weight = passive_detection_weight  # adjustable parameter
-        self.spread_detection_weight = spread_detection_weight  # adjustable parameter
-        self.target_detection_weight = target_detection_weight  # adjustable parameter
         self.reciprocity = reciprocity  # adjustable parameter
         self.transitivity = transitivity  # adjustable parameter TODO: turn off permanently?
         self.trust_factor = trust_factor  # adjustable parameter
         self.initial_closeness = initial_closeness  # adjustable parameter
         self.initial_trust = initial_trust  # adjustable parameter
         self.information_sharing = information_sharing  # adjustable parameter
-        self.sharing_factor = sharing_factor # adjustable parameter
+        self.sharing_factor = sharing_factor # adjustable
+        self.security_update_interval = security_update_interval  # adjustable parameter
 
 
         self.num_users = 0

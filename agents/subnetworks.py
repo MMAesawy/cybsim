@@ -158,17 +158,16 @@ class Organization(SubNetwork, Agent):
     #TODO fix this
     def step(self):
 
+        for c in self.attacks_compromised_counts:
+            self.update_stay_utility(c)
+
         self.count += 1
-        print("before:", self.security_budget)
-        print(self.count)
-        print("utility:", self.utility)
         # organization updates its security budget every n steps based on previous step utility in order to improve its utility
-        if self.count == 10:  # TODO parametrize
+        if self.count == self.model.security_update_interval:
             self.count = 0
             self.update_budget()
             self.update_budget_utility()
         self.utility_buffer = self.utility + self.security_budget #remove effect of security budget
-        print("after:" , self.security_budget)
         self.model.org_utility += self.utility # adds organization utility to model's utility of all organizations
 
     def advance(self):
@@ -196,9 +195,6 @@ class Organization(SubNetwork, Agent):
 
     def update_budget_utility(self):
         self.utility -= self.security_budget ** 2
-
-    def update_execute_utility(self, num_compromised): # TODO possibly useless now?
-        self.utility -= num_compromised
 
     def update_stay_utility(self, num_compromised): # TODO possibly useless now?
         self.utility -= num_compromised ** 2
