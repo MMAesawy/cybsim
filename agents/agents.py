@@ -58,7 +58,7 @@ class GenericDefender(User):
         """
         for i, c in enumerate(self.compromisers):
             if c is attacker:
-                # self.parent.attacks_list.append([c._attack_of_choice, 0.5])
+                # self.parent.old_attacks_list.append([c._attack_of_choice, 0.5])
                 self.compromisers.pop(i)
                 c.notify_clean(self)
                 break
@@ -139,12 +139,13 @@ class GenericAttacker(User):
         while self._is_active() and orgs_to_attack_count < len(non_infected_orgs):
             orgs_to_attack_count += 1
 
-        orgs_to_attack = np.random.choice(non_infected_orgs, orgs_to_attack_count, replace=False)
-        for i in orgs_to_attack:
-            user = random.choice(self.model.organizations[i].users)
-            self.communicate_to.append(user)
-        if not orgs_to_attack_count and self.model.verbose:
-            print("Attacker ", self.address, " has compromised all organizations")
+        if orgs_to_attack_count != 0:
+            orgs_to_attack = np.random.choice(non_infected_orgs, orgs_to_attack_count, replace=False)
+            for i in orgs_to_attack:
+                user = random.choice(self.model.organizations[i].users)
+                self.communicate_to.append(user)
+            if not orgs_to_attack_count and self.model.verbose:
+                print("Attacker ", self.address, " has compromised all organizations")
 
     def infect(self, victim):
         """
@@ -189,6 +190,9 @@ class Attacker(GenericAttacker):
 
     def get_tooltip(self):
         return super().get_tooltip() + ("\nattack effectiveness: %.2f" % self.attack_of_choice.effectiveness)
+
+    def get_effectiveness(self):
+        return self._attack_of_choice.effectiveness
 
     def _generate_packet(self, destination):
         packet = super()._generate_packet(destination=destination)
