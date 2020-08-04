@@ -98,14 +98,24 @@ def get_new_information_detected(probability, old_information, w = 0.5):
 def get_total_security(security_budget, deviation_width):
     return min(1, max(0, random.gauss(security_budget, deviation_width/6)))
 
-def share_info_selfish(org1, org2):
+def share_info_selfish(org1, org2): #org1 only shares
     for attack, info in org1.old_attacks_list.items():
-        org2.new_attacks_list[attack] = get_new_information_selfish(org2.old_attacks_list[attack], info)
+        new_info = get_new_information_selfish(org2.old_attacks_list[attack], info)
+        org2.new_attacks_list[attack] = new_info
+        org2.info_in += new_info
+        if new_info != 0:
+            org1.info_out += new_info
 
-def share_info_cooperative(org1, org2, sp):
+
+def share_info_cooperative(org1, org2, sp): #org1 shares with org2
     for attack, info in org1.old_attacks_list.items():
         if info > org2.old_attacks_list[attack]:
-            org2.new_attacks_list[attack] = get_new_information_cooperative(org2.old_attacks_list[attack], info, sp)
+            new_info = get_new_information_cooperative(org2.old_attacks_list[attack], info, sp)
+            org2.new_attacks_list[attack] = new_info
+            org2.info_in += new_info
+            if new_info != 0:
+                org1.info_out += new_info
+
 
 def adjust_transitivity(model, org1, org2):
     for i in range(model.num_subnetworks - 1):

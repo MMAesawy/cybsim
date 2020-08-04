@@ -100,7 +100,7 @@ model_params = {
                                                       description='Choose whether the first level of subgraphs is of devices'),
     # 'num_internet_devices': UserSettableParameter(param_type='slider', name='Number of internet devices', value=10, min_value=10, max_value=100, step=1,
     #                                               description='Choose how many internet devices to have'),
-    'num_subnetworks': UserSettableParameter(param_type='slider', name='Number of subnetworks', value=10, min_value=1, max_value=50, step=1,
+    'num_subnetworks': UserSettableParameter(param_type='slider', name='Number of subnetworks', value=10, min_value=4, max_value=50, step=1,
                                                   description='Choose how many subnetworks to have'),
     'num_attackers': UserSettableParameter(param_type='slider', name='Number of attackers', value=2, min_value=1, max_value=30, step=1,
                                                   description='Choose how many attackers to have'),

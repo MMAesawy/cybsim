@@ -147,6 +147,8 @@ class Organization(SubNetwork, Agent):
         self.utility = 0
         self.count = 0
         self.risk_of_sharing = 0.3  # TODO: parametrize, possibly update in update_utility_sharing or whatever
+        self.info_in = 0
+        self.info_out = 0
 
         model.organizations.append(self)
         # set and increment id
@@ -172,6 +174,9 @@ class Organization(SubNetwork, Agent):
     def advance(self):
         for attack, info in self.new_attacks_list.items():
             self.old_attacks_list[attack] = self.new_attacks_list[attack]
+
+    def free_loading_ratio(self):
+        return self.info_in / (self.info_in + self.info_out + 1e-5)
 
     def share_decision(self, trust):
         """Returns whether or not to share information according to other party."""

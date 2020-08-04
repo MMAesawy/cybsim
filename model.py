@@ -27,6 +27,12 @@ def get_avg_utility(model):
     model.org_utility = 0
     return avg
 
+def get_free_loading(model):
+    freq = []
+    for o in model.organizations:
+        freq.append(o.free_loading_ratio())
+    return freq
+
 class CybCim(Model):
 
     def __init__(self,
@@ -68,7 +74,7 @@ class CybCim(Model):
         # For batch runner
         self.running = True
 
-        self.num_internet_devices = num_internet_devices  # adjustable parameter, possibly useless?
+        self.num_internet_devices = num_internet_devices  # adjustable parameter, TODO possibly useless?
         self.num_subnetworks = num_subnetworks  # adjustable parameter
         self.num_attackers = num_attackers  # adjustable parameter
         self.device_count = device_count  # adjustable parameter
@@ -138,7 +144,8 @@ class CybCim(Model):
             {
              "Compromised Devices": get_total_compromised,
              "Closeness": get_avg_closeness,
-             "Utility": get_avg_utility
+             "Utility": get_avg_utility,
+             "Free loading": get_free_loading
             }
         )
 
@@ -247,6 +254,7 @@ class CybCim(Model):
         for i in range(len(self.attackers)):
             e.append((i + 1, self.attackers[i].get_effectiveness()))
         return e
+
 
     def step(self):
 
