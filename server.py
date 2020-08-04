@@ -74,7 +74,16 @@ def network_portrayal(G):
 
 class MyTextElement(TextElement):
     def render(self, model):
-        return "Number of users: {}" .format(model.num_users)
+        text = "Attack Effectiveness "
+        for e in model.get_attack_effectiveness():
+            text += "Attack "
+            text += str(e[0])
+            text += ": "
+            text += str("{:0.2f}".format(e[1]))
+            text += " "
+        text += "\nNumber of users: {}" .format(model.num_users)
+        return text
+        # return "Number of users: {}" .format(model.num_users), "Attacker Effectiveness " , model.get_attack_effectiveness
 
 model_params = {
     'visualize': UserSettableParameter(param_type='checkbox', name='Enable visualization', value=True,
@@ -135,8 +144,11 @@ model_params = {
                                          description='Parameter representing how much organizations trust each other less/more after interacting'),
     'initial_trust': UserSettableParameter(param_type='slider', name='Initial trust', value=0.5, max_value=1, min_value=0,
                                           step=0.1,description='Parameter representing how much organizations are initially trusting of each other to share information'),
-    'initial_closeness': UserSettableParameter(param_type='slider', name='Initial closeness', value=0.5, max_value=1, min_value=0,
-                                          step=0.1,description='Parameter representing how much organizations are initially close with each other representing their likelihood to interact')
+    'initial_closeness': UserSettableParameter(param_type='slider', name='Initial closeness', value=0.2, max_value=1, min_value=0,
+                                          step=0.1,description='Parameter representing how much organizations are initially close with each other representing their likelihood to interact'),
+    'sharing_factor': UserSettableParameter(param_type='slider', name='Sharing Factor', value=2, max_value=10, min_value=1,
+                                          step=0.2,description='Parameter representing the amount of information gained when players both cooperate'),
+
 
 
 }
