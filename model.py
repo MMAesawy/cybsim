@@ -51,7 +51,8 @@ class CybCim(Model):
                  transitivity=1,
                  trust_factor=2,
                  initial_closeness=0.5,
-                 initial_trust=0.5):
+                 initial_trust=0.5,
+                 sharing_factor=2):
 
         global VERBOSE
         super().__init__()
@@ -84,6 +85,8 @@ class CybCim(Model):
         self.initial_closeness = initial_closeness  # adjustable parameter
         self.initial_trust = initial_trust  # adjustable parameter
         self.information_sharing = information_sharing  # adjustable parameter
+        self.sharing_factor = sharing_factor # adjustable parameter
+
 
         self.num_users = 0
         self.devices = []
@@ -206,8 +209,8 @@ class CybCim(Model):
                         adjust_transitivity(self, i, j)
 
                         # actually gain information for both organizations
-                        share_info_cooperative(self.subnetworks[i], self.subnetworks[j])
-                        share_info_cooperative(self.subnetworks[j], self.subnetworks[i])
+                        share_info_cooperative(self.subnetworks[i], self.subnetworks[j], self.sharing_factor)
+                        share_info_cooperative(self.subnetworks[j], self.subnetworks[i], self.sharing_factor)
 
                         # lose some utility when sharing due to privacy loss etc
                         self.subnetworks[i].update_information_utility()
@@ -239,13 +242,20 @@ class CybCim(Model):
             j, i = i, j
         return self.closeness_matrix[i, j]
 
+    def get_attack_effectiveness(self):
+        e = []
+        for i in range(len(self.attackers)):
+            e.append((i + 1, self.attackers[i].get_effectiveness()))
+        return e
+
     def step(self):
-        if self.information_sharing:
-            self.information_sharing_game()  # TODO: move after agent step???
+
         self.reset_edge_data()
 
         # update agents
         self.schedule.step()
+        if self.information_sharing:
+            self.information_sharing_game()  # TODO: move after agent step???
 
         # # update correspondences
         # i = 0
@@ -273,3 +283,4 @@ class CybCim(Model):
                 e_data = self.G.get_edge_data(ns_address, nd_address)
                 e_data["active"] = False
                 e_data["malicious"] = False
+
