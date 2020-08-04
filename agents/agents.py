@@ -270,7 +270,7 @@ class Employee(GenericDefender):
             return True
 
     def detect(self, attack, targetted, passive=False):
-        information = self.parent.attacks_list[attack]
+        information = self.parent.old_attacks_list[attack]
         security = self._get_security()
 
         if passive:
@@ -284,8 +284,8 @@ class Employee(GenericDefender):
                                              information, info_weight=self.model.information_importance)
 
         if random.random() < prob:  # attack is detected, gain information
-            info = self.parent.attacks_list[attack]
-            self.parent.attacks_list[attack] = \
+            info = self.parent.old_attacks_list[attack]
+            self.parent.new_attacks_list[attack] = \
                 helpers.get_new_information_detected(prob, info, w=self.model.information_gain_weight)
             return True
         else:
