@@ -104,21 +104,31 @@ def get_total_security(security_budget, deviation_width):
 def share_info_selfish(org1, org2): #org1 only shares
     for attack, info in org1.old_attacks_list.items():
         new_info = get_new_information_selfish(org2.old_attacks_list[attack], info)
+        old_info_o1 = org1.old_attacks_list[attack]
+        old_info_o2 = org2.old_attacks_list[attack]
+
+        org2.info_in += abs(new_info - old_info_o2)
+        # if new_info != 0:
+        org1.info_out += abs(new_info - old_info_o1)
+        org1.org_out[org2] += abs(new_info - old_info_o1)
         org2.new_attacks_list[attack] = new_info
-        org2.info_in += new_info
-        if new_info != 0:
-            org1.info_out += new_info
 
 
 def share_info_cooperative(org1, org2, sp): #org1 shares with org2
     for attack, info in org1.old_attacks_list.items():
         if info > org2.old_attacks_list[attack]:
             new_info = get_new_information_cooperative(org2.old_attacks_list[attack], info, sp)
-            org2.new_attacks_list[attack] = new_info
-            org2.info_in += new_info
-            if new_info != 0:
-                org1.info_out += new_info
+            old_info_o1 = org1.old_attacks_list[attack]
+            old_info_o2 = org2.old_attacks_list[attack]
+            org2.info_in += abs(new_info - old_info_o2)
+            # if new_info != 0:
+            org1.info_out += abs(new_info - old_info_o1)
+            org1.org_out[org2] += abs(new_info - old_info_o1)
 
+            org2.new_attacks_list[attack] = new_info
+
+def free_loading_ratio_v1(info_in, info_out):
+    return info_in / (info_in + info_out + 1e-5)
 
 def adjust_transitivity(model, org1, org2):
     for i in range(model.num_subnetworks - 1):

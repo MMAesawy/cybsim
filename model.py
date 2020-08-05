@@ -30,7 +30,8 @@ def get_avg_utility(model):
 def get_free_loading(model):
     freq = []
     for o in model.organizations:
-        freq.append(o.free_loading_ratio())
+        # freq.append(o.free_loading_ratio())
+        freq.append(free_loading_ratio_v1(o.info_in, o.info_out))
     return freq
 
 class CybCim(Model):
@@ -59,7 +60,8 @@ class CybCim(Model):
                  initial_trust=0.5,
                  sharing_factor=2,
                  security_update_interval=10,
-                 org_memory=5):
+                 org_memory=5,
+                 acceptable_freeload=0.5):
 
         global VERBOSE
         super().__init__()
@@ -94,6 +96,7 @@ class CybCim(Model):
         self.sharing_factor = sharing_factor # adjustable
         self.security_update_interval = security_update_interval  # adjustable parameter
         self.org_memory = org_memory  # adjustable parameter
+        self.acceptable_freeload = acceptable_freeload
 
 
         self.num_users = 0
@@ -204,7 +207,8 @@ class CybCim(Model):
                     t2 = self.trust_matrix[j, i]
                     closeness = self.closeness_matrix[i][j]
                     # get each organization's decision to share or not based on its trust towards the other
-                    r1, r2 = self.subnetworks[i].share_decision(t1), self.subnetworks[j].share_decision(t2)
+                    r1 = self.subnetworks[i].share_decision(self.subnetworks[j], t1)
+                    r2 = self.subnetworks[j].share_decision(self.subnetworks[i], t2)
                     choice = [r1, r2]
                     if sum(choice) == 2:  # both cooperate/share
                         # come closer to each other for both orgs (symmetric matrix)
