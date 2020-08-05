@@ -154,6 +154,7 @@ class Organization(SubNetwork, Agent):
         self.info_out = 0
         self.num_detect = defaultdict(lambda: 0)
         self.num_attempts = 0
+        self.security_drop = min(1, max(0, random.gauss(0.75, 0.05)))
 
         model.organizations.append(self)
         # set and increment id
@@ -211,7 +212,8 @@ class Organization(SubNetwork, Agent):
             print("Ratio", ratio)
             self.security_budget += (1 - self.security_budget) * ratio
         else:
-            self.security_budget *= 0.9  # TODO: change for each org?
+            print("Dropping security by", self.security_drop)
+            self.security_budget *= self.security_drop  # TODO: change for each org?
 
         self.security_budget = max(0, min(1, self.security_budget))
         print("New security", self.security_budget)
