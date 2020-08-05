@@ -59,7 +59,8 @@ class CybCim(Model):
                  initial_trust=0.5,
                  sharing_factor=2,
                  security_update_interval=10,
-                 org_memory=5):
+                 org_memory=5,
+                 attack_awareness_weight=4):
 
         global VERBOSE
         super().__init__()
@@ -94,6 +95,7 @@ class CybCim(Model):
         self.sharing_factor = sharing_factor # adjustable
         self.security_update_interval = security_update_interval  # adjustable parameter
         self.org_memory = org_memory  # adjustable parameter
+        self.attack_awareness_weight = attack_awareness_weight  # adjustable parameter
 
 
         self.num_users = 0
