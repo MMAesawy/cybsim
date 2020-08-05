@@ -98,6 +98,8 @@ model_params = {
                                                       description='Choose whether a fisheye effect is enabled'),
     'subgraph_type': UserSettableParameter(param_type='checkbox', name='Subgraph of devices?', value=True,
                                                       description='Choose whether the first level of subgraphs is of devices'),
+    'fixed_attack_effectiveness': UserSettableParameter(param_type='checkbox', name='Fixed attack effectiveness?', value=False,
+                                                      description='Choose whether the attack effectiveness across all attacks are the same value'),
     'num_subnetworks': UserSettableParameter(param_type='slider', name='Number of subnetworks', value=10, min_value=4, max_value=50, step=1,
                                                   description='Choose how many subnetworks to have'),
     'num_attackers': UserSettableParameter(param_type='slider', name='Number of attackers', value=2, min_value=1, max_value=30, step=1,
@@ -134,7 +136,9 @@ model_params = {
     'org_memory': UserSettableParameter(param_type='slider', name='Organization Memory', value=3, max_value=20, min_value=1,
                                           step=1,description='Parameter representing organization attack awareness memory'),
     'attack_awareness_weight': UserSettableParameter(param_type='slider', name='Attack awareness weight', value=4, max_value=20, min_value=1,
-                                          step=1,description='Parameter representing how less effective the attack will be, under awareness of the attack')
+                                          step=1,description='Parameter representing how less effective the attack will be, under awareness of the attack'),
+    'fixed_attack_effectiveness_value': UserSettableParameter(param_type='slider', name='Fixed attack effectiveness value', value=0.5, max_value=1, min_value=0,
+                                          step=0.05,description='Parameter representing the value of the fixed attack effectiveness value across all attacks')
 }
 # NOTE ABOUT WIDTHS: a width of 1000 -> full stretch across the visual elements section
 

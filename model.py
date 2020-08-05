@@ -42,6 +42,7 @@ class CybCim(Model):
                  visualize=True,
                  verbose=True,
                  information_sharing=True,
+                 fixed_attack_effectiveness=False,
                  num_internet_devices=100,
                  num_subnetworks=15,
                  num_attackers=5,
@@ -60,7 +61,8 @@ class CybCim(Model):
                  sharing_factor=2,
                  security_update_interval=10,
                  org_memory=5,
-                 attack_awareness_weight=4):
+                 attack_awareness_weight=4,
+                 fixed_attack_effectiveness_value=0.5):
 
         global VERBOSE
         super().__init__()
@@ -96,6 +98,8 @@ class CybCim(Model):
         self.security_update_interval = security_update_interval  # adjustable parameter
         self.org_memory = org_memory  # adjustable parameter
         self.attack_awareness_weight = attack_awareness_weight  # adjustable parameter
+        self.fixed_attack_effectiveness = fixed_attack_effectiveness  # adjustable parameter
+        self.fixed_attack_effectiveness_value = fixed_attack_effectiveness_value  # adjustable parameter
 
 
         self.num_users = 0
