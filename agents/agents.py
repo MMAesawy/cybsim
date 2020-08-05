@@ -12,6 +12,7 @@ class User(NetworkDevice):
         self.total_utility = 0
         self.communicate_to = []
         self.parent.users.append(self)
+        self.activity = max(0, min(1, random.gauss(0.5, 1 / 6)))
         model.users.append(self)  # append user into model's user list
 
     def _generate_packet(self, destination):
@@ -24,13 +25,17 @@ class User(NetworkDevice):
 
     def _generate_communicators(self):
         # generate list of users to talk with
-        user = random.choice(self.parent.users)
-        while user is self:
+        if self.is_active():
             user = random.choice(self.parent.users)
-        self.communicate_to.append(user)
+            while user is self:
+                user = random.choice(self.parent.users)
+            self.communicate_to.append(user)
 
     def get_tooltip(self):
         return super().get_tooltip()
+
+    def is_active(self):
+        return random.random() > self.activity
 
 
 class GenericDefender(User):
@@ -130,12 +135,16 @@ class GenericAttacker(User):
 
     # only try to communicate with non infilterated organizations
     def _generate_communicators(self):
-        # generate list of users to talk with
-        non_infected_orgs = np.arange(len(self.model.organizations), dtype=np.int)[self.compromised_counts == 0]
+        if self.is_active():
+            # generate list of users to talk with
+            non_infected_orgs = np.arange(len(self.model.organizations), dtype=np.int)[self.compromised_counts == 0]
 
-        for i in non_infected_orgs:
-            user = random.choice(self.model.organizations[i].users)
-            self.communicate_to.append(user)
+            # for i in non_infected_orgs:
+            #     user = random.choice(self.model.organizations[i].users)
+            #     self.communicate_to.append(user)
+            if len(non_infected_orgs) > 0:
+                user = random.choice(self.model.organizations[random.choice(non_infected_orgs)].users)
+                self.communicate_to.append(user)
 
     def infect(self, victim):
         """
