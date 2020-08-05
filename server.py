@@ -132,11 +132,11 @@ model_params = {
     'sharing_factor': UserSettableParameter(param_type='slider', name='Sharing Factor', value=2, max_value=10, min_value=1,
                                           step=0.2,description='Parameter representing the amount of information gained when players both cooperate'),
     'security_update_interval': UserSettableParameter(param_type='slider', name='Security Update Interval', value=10, max_value=50, min_value=1,
-                                          step=0.2,description='Parameter representing interval at which organizations update their security'),
+                                          step=1,description='Parameter representing interval at which organizations update their security'),
     'org_memory': UserSettableParameter(param_type='slider', name='Organization Memory', value=3, max_value=20, min_value=1,
                                           step=1,description='Parameter representing organization attack awareness memory'),
-    'attack_awareness_weight': UserSettableParameter(param_type='slider', name='Attack awareness weight', value=4, max_value=20, min_value=1,
-                                          step=1,description='Parameter representing how less effective the attack will be, under awareness of the attack'),
+    'acceptable_freeload': UserSettableParameter(param_type='slider', name='Acceptable Freeload', value=0.5, max_value=1, min_value=0,
+                                          step=0.1,description='Parameter representing organization acceptable freeloading tolerance'),
     'fixed_attack_effectiveness_value': UserSettableParameter(param_type='slider', name='Fixed attack effectiveness value', value=0.5, max_value=1, min_value=0,
                                           step=0.05,description='Parameter representing the value of the fixed attack effectiveness value across all attacks')
 }

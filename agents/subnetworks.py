@@ -144,6 +144,9 @@ class Organization(SubNetwork, Agent):
         self.old_attacks_list = defaultdict(lambda: 0)
         self.new_attacks_list = defaultdict(lambda: 0)
         self.attacks_compromised_counts = defaultdict(lambda: 0)
+        # self.org_out = np.zeros(len(model.organizations))
+        self.org_out = defaultdict(lambda: 0)
+
         # incident start, last update, is aware
         self.attack_awareness = defaultdict(lambda: [self.model.schedule.time, self.model.schedule.time])
         self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
@@ -155,6 +158,7 @@ class Organization(SubNetwork, Agent):
         self.num_detect = defaultdict(lambda: 0)
         self.num_attempts = 0
         self.security_drop = min(1, max(0, random.gauss(0.75, 0.05)))
+        self.acceptable_freeload = model.acceptable_freeload
 
         model.organizations.append(self)
         # set and increment id
@@ -190,15 +194,22 @@ class Organization(SubNetwork, Agent):
     def free_loading_ratio(self):
         return self.info_in / (self.info_in + self.info_out + 1e-5)
 
-    def share_decision(self, trust):
+
+
+    def share_decision(self, org2, trust):
         """Returns whether or not to share information according to other party."""
         # TODO make decision based on trust factor, pass other org object instead of just closeness
-        return random.random() < trust
+        info_out = self.org_out[org2] # org1 out (org1_info_out)
+        info_in = org2.org_out[self] #org1 in (org2_info_out)
+        print("org1" , self.id, " org2: ", org2.id, "Trust: ",trust)
+        if info_out > info_in: # decreases probability to share
+            print("Probability: ", trust * info_in / info_out," Ratio: ", info_in / info_out)
+            print("------")
+            return random.random() < trust * min(1, self.acceptable_freeload + (info_in / info_out))
+        else:
+            return random.random() < trust
 
     def update_budget(self):
-        print("Org id", self.id)
-        print("Old Security", self.security_budget)
-
         unhandled_attacks = []
         current_time = self.model.schedule.time
         for a, v in self.attack_awareness.items():
@@ -206,17 +217,15 @@ class Organization(SubNetwork, Agent):
             if incident_time > self.model.org_memory:
                 unhandled_attacks.append((self.num_detect[a], incident_time))
 
-        print("Unhandled attacks", len(unhandled_attacks))
         if unhandled_attacks:  # a security incident happened and wasn't handled in time
             ratio = sum([num_detected/self.num_users/inc_time for num_detected, inc_time in unhandled_attacks])/len(unhandled_attacks)
-            print("Ratio", ratio)
             self.security_budget += (1 - self.security_budget) * ratio
         else:
             print("Dropping security by", self.security_drop)
             self.security_budget *= self.security_drop  # TODO: change for each org?
 
         self.security_budget = max(0, min(1, self.security_budget))
-        print("New security", self.security_budget)
+
         # self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
 
     def update_budget_utility(self):
