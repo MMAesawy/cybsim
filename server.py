@@ -137,6 +137,8 @@ model_params = {
                                           step=1,description='Parameter representing organization attack awareness memory'),
     'acceptable_freeload': UserSettableParameter(param_type='slider', name='Acceptable Freeload', value=0.5, max_value=1, min_value=0,
                                           step=0.1,description='Parameter representing organization acceptable freeloading tolerance'),
+    'attack_awareness_weight': UserSettableParameter(param_type='slider', name='Attack awareness weight', value=4, max_value=20, min_value=1,
+                                          step=1,description='Parameter representing how less effective the attack will be, under awareness of the attack'),
     'fixed_attack_effectiveness_value': UserSettableParameter(param_type='slider', name='Fixed attack effectiveness value', value=0.5, max_value=1, min_value=0,
                                           step=0.05,description='Parameter representing the value of the fixed attack effectiveness value across all attacks')
 }

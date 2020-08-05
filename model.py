@@ -63,6 +63,7 @@ class CybCim(Model):
                  security_update_interval=10,
                  org_memory=5,
                  acceptable_freeload=0.5,
+                 attack_awareness_weight=4,
                  fixed_attack_effectiveness_value=0.5):
 
         global VERBOSE
@@ -101,6 +102,7 @@ class CybCim(Model):
         self.acceptable_freeload = acceptable_freeload
         self.fixed_attack_effectiveness = fixed_attack_effectiveness  # adjustable parameter
         self.fixed_attack_effectiveness_value = fixed_attack_effectiveness_value  # adjustable parameter
+        self.attack_awareness_weight = attack_awareness_weight  # adjustable parameter
 
 
         self.num_users = 0
