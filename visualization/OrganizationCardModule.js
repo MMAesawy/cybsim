@@ -360,7 +360,7 @@ class OrganizationCardModule{
             .text(function(d) { return d.utility.toFixed(3); });
         cards
             .select("path.arc")
-            .transition()
+            // .transition()
             .attr("d",
                 function(d) {
                 return d3.arc()
