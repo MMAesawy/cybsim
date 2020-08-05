@@ -132,7 +132,9 @@ model_params = {
     'security_update_interval': UserSettableParameter(param_type='slider', name='Security Update Interval', value=10, max_value=50, min_value=1,
                                           step=0.2,description='Parameter representing interval at which organizations update their security'),
     'org_memory': UserSettableParameter(param_type='slider', name='Organization Memory', value=3, max_value=20, min_value=1,
-                                          step=1,description='Parameter representing organization attack awareness memory')
+                                          step=1,description='Parameter representing organization attack awareness memory'),
+    'attack_awareness_weight': UserSettableParameter(param_type='slider', name='Attack awareness weight', value=4, max_value=20, min_value=1,
+                                          step=1,description='Parameter representing how less effective the attack will be, under awareness of the attack')
 }
 # NOTE ABOUT WIDTHS: a width of 1000 -> full stretch across the visual elements section
 

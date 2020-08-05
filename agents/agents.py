@@ -263,7 +263,7 @@ class Employee(GenericDefender):
                 aggregate_security *= self.model.passive_detection_weight
             t = attack.effectiveness
             if is_aware:
-                t /= 4  # TODO: parametrize or figure out a set sensible value that makes sense?
+                t /= self.model.attack_awareness_weight  # TODO: parametrize or figure out a set sensible value that makes sense?
             prob = helpers.get_prob_detection_v3(aggregate_security, t,
                                                  stability=self.model.detection_func_stability)
             # print("PROB:", prob)
