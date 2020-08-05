@@ -58,6 +58,9 @@ class GenericDefender(User):
                 break
 
         self.parent.attacks_compromised_counts[attacker.attack_of_choice] -= 1
+        # if self.parent.attacks_compromised_counts[attacker.attack_of_choice] == 0:
+        #     self.parent.clear_awareness(attacker.attack_of_choice)
+
         if not self.is_compromised():  # if not compromised any more
             self.model.total_compromised -= 1
             self.parent.num_compromised -= 1
@@ -244,13 +247,15 @@ class Employee(GenericDefender):
 
     def detect(self, attack, targeted):
             information = self.parent.old_attacks_list[attack]
-            security = self._get_security()
+            security = self.parent.security_budget  #self._get_security()
             aggregate_security = (security + information)
-
-            if not targeted:
+            is_aware = self.parent.is_aware(attack)
+            if not targeted and not is_aware:  # treats aware attacks as targeted attacks
                 aggregate_security *= self.model.passive_detection_weight
-
-            prob = helpers.get_prob_detection_v3(aggregate_security, attack.effectiveness,
+            t = attack.effectiveness
+            if is_aware:
+                t /= 4  # TODO: parametrize or figure out a set sensible value that makes sense?
+            prob = helpers.get_prob_detection_v3(aggregate_security, t,
                                                  stability=self.model.detection_func_stability)
             # print("PROB:", prob)
             self.parent.num_attempts += 1
@@ -258,7 +263,9 @@ class Employee(GenericDefender):
                 info = self.parent.old_attacks_list[attack]
                 self.parent.new_attacks_list[attack] = \
                     helpers.get_new_information_detected(prob, info, w=self.model.information_gain_weight)
-                self.parent.num_detect += 1
+                self.parent.num_detect[attack] += 1
+                if not targeted:
+                    self.parent.attack_awareness[attack][1] = self.model.schedule.time
                 return True
             else:
                 return False

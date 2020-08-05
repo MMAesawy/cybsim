@@ -142,15 +142,17 @@ class Organization(SubNetwork, Agent):
         self.old_utility = 0
         self.utility = 0
         self.old_attacks_list = defaultdict(lambda: 0)
-        self.new_attacks_list = defaultdict(lambda : 0)
+        self.new_attacks_list = defaultdict(lambda: 0)
         self.attacks_compromised_counts = defaultdict(lambda: 0)
+        # incident start, last update, is aware
+        self.attack_awareness = defaultdict(lambda: [self.model.schedule.time, self.model.schedule.time])
         self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
         self.num_compromised = 0
         self.count = 0
         self.risk_of_sharing = 0.3  # TODO: parametrize, possibly update in update_utility_sharing or whatever
         self.info_in = 0
         self.info_out = 0
-        self.num_detect = 0
+        self.num_detect = defaultdict(lambda: 0)
         self.num_attempts = 0
 
         model.organizations.append(self)
@@ -169,8 +171,6 @@ class Organization(SubNetwork, Agent):
         if self.count == self.model.security_update_interval:
             self.count = 0
             self.update_budget()
-            self.num_attempts = 0
-            self.num_detect = 0
             self.old_utility = self.utility
             self.update_budget_utility()
         self.model.org_utility += self.utility # adds organization utility to model's utility of all organizations
@@ -178,6 +178,13 @@ class Organization(SubNetwork, Agent):
     def advance(self):
         for attack, info in self.new_attacks_list.items():
             self.old_attacks_list[attack] = self.new_attacks_list[attack]
+        current_time = self.model.schedule.time
+        delete = []
+        for attack, (_, last_update) in self.attack_awareness.items():
+            if current_time - last_update > self.model.org_memory:
+                delete.append(attack)
+        for a in delete:
+            self.clear_awareness(a)
 
     def free_loading_ratio(self):
         return self.info_in / (self.info_in + self.info_out + 1e-5)
@@ -188,19 +195,23 @@ class Organization(SubNetwork, Agent):
         return random.random() < trust
 
     def update_budget(self):
-        utility_drop = -(self.utility - self.old_utility)
-        print("Drop", utility_drop)
+        print("Org id", self.id)
         print("Old Security", self.security_budget)
 
-        # if utility_drop > 0:  # people got infected since last security budget update
-        #     self.security_budget += (1 - self.security_budget) / 2
-        # else:
-        #     self.security_budget -= self.security_budget / 2
-        ratio = self.num_detect / self.num_attempts
-        if self.num_detect / self.num_attempts < self.model.acceptable_threshold:
-            self.security_budget += math.exp(-5*(ratio))
+        unhandled_attacks = []
+        current_time = self.model.schedule.time
+        for a, v in self.attack_awareness.items():
+            incident_time = current_time - v[0]
+            if incident_time > self.model.org_memory:
+                unhandled_attacks.append((self.num_detect[a], incident_time))
+
+        print("Unhandled attacks", len(unhandled_attacks))
+        if unhandled_attacks:  # a security incident happened and wasn't handled in time
+            ratio = sum([num_detected/self.num_users/inc_time for num_detected, inc_time in unhandled_attacks])/len(unhandled_attacks)
+            print("Ratio", ratio)
+            self.security_budget += (1 - self.security_budget) * ratio
         else:
-            self.security_budget -= math.exp(-5*(ratio))
+            self.security_budget *= 0.9  # TODO: change for each org?
 
         self.security_budget = max(0, min(1, self.security_budget))
         print("New security", self.security_budget)
@@ -216,6 +227,13 @@ class Organization(SubNetwork, Agent):
     def update_information_utility(self):
         # self.utility -= self.risk_of_sharing
         pass
+
+    def clear_awareness(self, attack):
+        del self.attack_awareness[attack]
+        del self.num_detect[attack]
+
+    def is_aware(self, attack):
+        return attack in self.attack_awareness
 
     def get_percent_compromised(self, attack=None):
         """Returns the percentage of users compromised for each attack (or the total if `attack` is None)"""

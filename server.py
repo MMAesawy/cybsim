@@ -104,15 +104,15 @@ model_params = {
                                                   description='Choose how many attackers to have'),
     'device_count': UserSettableParameter(param_type='slider', name='Device count for organization', value=30, min_value=10, max_value=100, step=1,
                                                   description='Choose the number of devices for an organization'),
-    'avg_time_to_new_attack': UserSettableParameter(param_type='slider', name='Average time for new attack', value=500, min_value=0, max_value=1000, step=1,
+    'avg_time_to_new_attack': UserSettableParameter(param_type='slider', name='Average time for new attack', value=100, min_value=0, max_value=500, step=1,
                                                   description='Choose the average time for the generation of a new attack on the network'),
     # 'detection_func_stability': UserSettableParameter(param_type='slider', name='Detection Stability (1e-x)', value=3, min_value=0, max_value=5, step=1,
     #                                                description='Controls the magnitude of the stability factor added to the detection probability function.'),
     'device_security_deviation_width': UserSettableParameter(param_type='slider', name='Security deviation width', value=0.25,
                                                     min_value=0, max_value=1, step=0.005,
                                                     description='Controls the deviation of devices\' security around the organization\'s security budget '),
-    'information_gain_weight': UserSettableParameter(param_type='slider', name='Information gain scale', value=0.1,
-                                                    min_value=0, max_value=2, step=0.01,
+    'information_gain_weight': UserSettableParameter(param_type='slider', name='Information gain scale', value=0.01,
+                                                    min_value=0, max_value=0.5, step=0.005,
                                                     description='Scales the amount of information gained through a detection. Greater values means it\'s easier to gain information.'),
     'passive_detection_weight': UserSettableParameter(param_type='slider', name='Passive detection weight', value=0.25,
                                                     min_value=0.01, max_value=1, step=0.005,
@@ -131,8 +131,8 @@ model_params = {
                                           step=0.2,description='Parameter representing the amount of information gained when players both cooperate'),
     'security_update_interval': UserSettableParameter(param_type='slider', name='Security Update Interval', value=10, max_value=50, min_value=1,
                                           step=0.2,description='Parameter representing interval at which organizations update their security'),
-    'acceptable_threshold': UserSettableParameter(param_type='slider', name='Acceptable Threshold', value=0.8, max_value=1, min_value=0,
-                                          step=0.1,description='Parameter representing threshold of changing security budget')
+    'org_memory': UserSettableParameter(param_type='slider', name='Organization Memory', value=3, max_value=20, min_value=1,
+                                          step=1,description='Parameter representing organization attack awareness memory')
 }
 # NOTE ABOUT WIDTHS: a width of 1000 -> full stretch across the visual elements section
 
