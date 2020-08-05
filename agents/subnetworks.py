@@ -147,9 +147,10 @@ class Organization(SubNetwork, Agent):
         # self.org_out = np.zeros(len(model.organizations))
         self.org_out = defaultdict(lambda: 0)
 
-        # incident start, last update, is aware
+        # incident start, last update
         self.attack_awareness = defaultdict(lambda: [self.model.schedule.time, self.model.schedule.time])
-        self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
+        self.security_budget = max(0.005, min(1, random.gauss(0.5, 1 / 6)))
+        # self.security_budget = 0.005
         self.num_compromised = 0
         self.count = 0
         self.risk_of_sharing = 0.3  # TODO: parametrize, possibly update in update_utility_sharing or whatever
@@ -224,7 +225,7 @@ class Organization(SubNetwork, Agent):
             print("Dropping security by", self.security_drop)
             self.security_budget *= self.security_drop  # TODO: change for each org?
 
-        self.security_budget = max(0, min(1, self.security_budget))
+        self.security_budget = max(0.005, min(1, self.security_budget))
 
         # self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
 
@@ -240,6 +241,7 @@ class Organization(SubNetwork, Agent):
         pass
 
     def clear_awareness(self, attack):
+        self.update_Incident_times(attack)
         del self.attack_awareness[attack]
         del self.num_detect[attack]
 
@@ -256,6 +258,12 @@ class Organization(SubNetwork, Agent):
 
     def get_info(self, attack):
         return self.old_attacks_list[attack]
+
+    def update_Incident_times(self, attack):
+        current_time = self.model.schedule.time
+        for a, (incident_start, _) in self.attack_awareness.items():
+            if a == attack:
+                self.model.incident_times.append(current_time - incident_start)
 
     # <----- creating the devices and users in the subnetwork ----->
     def _create_graph(self):

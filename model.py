@@ -34,6 +34,9 @@ def get_free_loading(model):
         freq.append(free_loading_ratio_v1(o.info_in, o.info_out))
     return freq
 
+def get_avg_incident_time(model):  #TODO to be called somewhere
+    return sum(model.incident_times)/len(model.incident_times)
+
 class CybCim(Model):
 
     def __init__(self,
@@ -77,9 +80,6 @@ class CybCim(Model):
         VERBOSE = verbose
         self.address_server = AddressServer()
 
-        # For batch runner
-        self.running = True
-
         self.num_internet_devices = num_internet_devices  # adjustable parameter, TODO possibly useless?
         self.num_subnetworks = num_subnetworks  # adjustable parameter
         self.num_attackers = num_attackers  # adjustable parameter
@@ -111,6 +111,8 @@ class CybCim(Model):
         self.organizations = []
         self.users = []  # keeping track of human users in all networks
         self.attackers = []
+
+        self.incident_times = []
 
         # create graph and compute pairwise shortest paths
         self._create_graph()

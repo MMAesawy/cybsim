@@ -2,19 +2,20 @@ from model import *
 from mesa.batchrunner import BatchRunner
 
 fixed_params = {"fixed_attack_effectiveness": True,
-                "information_sharing": False,
+                "information_sharing": True,
                 "verbose": False}
 variable_params = {}
 
 batch_run = BatchRunner(CybCim,
                         variable_params,
                         fixed_params,
-                        iterations=20,
-                        max_steps=500,
+                        iterations=5,
+                        max_steps=200,
                         model_reporters={
-                             "Compromised Devices": get_total_compromised,
-                             "Closeness": get_avg_closeness
-                         })
+                            "Compromised Devices": get_total_compromised,
+                            "Closeness": get_avg_closeness,
+                            "Average Incident time": get_avg_incident_time
+                        })
 batch_run.run_all()
 
 run_data = batch_run.get_model_vars_dataframe()
