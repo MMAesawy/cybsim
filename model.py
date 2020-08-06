@@ -58,13 +58,17 @@ def get_security_per_org(model):
         security.append(o.security_budget)
     return security
 
-def get_avg_security_per_org(model):
-    for i, o in enumerate(model.organizations):
-        model.avg_security_per_org[i] += o.security_budget
-    return  model.avg_security_per_org / (model.schedule.time + 1)
+# def get_avg_security_per_org(model): # useless now
+#     for i, o in enumerate(model.organizations):
+#         model.avg_security_per_org[i] += o.security_budget
+#     return  model.avg_security_per_org / (model.schedule.time + 1)
 
 def get_total_avg_security(model):
-    return sum(model.avg_security_per_org) / len(model.organizations)
+    total_avg_sec = 0
+    for o in model.organizations:
+        total_avg_sec += o.avg_security
+    return total_avg_sec / len(model.organizations)
+    # return sum(model.avg_security_per_org) / len(model.organizations)
 
 
 class CybCim(Model):
@@ -144,7 +148,7 @@ class CybCim(Model):
 
         self.incident_times = []
         self.newly_compromised_per_step = []
-        self.avg_security_per_org = np.zeros(num_subnetworks - 1) # storing averages for data collection
+        # self.avg_security_per_org = np.zeros(num_subnetworks - 1) # storing averages for data collection # useless
         self.avg_newly_compromised_per_org = np.zeros(num_subnetworks - 1) # storing averages for data collection
 
         # create graph and compute pairwise shortest paths
@@ -193,9 +197,7 @@ class CybCim(Model):
                 "Closeness": get_avg_closeness,
                 "Utility": get_avg_utility,
                 "Free loading": get_free_loading,
-                # "security per org": get_security_per_org,
-                "avg security per org": get_avg_security_per_org,
-                "total avg security": get_total_avg_security
+                "total avg sec": get_total_avg_security
             }
         )
 

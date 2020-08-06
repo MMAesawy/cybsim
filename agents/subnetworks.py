@@ -161,12 +161,18 @@ class Organization(SubNetwork, Agent):
         self.num_attempts = 0
         self.security_drop = min(1, max(0, random.gauss(0.75, 0.05)))
         self.acceptable_freeload = model.acceptable_freeload
-        self.free_loading_ratio = 0
+
+        self.free_loading_ratio = 0 # used for batch runner
+        self.total_security = 0  # used for batch runner
+        self.avg_security = 0
 
         model.organizations.append(self)
         # set and increment id
         self.id = Organization.organization_count
         Organization.organization_count += 1
+
+    def get_avg_security(self):
+        return self.total_security / (self.model.schedule.time + 1)
 
     #TODO fix this
     def step(self):
@@ -190,6 +196,9 @@ class Organization(SubNetwork, Agent):
         self.num_compromised_new = 0  # reset variable
 
         self.free_loading_ratio = self.get_free_loading_ratio()
+        self.total_security += self.security_budget # updating total value to get average
+        self.avg_security = self.get_avg_security()
+
 
     def advance(self):
         for attack, info in self.new_attacks_list.items():
