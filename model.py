@@ -198,7 +198,6 @@ class CybCim(Model):
             {
                 "Compromised Devices": get_total_compromised,
                 "Closeness": get_avg_closeness,
-                "Utility": get_avg_utility,
                 "Average Trust": get_avg_trust,
                 "Free loading": get_free_loading,
                 "total avg sec": get_total_avg_security

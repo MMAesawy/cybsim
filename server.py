@@ -151,12 +151,10 @@ chart_1 = ChartModule([{'Label': 'Compromised Devices', 'Color': '#505050', 'Poi
 
 chart_2 = ChartModule([{'Label': 'Closeness', 'Color':'#505050'}], canvas_height=200)
 
-chart_3 = ChartModule([{'Label': 'Utility', 'Color':'#505050'}], canvas_height=200)
+chart_3 = ChartModule([{'Label': 'Average Trust', 'Color':'#505050'}], canvas_height=200)
 
-chart_4 = ChartModule([{'Label': 'Average Trust', 'Color':'#505050'}], canvas_height=200)
-
-composite_view = TabSelectorView([chart_1, chart_2, chart_3, chart_4],
-                                 element_names=["Compromised Devices", "Organization Closeness","Organization Utility"," Average Trust"],
+composite_view = TabSelectorView([chart_1, chart_2, chart_3],
+                                 element_names=["Compromised Devices", "Organization Closeness", " Average Trust"],
                                  width=1000)
 
 card_view = OrganizationCardModule()
