@@ -42,14 +42,14 @@ batch_run = BatchRunnerNew(CybCim,
                             # "Average of newly compromised per step": get_avg_newly_compromised_per_step
                         },
                         agent_reporters={
-                            # "freeloading per org": get_free_loading
-                            "free loading per organization": "free_loading_ratio"
+                            "Average incident time per Org.": "avg_incident_times",
+                            "Free loading per Org.": "free_loading_ratio"
                         })
 batch_run.run_all()
 
 # run_data = batch_run.get_model_vars_dataframe()
 run_data = batch_run.get_agent_vars_dataframe()
-run_data.to_csv("D:\Materials\cybsim\Result.csv")
-# run_data.to_csv("Result.csv")
+# run_data.to_csv("D:\Materials\cybsim\Result.csv")
+run_data.to_csv("Result.csv")
 # run_data.head()
 # plt.scatter(run_data.avg_time_to_new_attack, run_data.Gini)

@@ -166,6 +166,12 @@ class Organization(SubNetwork, Agent):
         self.total_security = 0  # used for batch runner
         self.avg_security = 0
 
+        self.avg_compromised_per_step = 0  #TODO yet to be used
+
+        self.incident_times = 0  # for avg incident time
+        self.avg_incident_times = 0  # for avg incident time
+        self.incident_times_num = 0  # for avg incident time
+
         model.organizations.append(self)
         # set and increment id
         self.id = Organization.organization_count
@@ -261,6 +267,8 @@ class Organization(SubNetwork, Agent):
 
     def clear_awareness(self, attack):
         self.update_incident_times(attack)
+        self.incident_times_num += 1  # for avg incident time
+        self.avg_incident_times = self.set_avg_incident_time()
         del self.attack_awareness[attack]
         del self.num_detect[attack]
 
@@ -281,6 +289,10 @@ class Organization(SubNetwork, Agent):
     def update_incident_times(self, attack):
         current_time = self.model.schedule.time
         self.model.incident_times.append(current_time - self.attack_awareness[attack][0])
+        self.incident_times += (current_time - self.attack_awareness[attack][0])  # for avg incident time
+
+    def set_avg_incident_time(self):  # for avg incident time
+        return self.incident_times/self.incident_times_num
 
     # <----- creating the devices and users in the subnetwork ----->
     def _create_graph(self):
