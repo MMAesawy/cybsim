@@ -184,7 +184,7 @@ class Organization(SubNetwork, Agent):
         self.model.total_org_utility += self.utility  # adds organization utility to model's total utility of all organizations for the calculation of the average utility for the batchrunner
 
         # for calculating the average compromised per step
-        self.model.newly_compromised_num_per_step.append(self.num_compromised_new - self.num_compromised_old)
+        self.model.newly_compromised_per_step.append(self.num_compromised_new - self.num_compromised_old)
         self.num_compromised_old = self.num_compromised_new
         self.num_compromised_new = 0  # reset variable
 
@@ -209,10 +209,10 @@ class Organization(SubNetwork, Agent):
         # TODO make decision based on trust factor, pass other org object instead of just closeness
         info_out = self.org_out[org2] # org1 out (org1_info_out)
         info_in = org2.org_out[self] #org1 in (org2_info_out)
-        print("org1" , self.id, " org2: ", org2.id, "Trust: ",trust)
+        # print("org1" , self.id, " org2: ", org2.id, "Trust: ",trust)
         if info_out > info_in: # decreases probability to share
-            print("Probability: ", trust * info_in / info_out," Ratio: ", info_in / info_out)
-            print("------")
+            # print("Probability: ", trust * info_in / info_out," Ratio: ", info_in / info_out)
+            # print("------")
             return random.random() < trust * min(1, self.acceptable_freeload + (info_in / info_out))
         else:
             return random.random() < trust

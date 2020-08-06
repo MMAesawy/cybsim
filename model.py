@@ -13,8 +13,13 @@ VERBOSE = True
 def get_total_compromised(model):
     return model.total_compromised
 
+def get_avg_compromised_per_org(model):
+    for i, o in enumerate(model.organizations):
+        model.avg_newly_compromised_per_org[i] += model.avg_newly_compromised_per_org[i]
+    return model.avg_newly_compromised_per_org / (model.schedule.time + 1)
+
 def get_avg_newly_compromised_per_step(model):  #TODO to be called somewhere (called in batchrunner)
-    return sum(model.newly_compromised_num_per_step)/len(model.newly_compromised_num_per_step)
+    return sum(model.newly_compromised_per_step) / len(model.newly_compromised_per_step)
 
 # Data collector function for closeness between organization
 def get_avg_closeness(model):
@@ -59,7 +64,7 @@ def get_avg_security_per_org(model):
     return  model.avg_security_per_org / (model.schedule.time + 1)
 
 def get_total_avg_security(model):
-    return sum(get_security_per_org(model)) / len(model.organizations)
+    return sum(model.avg_security_per_org) / len(model.organizations)
 
 
 class CybCim(Model):
@@ -138,8 +143,9 @@ class CybCim(Model):
         self.attackers = []
 
         self.incident_times = []
-        self.newly_compromised_num_per_step = []
-        self.avg_security_per_org = np.zeros(num_subnetworks - 1)
+        self.newly_compromised_per_step = []
+        self.avg_security_per_org = np.zeros(num_subnetworks - 1) # storing averages for data collection
+        self.avg_newly_compromised_per_org = np.zeros(num_subnetworks - 1) # storing averages for data collection
 
         # create graph and compute pairwise shortest paths
         self._create_graph()
