@@ -33,7 +33,7 @@ batch_run = BatchRunnerNew(CybCim,
                         variable_params,
                         fixed_params,
                         iterations=1,
-                        max_steps=200,
+                        max_steps=500,
                         model_reporters={
                             # "Average Utility loss": get_avg_utility_batch,
                             # "Closeness": get_avg_closeness,
@@ -43,7 +43,9 @@ batch_run = BatchRunnerNew(CybCim,
                         },
                         agent_reporters={
                             "Average incident time per Org.": "avg_incident_times",
-                            "Free loading per Org.": "free_loading_ratio"
+                            "Free loading per Org.": "free_loading_ratio",
+                            "Average security per Org.": "avg_security",
+                            "Avg. num. of compromised per step": "avg_compromised_per_step"
                         })
 batch_run.run_all()
 
