@@ -30,6 +30,9 @@ def get_avg_closeness(model):
     n = model.num_subnetworks - 1
     return avg / (n * (n-1) / 2)  # avg / n choose 2
 
+def get_avg_trust(model):
+    return model.trust_matrix.mean()
+
 def get_avg_utility(model):
     avg = model.org_utility / (model.num_subnetworks - 1)
     model.org_utility = 0
@@ -196,6 +199,7 @@ class CybCim(Model):
                 "Compromised Devices": get_total_compromised,
                 "Closeness": get_avg_closeness,
                 "Utility": get_avg_utility,
+                "Average Trust": get_avg_trust,
                 "Free loading": get_free_loading,
                 "total avg sec": get_total_avg_security
             }
