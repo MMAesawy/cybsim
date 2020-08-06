@@ -68,7 +68,7 @@ class GenericDefender(User):
 
         if not self.is_compromised():  # if not compromised any more
             self.model.total_compromised -= 1
-            self.parent.num_compromised -= 1
+            self.parent.num_compromised_new -= 1
 
     def clean_all(self):
         """Cleans the user from a specific attacker. Notifies each attacker."""
@@ -77,7 +77,7 @@ class GenericDefender(User):
             self.parent.attacks_compromised_counts[c.attack_of_choice] -= 1
         self.compromisers.clear()
         self.model.total_compromised -= 1
-        self.parent.num_compromised -= 1
+        self.parent.num_compromised_new -= 1
 
     def notify_infection(self, attacker):
         """
@@ -88,7 +88,6 @@ class GenericDefender(User):
             raise ValueError("Compromiser is not an instance of GenericAttacker")
         if not self.is_compromised():
             self.model.total_compromised += 1
-            self.parent.num_compromised += 1
             self.parent.num_compromised_new += 1
         self.parent.attacks_compromised_counts[attacker.attack_of_choice] += 1
         self.compromisers.append(attacker)

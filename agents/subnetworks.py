@@ -151,7 +151,6 @@ class Organization(SubNetwork, Agent):
         self.attack_awareness = defaultdict(lambda: [self.model.schedule.time, self.model.schedule.time])
         self.security_budget = max(0.005, min(1, random.gauss(0.5, 1 / 6)))
         # self.security_budget = 0.005
-        self.num_compromised = 0
         self.num_compromised_new = 0  # for getting avg rate of compromised per step
         self.num_compromised_old = 0  # for getting avg rate of compromised per step
         self.count = 0
@@ -187,6 +186,7 @@ class Organization(SubNetwork, Agent):
         # for calculating the average compromised per step
         self.model.newly_compromised_num_per_step.append(self.num_compromised_new - self.num_compromised_old)
         self.num_compromised_old = self.num_compromised_new
+        self.num_compromised_new = 0  # reset variable
 
     def advance(self):
         for attack, info in self.new_attacks_list.items():
@@ -232,7 +232,7 @@ class Organization(SubNetwork, Agent):
             print("Dropping security by", self.security_drop)
             self.security_budget *= self.security_drop  # TODO: change for each org?
 
-        self.security_budget = max(0.005, min(1, self.security_budget))
+        self.security_budget = max(0.005, min(1.0, self.security_budget))
 
         # self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
 
@@ -248,7 +248,7 @@ class Organization(SubNetwork, Agent):
         pass
 
     def clear_awareness(self, attack):
-        self.update_Incident_times(attack)
+        self.update_incident_times(attack)
         del self.attack_awareness[attack]
         del self.num_detect[attack]
 
@@ -261,16 +261,14 @@ class Organization(SubNetwork, Agent):
             return 0
         if attack:
             return self.attacks_compromised_counts[attack] / self.num_users
-        return self.num_compromised / self.num_users
+        return self.num_compromised_old / self.num_users
 
     def get_info(self, attack):
         return self.old_attacks_list[attack]
 
-    def update_Incident_times(self, attack):
+    def update_incident_times(self, attack):
         current_time = self.model.schedule.time
-        for a, (incident_start, _) in self.attack_awareness.items():
-            if a == attack:
-                self.model.incident_times.append(current_time - incident_start)
+        self.model.incident_times.append(current_time - self.attack_awareness[attack][0])
 
     # <----- creating the devices and users in the subnetwork ----->
     def _create_graph(self):
