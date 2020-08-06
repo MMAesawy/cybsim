@@ -162,7 +162,11 @@ class Organization(SubNetwork, Agent):
         self.security_drop = min(1, max(0, random.gauss(0.75, 0.05)))
         self.acceptable_freeload = model.acceptable_freeload
 
-        self.free_loading_ratio = 0  # used for batch runner
+
+        # <---- Data collection ---->
+
+        self.free_loading_ratio = 0  # variable to store freeloading ratio for each organization
+        # to store changing organization security
         self.total_security = 0  # used for batch runner
         self.avg_security = 0
 
@@ -173,69 +177,48 @@ class Organization(SubNetwork, Agent):
         self.avg_incident_times = 0  # for avg incident time
         self.incident_times_num = 0  # for avg incident time
 
-        model.organizations.append(self)
+        # to store times organization shares when it enters a game
+        self.total_share = 0
+        self.avg_share = 0
+        self.num_games_played = 0
 
+        # to store average known info
+        self.avg_info = 0
+
+        # <--- adding organization to model org array and setting unique ID --->
+
+        model.organizations.append(self)
         # set and increment id
         self.id = Organization.organization_count
         Organization.organization_count += 1
 
+    def get_avg_known_info(self):
+        avg = 0
+        for attack, info in self.old_attacks_list.items():
+            avg += info
+        return avg / len(self.old_attacks_list)
+
     def get_avg_security(self):
         return self.total_security / (self.model.schedule.time + 1)
-
-    # TODO fix this
-    def step(self):
-
-        for c in self.attacks_compromised_counts.values():
-            self.update_stay_utility(c)
-
-        self.count += 1
-        # organization updates its security budget every n steps based on previous step utility in order to improve its utility
-        if self.count == self.model.security_update_interval:
-            self.count = 0
-            self.update_budget()
-            self.old_utility = self.utility
-            self.update_budget_utility()
-        self.model.org_utility += self.utility  # adds organization utility to model's utility of all organizations
-        self.model.total_org_utility += self.utility  # adds organization utility to model's total utility of all organizations for the calculation of the average utility for the batchrunner
-
-        # for calculating the average compromised per step
-        self.model.newly_compromised_per_step.append(self.num_compromised_new - self.num_compromised_old)
-        self.compromised_per_step_aggregated += self.num_compromised_new - self.num_compromised_old  # Organization lvl
-        self.avg_compromised_per_step = self.set_avg_compromised_per_step()  # Organization lvl
-
-        self.num_compromised_old = self.num_compromised_new
-        # self.num_compromised_new = 0  # reset variable
-
-        self.free_loading_ratio = self.get_free_loading_ratio()
-        self.total_security += self.security_budget  # updating total value to get average
-        self.avg_security = self.get_avg_security()
-
-    def advance(self):
-        for attack, info in self.new_attacks_list.items():
-            self.old_attacks_list[attack] = self.new_attacks_list[attack]
-        current_time = self.model.schedule.time
-        delete = []
-        for attack, (_, last_update) in self.attack_awareness.items():
-            if current_time - last_update > self.model.org_memory:
-                delete.append(attack)
-        for a in delete:
-            self.clear_awareness(a)
 
     def get_free_loading_ratio(self):
         return self.info_in / (self.info_in + self.info_out + 1e-5)
 
     def share_decision(self, org2, trust):
         """Returns whether or not to share information according to other party."""
-        # TODO make decision based on trust factor, pass other org object instead of just closeness
+        self.num_games_played += 1
         info_out = self.org_out[org2]  # org1 out (org1_info_out)
         info_in = org2.org_out[self]  # org1 in (org2_info_out)
-        # print("org1" , self.id, " org2: ", org2.id, "Trust: ",trust)
         if info_out > info_in:  # decreases probability to share
-            # print("Probability: ", trust * info_in / info_out," Ratio: ", info_in / info_out)
-            # print("------")
-            return random.random() < trust * min(1, self.acceptable_freeload + (info_in / info_out))
+            share = random.random() < trust * min(1, self.acceptable_freeload + (info_in / info_out))
         else:
-            return random.random() < trust
+            share = random.random() < trust
+        if share:
+            self.total_share += 1
+        return share
+
+    def get_avg_share(self):
+        return self.total_share / self.num_games_played
 
     def update_budget(self):
         unhandled_attacks = []
@@ -269,6 +252,14 @@ class Organization(SubNetwork, Agent):
         # self.utility -= self.risk_of_sharing
         pass
 
+    def update_incident_times(self, attack):
+        current_time = self.model.schedule.time
+        self.model.incident_times.append(current_time - self.attack_awareness[attack][0])
+        self.incident_times += (current_time - self.attack_awareness[attack][0])  # for avg incident time
+
+    def set_avg_incident_time(self):  # for avg incident time
+        return self.incident_times / self.incident_times_num
+
     def clear_awareness(self, attack):
         self.update_incident_times(attack)
         self.incident_times_num += 1  # for avg incident time
@@ -290,16 +281,52 @@ class Organization(SubNetwork, Agent):
     def get_info(self, attack):
         return self.old_attacks_list[attack]
 
-    def update_incident_times(self, attack):
-        current_time = self.model.schedule.time
-        self.model.incident_times.append(current_time - self.attack_awareness[attack][0])
-        self.incident_times += (current_time - self.attack_awareness[attack][0])  # for avg incident time
-
-    def set_avg_incident_time(self):  # for avg incident time
-        return self.incident_times / self.incident_times_num
-
     def set_avg_compromised_per_step(self):
         return self.compromised_per_step_aggregated / (self.model.schedule.time + 1)
+
+    def step(self):
+        for c in self.attacks_compromised_counts.values():
+            self.update_stay_utility(c)
+
+        self.count += 1
+        # organization updates its security budget every n steps based on previous step utility in order to improve its utility
+        if self.count == self.model.security_update_interval:
+            self.count = 0
+            self.update_budget()
+            self.old_utility = self.utility
+            self.update_budget_utility()
+        self.model.org_utility += self.utility  # adds organization utility to model's utility of all organizations
+        self.model.total_org_utility += self.utility  # adds organization utility to model's total utility of all organizations for the calculation of the average utility for the batchrunner
+
+        # for calculating the average compromised per step
+        self.model.newly_compromised_per_step.append(self.num_compromised_new - self.num_compromised_old)
+        self.compromised_per_step_aggregated += (self.num_compromised_new - self.num_compromised_old) # Organization lvl
+        self.avg_compromised_per_step = self.set_avg_compromised_per_step()  # Organization lvl
+
+        self.num_compromised_old = self.num_compromised_new
+        # self.num_compromised_new = 0  # reset variable
+
+        self.free_loading_ratio = self.get_free_loading_ratio()
+        self.total_security += self.security_budget  # updating total value to get average
+        self.avg_security = self.get_avg_security()
+
+        if self.num_games_played > 0:
+            self.avg_share = self.get_avg_share()
+
+        if len(self.old_attacks_list) > 0:
+            self.avg_info =  self.get_avg_known_info()
+
+    def advance(self):
+        for attack, info in self.new_attacks_list.items():
+            self.old_attacks_list[attack] = self.new_attacks_list[attack]
+        current_time = self.model.schedule.time
+        delete = []
+        for attack, (_, last_update) in self.attack_awareness.items():
+            if current_time - last_update > self.model.org_memory:
+                delete.append(attack)
+        for a in delete:
+            self.clear_awareness(a)
+
 
     # <----- creating the devices and users in the subnetwork ----->
     def _create_graph(self):
