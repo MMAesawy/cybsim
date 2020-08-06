@@ -89,6 +89,7 @@ class GenericDefender(User):
         if not self.is_compromised():
             self.model.total_compromised += 1
             self.parent.num_compromised += 1
+            self.parent.num_compromised_new += 1
         self.parent.attacks_compromised_counts[attacker.attack_of_choice] += 1
         self.compromisers.append(attacker)
 

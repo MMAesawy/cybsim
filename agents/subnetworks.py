@@ -152,6 +152,8 @@ class Organization(SubNetwork, Agent):
         self.security_budget = max(0.005, min(1, random.gauss(0.5, 1 / 6)))
         # self.security_budget = 0.005
         self.num_compromised = 0
+        self.num_compromised_new = 0  # for getting avg rate of compromised per step
+        self.num_compromised_old = 0  # for getting avg rate of compromised per step
         self.count = 0
         self.risk_of_sharing = 0.3  # TODO: parametrize, possibly update in update_utility_sharing or whatever
         self.info_in = 0
@@ -180,6 +182,10 @@ class Organization(SubNetwork, Agent):
             self.old_utility = self.utility
             self.update_budget_utility()
         self.model.org_utility += self.utility # adds organization utility to model's utility of all organizations
+
+        # for calculating the average compromised per step
+        self.model.newly_compromised_num_per_step.append(self.num_compromised_new - self.num_compromised_old)
+        self.num_compromised_old = self.num_compromised_new
 
     def advance(self):
         for attack, info in self.new_attacks_list.items():

@@ -13,6 +13,9 @@ VERBOSE = True
 def get_total_compromised(model):
     return model.total_compromised
 
+def get_avg_newly_compromised_per_step(model):
+    return sum(model.newly_compromised_num_per_step)/len(model.newly_compromised_num_per_step)
+
 # Data collector function for closeness between organization
 def get_avg_closeness(model):
     avg = 0
@@ -113,6 +116,7 @@ class CybCim(Model):
         self.attackers = []
 
         self.incident_times = []
+        self.newly_compromised_num_per_step = []
 
         # create graph and compute pairwise shortest paths
         self._create_graph()
