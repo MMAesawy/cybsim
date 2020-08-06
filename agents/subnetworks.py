@@ -182,6 +182,7 @@ class Organization(SubNetwork, Agent):
             self.old_utility = self.utility
             self.update_budget_utility()
         self.model.org_utility += self.utility # adds organization utility to model's utility of all organizations
+        self.model.total_org_utility += self.utility  # adds organization utility to model's total utility of all organizations for the calculation of the average utility for the batchrunner
 
         # for calculating the average compromised per step
         self.model.newly_compromised_num_per_step.append(self.num_compromised_new - self.num_compromised_old)

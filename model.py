@@ -13,7 +13,7 @@ VERBOSE = True
 def get_total_compromised(model):
     return model.total_compromised
 
-def get_avg_newly_compromised_per_step(model):
+def get_avg_newly_compromised_per_step(model):  #TODO to be called somewhere (called in batchrunner)
     return sum(model.newly_compromised_num_per_step)/len(model.newly_compromised_num_per_step)
 
 # Data collector function for closeness between organization
@@ -30,6 +30,10 @@ def get_avg_utility(model):
     model.org_utility = 0
     return avg
 
+def get_avg_utility_batch(model):  # TODO redundant code
+    avg = model.total_org_utility / (model.num_subnetworks - 1)
+    return avg
+
 def get_free_loading(model):
     freq = []
     for o in model.organizations:
@@ -37,7 +41,10 @@ def get_free_loading(model):
         freq.append(free_loading_ratio_v1(o.info_in, o.info_out))
     return freq
 
-def get_avg_incident_time(model):  #TODO to be called somewhere
+def get_avg_free_loading(model):
+    return sum(get_free_loading(model))/len(get_free_loading(model))
+
+def get_avg_incident_time(model):  #TODO to be called somewhere (called in batchrunner)
     return sum(model.incident_times)/len(model.incident_times)
 
 class CybCim(Model):
@@ -144,6 +151,7 @@ class CybCim(Model):
         self.packet_count = 1  # TODO maybe have it do something with org productivity?
 
         self.org_utility = 0
+        self.total_org_utility = 0  # TODO byproduct of the redundant average utility function
         Organization.organization_count = 0  # reset organization count
 
         # TODO possibly move to own function

@@ -9,11 +9,12 @@ variable_params = {}
 batch_run = BatchRunner(CybCim,
                         variable_params,
                         fixed_params,
-                        iterations=5,
-                        max_steps=300,
+                        iterations=1,
+                        max_steps=2000,
                         model_reporters={
-                            "Compromised Devices": get_total_compromised,
+                            "Average Utility loss": get_avg_utility_batch,
                             "Closeness": get_avg_closeness,
+                            "Average freeloading": get_avg_free_loading,
                             "Average Incident time": get_avg_incident_time,
                             "Average of newly compromised per step": get_avg_newly_compromised_per_step
                         })
