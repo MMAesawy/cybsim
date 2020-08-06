@@ -47,6 +47,21 @@ def get_avg_free_loading(model):
 def get_avg_incident_time(model):  #TODO to be called somewhere (called in batchrunner)
     return sum(model.incident_times)/len(model.incident_times)
 
+def get_security_per_org(model):
+    security = []
+    for o in model.organizations:
+        security.append(o.security_budget)
+    return security
+
+def get_avg_security_per_org(model):
+    for i, o in enumerate(model.organizations):
+        model.avg_security_per_org[i] += o.security_budget
+    return  model.avg_security_per_org / (model.schedule.time + 1)
+
+def get_total_avg_security(model):
+    return sum(get_security_per_org(model)) / len(model.organizations)
+
+
 class CybCim(Model):
 
     def __init__(self,
@@ -124,6 +139,7 @@ class CybCim(Model):
 
         self.incident_times = []
         self.newly_compromised_num_per_step = []
+        self.avg_security_per_org = np.zeros(num_subnetworks - 1)
 
         # create graph and compute pairwise shortest paths
         self._create_graph()
@@ -167,10 +183,13 @@ class CybCim(Model):
         # data needed for making any graphs
         self.datacollector = DataCollector(
             {
-             "Compromised Devices": get_total_compromised,
-             "Closeness": get_avg_closeness,
-             "Utility": get_avg_utility,
-             "Free loading": get_free_loading
+                "Compromised Devices": get_total_compromised,
+                "Closeness": get_avg_closeness,
+                "Utility": get_avg_utility,
+                "Free loading": get_free_loading,
+                # "security per org": get_security_per_org,
+                "avg security per org": get_avg_security_per_org,
+                "total avg security": get_total_avg_security
             }
         )
 
