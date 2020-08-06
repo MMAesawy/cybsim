@@ -161,6 +161,7 @@ class Organization(SubNetwork, Agent):
         self.num_attempts = 0
         self.security_drop = min(1, max(0, random.gauss(0.75, 0.05)))
         self.acceptable_freeload = model.acceptable_freeload
+        self.free_loading_ratio = 0
 
         model.organizations.append(self)
         # set and increment id
@@ -188,6 +189,8 @@ class Organization(SubNetwork, Agent):
         self.num_compromised_old = self.num_compromised_new
         self.num_compromised_new = 0  # reset variable
 
+        self.free_loading_ratio = self.get_free_loading_ratio()
+
     def advance(self):
         for attack, info in self.new_attacks_list.items():
             self.old_attacks_list[attack] = self.new_attacks_list[attack]
@@ -199,7 +202,7 @@ class Organization(SubNetwork, Agent):
         for a in delete:
             self.clear_awareness(a)
 
-    def free_loading_ratio(self):
+    def get_free_loading_ratio(self):
         return self.info_in / (self.info_in + self.info_out + 1e-5)
 
 

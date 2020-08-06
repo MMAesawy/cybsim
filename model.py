@@ -42,7 +42,7 @@ def get_avg_utility_batch(model):  # TODO redundant code
 def get_free_loading(model):
     freq = []
     for o in model.organizations:
-        # freq.append(o.free_loading_ratio())
+        # freq.append(o.get_free_loading_ratio())
         freq.append(free_loading_ratio_v1(o.info_in, o.info_out))
     return freq
 
