@@ -162,17 +162,19 @@ class Organization(SubNetwork, Agent):
         self.security_drop = min(1, max(0, random.gauss(0.75, 0.05)))
         self.acceptable_freeload = model.acceptable_freeload
 
-        self.free_loading_ratio = 0 # used for batch runner
+        self.free_loading_ratio = 0  # used for batch runner
         self.total_security = 0  # used for batch runner
         self.avg_security = 0
 
-        self.avg_compromised_per_step = 0  #TODO yet to be used
+        self.compromised_per_step_aggregated = 0
+        self.avg_compromised_per_step = 0  # TODO yet to be used
 
         self.incident_times = 0  # for avg incident time
         self.avg_incident_times = 0  # for avg incident time
         self.incident_times_num = 0  # for avg incident time
 
         model.organizations.append(self)
+
         # set and increment id
         self.id = Organization.organization_count
         Organization.organization_count += 1
@@ -180,7 +182,7 @@ class Organization(SubNetwork, Agent):
     def get_avg_security(self):
         return self.total_security / (self.model.schedule.time + 1)
 
-    #TODO fix this
+    # TODO fix this
     def step(self):
 
         for c in self.attacks_compromised_counts.values():
@@ -193,18 +195,20 @@ class Organization(SubNetwork, Agent):
             self.update_budget()
             self.old_utility = self.utility
             self.update_budget_utility()
-        self.model.org_utility += self.utility # adds organization utility to model's utility of all organizations
+        self.model.org_utility += self.utility  # adds organization utility to model's utility of all organizations
         self.model.total_org_utility += self.utility  # adds organization utility to model's total utility of all organizations for the calculation of the average utility for the batchrunner
 
         # for calculating the average compromised per step
         self.model.newly_compromised_per_step.append(self.num_compromised_new - self.num_compromised_old)
+        self.compromised_per_step_aggregated += self.num_compromised_new - self.num_compromised_old  # Organization lvl
+        self.avg_compromised_per_step = self.set_avg_compromised_per_step()  # Organization lvl
+
         self.num_compromised_old = self.num_compromised_new
-        self.num_compromised_new = 0  # reset variable
+        # self.num_compromised_new = 0  # reset variable
 
         self.free_loading_ratio = self.get_free_loading_ratio()
-        self.total_security += self.security_budget # updating total value to get average
+        self.total_security += self.security_budget  # updating total value to get average
         self.avg_security = self.get_avg_security()
-
 
     def advance(self):
         for attack, info in self.new_attacks_list.items():
@@ -220,15 +224,13 @@ class Organization(SubNetwork, Agent):
     def get_free_loading_ratio(self):
         return self.info_in / (self.info_in + self.info_out + 1e-5)
 
-
-
     def share_decision(self, org2, trust):
         """Returns whether or not to share information according to other party."""
         # TODO make decision based on trust factor, pass other org object instead of just closeness
-        info_out = self.org_out[org2] # org1 out (org1_info_out)
-        info_in = org2.org_out[self] #org1 in (org2_info_out)
+        info_out = self.org_out[org2]  # org1 out (org1_info_out)
+        info_in = org2.org_out[self]  # org1 in (org2_info_out)
         # print("org1" , self.id, " org2: ", org2.id, "Trust: ",trust)
-        if info_out > info_in: # decreases probability to share
+        if info_out > info_in:  # decreases probability to share
             # print("Probability: ", trust * info_in / info_out," Ratio: ", info_in / info_out)
             # print("------")
             return random.random() < trust * min(1, self.acceptable_freeload + (info_in / info_out))
@@ -244,7 +246,9 @@ class Organization(SubNetwork, Agent):
                 unhandled_attacks.append((self.num_detect[a], incident_time))
 
         if unhandled_attacks:  # a security incident happened and wasn't handled in time
-            ratio = sum([num_detected/self.num_users/inc_time for num_detected, inc_time in unhandled_attacks])/len(unhandled_attacks)
+            ratio = sum(
+                [num_detected / self.num_users / inc_time for num_detected, inc_time in unhandled_attacks]) / len(
+                unhandled_attacks)
             self.security_budget += (1 - self.security_budget) * ratio
         else:
             print("Dropping security by", self.security_drop)
@@ -259,7 +263,7 @@ class Organization(SubNetwork, Agent):
         pass
 
     def update_stay_utility(self, num_compromised):
-        self.utility -= (num_compromised/self.num_users) ** 2
+        self.utility -= (num_compromised / self.num_users) ** 2
 
     def update_information_utility(self):
         # self.utility -= self.risk_of_sharing
@@ -292,7 +296,10 @@ class Organization(SubNetwork, Agent):
         self.incident_times += (current_time - self.attack_awareness[attack][0])  # for avg incident time
 
     def set_avg_incident_time(self):  # for avg incident time
-        return self.incident_times/self.incident_times_num
+        return self.incident_times / self.incident_times_num
+
+    def set_avg_compromised_per_step(self):
+        return self.compromised_per_step_aggregated / (self.model.schedule.time + 1)
 
     # <----- creating the devices and users in the subnetwork ----->
     def _create_graph(self):
