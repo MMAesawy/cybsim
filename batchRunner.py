@@ -1,8 +1,27 @@
 from model import *
 from agents import subnetworks
-from mesa.batchrunnercustom import BatchRunner
+from mesa.batchrunner import BatchRunner
 import numpy as np
 
+class BatchRunnerNew(BatchRunner):
+    def __init__(self, model_cls, variable_parameters=None,
+                 fixed_parameters=None, iterations=1, max_steps=1000,
+                 model_reporters=None, agent_reporters=None,
+                 display_progress=True):
+        BatchRunner.__init__(self, model_cls, variable_parameters,
+                 fixed_parameters, iterations, max_steps,
+                 model_reporters, agent_reporters,
+                 display_progress)
+
+    def collect_agent_vars(self, model):
+        """ Run reporters and collect agent-level variables. """
+        agent_vars = {}
+        for agent in model.organizations:
+            agent_record = {}
+            for var, reporter in self.agent_reporters.items():
+                agent_record[var] = getattr(agent, reporter)
+            agent_vars[agent.unique_id] = agent_record
+        return agent_vars
 
 
 fixed_params = {"fixed_attack_effectiveness": True,
@@ -10,7 +29,7 @@ fixed_params = {"fixed_attack_effectiveness": True,
                 "verbose": False}
 variable_params = {"fixed_attack_effectiveness_value": np.arange(0.2, 0.8, 0.2)}
 
-batch_run = BatchRunner(CybCim,
+batch_run = BatchRunnerNew(CybCim,
                         variable_params,
                         fixed_params,
                         iterations=1,
