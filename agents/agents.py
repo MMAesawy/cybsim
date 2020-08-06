@@ -257,10 +257,10 @@ class Employee(GenericDefender):
     def detect(self, attack, targeted):
             information = self.parent.old_attacks_list[attack]
             security = self.parent.security_budget  #self._get_security()
-            aggregate_security = (security + information)
             is_aware = self.parent.is_aware(attack)
             if not targeted and not is_aware:  # treats aware attacks as targeted attacks
-                aggregate_security *= self.model.passive_detection_weight
+                security *= self.model.passive_detection_weight
+            aggregate_security = (security + information)
             t = attack.effectiveness
             if is_aware:
                 t /= self.model.attack_awareness_weight  # TODO: parametrize or figure out a set sensible value that makes sense?
