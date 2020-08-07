@@ -30,6 +30,9 @@ def get_avg_closeness(model):
     n = model.num_subnetworks - 1
     return avg / (n * (n-1) / 2)  # avg / n choose 2
 
+def get_avg_trust(model):
+    return model.trust_matrix.mean()
+
 def get_avg_utility(model):
     avg = model.org_utility / (model.num_subnetworks - 1)
     model.org_utility = 0
@@ -94,11 +97,11 @@ class CybCim(Model):
                  reciprocity=2,
                  transitivity=1,
                  trust_factor=2,
-                 initial_closeness=0.5,
+                 initial_closeness=0.2,
                  initial_trust=0.5,
                  sharing_factor=2,
                  security_update_interval=10,
-                 org_memory=5,
+                 org_memory=3,
                  acceptable_freeload=0.5,
                  attack_awareness_weight=4,
                  fixed_attack_effectiveness_value=0.5,
@@ -206,7 +209,7 @@ class CybCim(Model):
             {
                 "Compromised Devices": get_total_compromised,
                 "Closeness": get_avg_closeness,
-                "Utility": get_avg_utility,
+                "Average Trust": get_avg_trust,
                 "Free loading": get_free_loading,
                 "total avg sec": get_total_avg_security
             }

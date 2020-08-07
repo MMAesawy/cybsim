@@ -140,16 +140,11 @@ class GenericAttacker(User):
 
     # only try to communicate with non infilterated organizations
     def _generate_communicators(self):
-        # if self.is_active():
-        # generate list of users to talk with
-        non_infected_orgs = np.arange(len(self.model.organizations), dtype=np.int)[self.compromised_counts == 0]
-
-        # for i in non_infected_orgs:
-        #     user = random.choice(self.model.organizations[i].users)
-        #     self.communicate_to.append(user)
-        if len(non_infected_orgs) > 0:
-            user = random.choice(self.model.organizations[random.choice(non_infected_orgs)].users)
-            self.communicate_to.append(user)
+        for org in self.model.organizations:
+            if random.random() < (1-self.attack_of_choice.effectiveness):
+                user = random.choice(org.users)
+                if user not in self.compromised:
+                    self.communicate_to.append(user)
 
     def infect(self, victim):
         """
@@ -228,13 +223,12 @@ class Employee(GenericDefender):
     def step(self):
         super().step()
         self._generate_communicators()
-        # for c in self.compromisers:
-        #     detected = self.detect(c.attack_of_choice, targeted=False)
-        #     if detected:
-        #         self.to_clean.append(c)
-                # #self.clean_specific(c)
-                # for u in self.parent.users:
-                #     u.clean_specific(c)
+        for a in self.parent.attack_awareness.keys():
+            attacker = a.original_source
+            if attacker in self.compromisers:
+                detected = self.detect(a, targeted=False)
+                if detected:
+                    self.to_clean.append(attacker)
 
     def advance(self):
         super().advance()
@@ -260,23 +254,25 @@ class Employee(GenericDefender):
             return True
 
     def detect(self, attack, targeted):
-            information = self.parent.old_attacks_list[attack]
+            information = self.parent.get_info(attack)
             security = self.parent.security_budget  #self._get_security()
-            aggregate_security = (security + information)
             is_aware = self.parent.is_aware(attack)
             if not targeted and not is_aware:  # treats aware attacks as targeted attacks
-                aggregate_security *= self.model.passive_detection_weight
+                security *= self.model.passive_detection_weight
+            aggregate_security = (security + information)
             t = attack.effectiveness
-            if is_aware:
-                t /= self.model.attack_awareness_weight  # TODO: parametrize or figure out a set sensible value that makes sense?
+            # if is_aware:
+            #     t /= self.model.attack_awareness_weight
             prob = helpers.get_prob_detection_v3(aggregate_security, t,
                                                  stability=self.model.detection_func_stability)
             # print("PROB:", prob)
             self.parent.num_attempts += 1
             if random.random() < prob:  # attack is detected, gain information
-                info = self.parent.old_attacks_list[attack]
-                self.parent.new_attacks_list[attack] = \
-                    helpers.get_new_information_detected(prob, info, w=self.model.information_gain_weight)
+                # new_info =\
+                #     helpers.get_new_information_detected(prob, information, w=self.model.information_gain_weight)
+                attack_list = self.parent.new_attacks_list[attack]
+                if not attack_list.all():
+                    attack_list[np.random.choice(np.arange(0, 1000)[~attack_list], 1)] = True
                 self.parent.num_detect[attack] += 1
                 if not targeted:
                     self.parent.attack_awareness[attack][1] = self.model.schedule.time
