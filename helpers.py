@@ -1,6 +1,7 @@
 import re
 import networkx as nx
 import random
+import numpy as np
 
 def random_string(length = 8):
     return "".join([chr(random.randint(ord("a"), ord("z"))) for _ in range(length)])
@@ -65,12 +66,13 @@ def get_defense(total_security, information, information_weight=1):
     return (2 - x**0.5 * y**(0.5*b) - x * y**b) / 2
 
 def get_new_information_selfish(i1, i2):
-    return max(i1, i2)
-    # return i1+i2*(1-i1)
+    return np.logical_or(i1, i2)
+   # return i1+i2*(1-i1)
 
 def get_new_information_cooperative(i1, i2, sp):
     # i2 > i1
-    return i1 + ((i2 - i1) / sp)
+    return np.logical_or(i1, i2)
+    # return i1 + ((i2 - i1) / sp) # TODO remove SP
     # return max(i1, i2)
 
 def get_reciprocity(choice, c, r):
@@ -108,23 +110,27 @@ def share_info_selfish(org1, org2): #org1 only shares
         old_info_o1 = org1.old_attacks_list[attack]
         old_info_o2 = org2.old_attacks_list[attack]
 
-        org2.info_in += abs(new_info - old_info_o2)
-        # if new_info != 0:
-        org1.info_out += abs(new_info - old_info_o1)
-        org1.org_out[org2] += abs(new_info - old_info_o1)
+        # org2.info_in += np.logical_xor(new_info, old_info_o2).mean()
+        # # if new_info != 0:
+        # org1.info_out += np.logical_xor(new_info, old_info_o1).mean()
+        # org1.org_out[org2] += np.logical_xor(new_info, old_info_o1).mean()
+        o = old_info_o1.mean()
+        org2.info_in += o
+        org1.info_out += o
+        org1.org_out[org2] += o
         org2.new_attacks_list[attack] = new_info
 
 
 def share_info_cooperative(org1, org2, sp): #org1 shares with org2
     for attack, info in org1.old_attacks_list.items():
-        if info > org2.old_attacks_list[attack]:
+        if info.sum() > org2.old_attacks_list[attack].sum():
             new_info = get_new_information_cooperative(org2.old_attacks_list[attack], info, sp)
             old_info_o1 = org1.old_attacks_list[attack]
             old_info_o2 = org2.old_attacks_list[attack]
-            org2.info_in += abs(new_info - old_info_o2)
+            org2.info_in += np.logical_xor(new_info, old_info_o2).mean()
             # if new_info != 0:
-            org1.info_out += abs(new_info - old_info_o1)
-            org1.org_out[org2] += abs(new_info - old_info_o1)
+            org1.info_out += np.logical_xor(new_info, old_info_o1).mean()
+            org1.org_out[org2] += np.logical_xor(new_info, old_info_o1).mean()
 
             org2.new_attacks_list[attack] = new_info
 

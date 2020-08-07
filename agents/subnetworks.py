@@ -141,9 +141,12 @@ class Organization(SubNetwork, Agent):
         Agent.__init__(self, address, model)
         self.old_utility = 0
         self.utility = 0
-        self.old_attacks_list = defaultdict(lambda: 0) # dictionary storing attack and known information about it
-        self.new_attacks_list = defaultdict(lambda: 0) # updated dictionary storing attack and known information about it
-        self.attacks_compromised_counts = defaultdict(lambda: 0) # to store attackers and number of devices compromised from organization
+        # dictionary storing attack and known information about it
+        self.old_attacks_list = defaultdict(lambda: np.zeros(1000, dtype=np.bool))
+        # updated dictionary storing attack and known information about it
+        self.new_attacks_list = defaultdict(lambda: np.zeros(1000, dtype=np.bool))
+        # to store attackers and number of devices compromised from organization
+        self.attacks_compromised_counts = defaultdict(lambda: 0)
         # self.org_out = np.zeros(len(model.organizations))
         self.org_out = defaultdict(lambda: 0) # store the amount of info shared with other organizations
 
@@ -197,7 +200,7 @@ class Organization(SubNetwork, Agent):
     def get_avg_known_info(self):
         avg = 0
         for attack, info in self.old_attacks_list.items():
-            avg += info
+            avg += info.mean()
         return avg / len(self.old_attacks_list)
 
     # returns average security across all time steps
@@ -288,7 +291,7 @@ class Organization(SubNetwork, Agent):
 
     # return amount of information known given a specific attack
     def get_info(self, attack):
-        return self.old_attacks_list[attack]
+        return self.old_attacks_list[attack].mean()
 
     def set_avg_compromised_per_step(self):
         return self.compromised_per_step_aggregated / (self.model.schedule.time + 1)
@@ -331,7 +334,7 @@ class Organization(SubNetwork, Agent):
 
     def advance(self):
         for attack, info in self.new_attacks_list.items():
-            self.old_attacks_list[attack] = self.new_attacks_list[attack]
+            self.old_attacks_list[attack] = self.new_attacks_list[attack].copy()
         current_time = self.model.schedule.time
         delete = []
         for attack, (_, last_update) in self.attack_awareness.items():
