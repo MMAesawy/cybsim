@@ -251,7 +251,6 @@ class Organization(SubNetwork, Agent):
                 unhandled_attacks)
             self.security_budget += (1 - self.security_budget) * ratio
         else:
-            print("Dropping security by", self.security_drop)
             self.security_budget *= self.security_drop  # TODO: change for each org?
 
         self.security_budget = max(0.005, min(1.0, self.security_budget))

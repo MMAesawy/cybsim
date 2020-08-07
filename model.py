@@ -13,11 +13,13 @@ import numpy as np
 def get_total_compromised(model):
     return model.total_compromised
 
+# return average number of newly compromised devices for each organization
 def get_avg_compromised_per_org(model):
     for i, o in enumerate(model.organizations):
         model.avg_newly_compromised_per_org[i] += model.avg_newly_compromised_per_org[i]
     return model.avg_newly_compromised_per_org / (model.schedule.time + 1)
 
+# return the average number of newly compromised devcies among all organizations
 def get_avg_newly_compromised_per_step(model):  #TODO to be called somewhere (called in batchrunner)
     return sum(model.newly_compromised_per_step) / len(model.newly_compromised_per_step)
 
@@ -30,6 +32,7 @@ def get_avg_closeness(model):
     n = model.num_subnetworks - 1
     return avg / (n * (n-1) / 2)  # avg / n choose 2
 
+# return number of organizations that achieve closeness >= 0.5 at teh end of run
 def get_number_min_closeness(model):
     count = 0
     for i in range(model.num_subnetworks - 1):
@@ -41,7 +44,7 @@ def get_number_min_closeness(model):
 def get_avg_trust(model):
     return model.trust_matrix.mean()
 
-def get_avg_utility(model):
+def get_avg_utility(model): # TODO redundant code
     avg = model.org_utility / (model.num_subnetworks - 1)
     model.org_utility = 0
     return avg
@@ -50,6 +53,7 @@ def get_avg_utility_batch(model):  # TODO redundant code
     avg = model.total_org_utility / (model.num_subnetworks - 1)
     return avg
 
+# returns freeloading ratio for each organization
 def get_free_loading(model):
     freq = []
     for o in model.organizations:
@@ -57,13 +61,14 @@ def get_free_loading(model):
         freq.append(free_loading_ratio_v1(o.info_in, o.info_out))
     return freq
 
+# return average freeloading ratio across al organizations
 def get_avg_free_loading(model):
-    return sum(get_free_loading(model))/len(get_free_loading(model))
+    return sum(get_free_loading(model)) / len(get_free_loading(model))
 
 def get_avg_incident_time(model):  #TODO to be called somewhere (called in batchrunner)
     return sum(model.incident_times)/len(model.incident_times)
 
-def get_security_per_org(model):
+def get_security_per_org(model): # TODO used in subnetworks instead
     security = []
     for o in model.organizations:
         security.append(o.security_budget)
@@ -74,6 +79,7 @@ def get_security_per_org(model):
 #         model.avg_security_per_org[i] += o.security_budget
 #     return  model.avg_security_per_org / (model.schedule.time + 1)
 
+# returns average security among all organizations
 def get_total_avg_security(model):
     total_avg_sec = 0
     for o in model.organizations:
@@ -92,22 +98,16 @@ class CybCim(Model):
                  verbose=True,
                  information_sharing=True,
                  fixed_attack_effectiveness=False,
-                 num_internet_devices=100,
                  num_subnetworks=15,
                  num_attackers=5,
                  device_count=30,
                  avg_time_to_new_attack=50,
-                 # information_importance=2,
-                 detection_func_stability=3,
-                 device_security_deviation_width=0.25,
-                 information_gain_weight=0.5,
-                 passive_detection_weight=0.1,
+                 detection_func_stability=4,
+                 passive_detection_weight=0.25,
                  reciprocity=2,
-                 transitivity=1,
                  trust_factor=2,
                  initial_closeness=0.2,
                  initial_trust=0.5,
-                 sharing_factor=2,
                  security_update_interval=10,
                  org_memory=3,
                  acceptable_freeload=0.5,
@@ -129,24 +129,18 @@ class CybCim(Model):
         globalVariables.GLOBAL_SEED = global_seed
         globalVariables.VERBOSE = verbose
         self.address_server = AddressServer()
-
-        self.num_internet_devices = num_internet_devices  # adjustable parameter, TODO possibly useless?
         self.num_subnetworks = num_subnetworks  # adjustable parameter
         self.num_attackers = num_attackers  # adjustable parameter
         self.device_count = device_count  # adjustable parameter
         self.avg_time_to_new_attack = avg_time_to_new_attack  # adjustable parameter
         # self.information_importance = information_importance  # adjustable parameter
         self.detection_func_stability = 10**(-detection_func_stability)  # adjustable parameter
-        self.device_security_deviation_width = device_security_deviation_width  # adjustable parameter
-        self.information_gain_weight = information_gain_weight  # adjustable parameter
         self.passive_detection_weight = passive_detection_weight  # adjustable parameter
         self.reciprocity = reciprocity  # adjustable parameter
-        self.transitivity = transitivity  # adjustable parameter TODO: turn off permanently?
         self.trust_factor = trust_factor  # adjustable parameter
         self.initial_closeness = initial_closeness  # adjustable parameter
         self.initial_trust = initial_trust  # adjustable parameter
         self.information_sharing = information_sharing  # adjustable parameter
-        self.sharing_factor = sharing_factor # adjustable
         self.security_update_interval = security_update_interval  # adjustable parameter
         self.org_memory = org_memory  # adjustable parameter
         self.acceptable_freeload = acceptable_freeload
@@ -288,11 +282,10 @@ class CybCim(Model):
                         self.trust_matrix[i, j] = increase_trust(t1, self.trust_factor)
                         self.trust_matrix[j, i] = increase_trust(t2, self.trust_factor)
 
-                        adjust_transitivity(self, i, j)
 
                         # actually gain information for both organizations
-                        share_info_cooperative(self.subnetworks[i], self.subnetworks[j], self.sharing_factor)
-                        share_info_cooperative(self.subnetworks[j], self.subnetworks[i], self.sharing_factor)
+                        share_info_cooperative(self.subnetworks[i], self.subnetworks[j])
+                        share_info_cooperative(self.subnetworks[j], self.subnetworks[i])
 
                         # lose some utility when sharing due to privacy loss etc
                         self.subnetworks[i].update_information_utility()

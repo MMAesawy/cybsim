@@ -74,7 +74,7 @@ def get_new_information_selfish(i1, i2):
     return np.logical_or(i1, i2)
    # return i1+i2*(1-i1)
 
-def get_new_information_cooperative(i1, i2, sp):
+def get_new_information_cooperative(i1, i2):
     # i2 > i1
     return np.logical_or(i1, i2)
     # return i1 + ((i2 - i1) / sp) # TODO remove SP
@@ -126,10 +126,10 @@ def share_info_selfish(org1, org2): #org1 only shares
         org2.new_attacks_list[attack] = new_info
 
 
-def share_info_cooperative(org1, org2, sp): #org1 shares with org2
+def share_info_cooperative(org1, org2): #org1 shares with org2
     for attack, info in org1.old_attacks_list.items():
         if info.sum() > org2.old_attacks_list[attack].sum():
-            new_info = get_new_information_cooperative(org2.old_attacks_list[attack], info, sp)
+            new_info = get_new_information_cooperative(org2.old_attacks_list[attack], info)
             old_info_o1 = org1.old_attacks_list[attack]
             old_info_o2 = org2.old_attacks_list[attack]
             org2.info_in += np.logical_xor(new_info, old_info_o2).mean()
@@ -142,15 +142,4 @@ def share_info_cooperative(org1, org2, sp): #org1 shares with org2
 def free_loading_ratio_v1(info_in, info_out):
     return info_in / (info_in + info_out + 1e-5)
 
-def adjust_transitivity(model, org1, org2):
-    for i in range(model.num_subnetworks - 1):
-        if i == org1 or i == org2:
-            continue
-        else:
-            if abs(0.5 - model.closeness_matrix[org1][i]) > abs(0.5 - model.closeness_matrix[org2][i]):
-                # if org1's opinion is more "extreme" than org2
-                model.closeness_matrix[org2][i] /= model.transitivity
-            else:
-                # otherwise
-                model.closeness_matrix[org1][i] /= model.transitivity
 
