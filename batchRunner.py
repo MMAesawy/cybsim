@@ -47,7 +47,8 @@ batch_run = BatchRunnerNew(CybCim,
                             "Average security per Org.": "avg_security",
                             "Avg. num. of compromised per step": "avg_compromised_per_step",
                             "Avg. num of organization shares": "avg_share",
-                            "Avg known info": "avg_info"
+                            "Avg known info": "avg_info",
+                            "times with incidents": "time_with_incident"
                         })
 batch_run.run_all()
 

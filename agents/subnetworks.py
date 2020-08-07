@@ -181,6 +181,9 @@ class Organization(SubNetwork, Agent):
         self.avg_incident_times = 0  # for avg incident time
         self.incident_times_num = 0  # for avg incident time
 
+        self.time_with_incident = 0
+        self.avg_time_with_incident = 0
+
         # to store times organization shares when it enters a game
         self.total_share = 0
         self.avg_share = 0
@@ -263,11 +266,15 @@ class Organization(SubNetwork, Agent):
 
     def update_incident_times(self, attack):
         current_time = self.model.schedule.time
-        self.model.incident_times.append(current_time - self.attack_awareness[attack][0])
-        self.incident_times += (current_time - self.attack_awareness[attack][0])  # for avg incident time
+        incident_time = current_time - self.attack_awareness[attack][0] - self.model.org_memory
+        self.model.incident_times.append(incident_time)
+        self.incident_times += incident_time  # for avg incident time
 
     def set_avg_incident_time(self):  # for avg incident time
         return self.incident_times / self.incident_times_num
+
+    def set_avg_time_with_incident(self):
+        return self.time_with_incident / self.model.schedule.time
 
     # remove attacker from awareness array if handled in acceptable time based on org memory
     def clear_awareness(self, attack):
@@ -289,12 +296,13 @@ class Organization(SubNetwork, Agent):
             return self.attacks_compromised_counts[attack] / self.num_users
         return self.num_compromised_old / self.num_users
 
+    def set_avg_compromised_per_step(self):
+        return self.compromised_per_step_aggregated / (self.model.schedule.time + 1)
+
     # return amount of information known given a specific attack
     def get_info(self, attack):
         return self.old_attacks_list[attack].mean()
 
-    def set_avg_compromised_per_step(self):
-        return self.compromised_per_step_aggregated / (self.model.schedule.time + 1)
 
     def step(self):
         for c in self.attacks_compromised_counts.values(): #TODO useless?
@@ -331,6 +339,10 @@ class Organization(SubNetwork, Agent):
         # <--- updating average information known about all attacks --->
         if len(self.old_attacks_list) > 0:
             self.avg_info =  self.get_avg_known_info()
+
+        if len(self.attack_awareness) > 0:
+            self.time_with_incident += 1
+
 
     def advance(self):
         for attack, info in self.new_attacks_list.items():

@@ -30,6 +30,14 @@ def get_avg_closeness(model):
     n = model.num_subnetworks - 1
     return avg / (n * (n-1) / 2)  # avg / n choose 2
 
+def get_number_min_closeness(model):
+    count = 0
+    for i in range(model.num_subnetworks - 1):
+        for j in range(i + 1, model.num_subnetworks - 1):
+            if model.closeness_matrix[i, j] >= 0.5:
+                count += 1
+    return count
+
 def get_avg_trust(model):
     return model.trust_matrix.mean()
 
@@ -300,12 +308,12 @@ class CybCim(Model):
                             self.trust_matrix[j, i] = decrease_trust(t2, self.trust_factor) # org j will trust org i less
                             #org i will not update its trust
 
-    # given two organization indices, return their closeness
+    # given two organiziation indices, return their closeness
     def get_closeness(self, i, j):
         if i > j:
             j, i = i, j
         return self.closeness_matrix[i, j]
-    
+
     def get_attack_effectiveness(self):
         e = []
         for i in range(len(self.attackers)):
@@ -314,25 +322,13 @@ class CybCim(Model):
 
 
     def step(self):
+        if self.information_sharing:
+            self.information_sharing_game()  # TODO: move after agent step???
 
         self.reset_edge_data()
 
         # update agents
         self.schedule.step()
-        if self.information_sharing:
-            self.information_sharing_game()  # TODO: move after agent step???
-
-        # # update correspondences
-        # i = 0
-        # while True:
-        #     c = self.active_correspondences[i]
-        #     if not c.active:
-        #         self.active_correspondences.pop(i)
-        #     else:
-        #         c.step()
-        #         i += 1
-        #     if i >= len(self.active_correspondences):
-        #         break
         self.datacollector.collect(self)
 
     def merge_with_master_graph(self):
