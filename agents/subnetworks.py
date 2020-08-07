@@ -141,8 +141,8 @@ class Organization(SubNetwork, Agent):
         Agent.__init__(self, address, model)
         self.old_utility = 0
         self.utility = 0
-        self.old_attacks_list = defaultdict(lambda: 0)
-        self.new_attacks_list = defaultdict(lambda: 0)
+        self.old_attacks_list = defaultdict(lambda: np.zeros(1000, dtype=np.bool))
+        self.new_attacks_list = defaultdict(lambda: np.zeros(1000, dtype=np.bool))
         self.attacks_compromised_counts = defaultdict(lambda: 0)
         # self.org_out = np.zeros(len(model.organizations))
         self.org_out = defaultdict(lambda: 0)
@@ -195,7 +195,7 @@ class Organization(SubNetwork, Agent):
     def get_avg_known_info(self):
         avg = 0
         for attack, info in self.old_attacks_list.items():
-            avg += info
+            avg += info.mean()
         return avg / len(self.old_attacks_list)
 
     def get_avg_security(self):
@@ -279,7 +279,7 @@ class Organization(SubNetwork, Agent):
         return self.num_compromised_old / self.num_users
 
     def get_info(self, attack):
-        return self.old_attacks_list[attack]
+        return self.old_attacks_list[attack].mean()
 
     def set_avg_compromised_per_step(self):
         return self.compromised_per_step_aggregated / (self.model.schedule.time + 1)
@@ -318,7 +318,7 @@ class Organization(SubNetwork, Agent):
 
     def advance(self):
         for attack, info in self.new_attacks_list.items():
-            self.old_attacks_list[attack] = self.new_attacks_list[attack]
+            self.old_attacks_list[attack] = self.new_attacks_list[attack].copy()
         current_time = self.model.schedule.time
         delete = []
         for attack, (_, last_update) in self.attack_awareness.items():

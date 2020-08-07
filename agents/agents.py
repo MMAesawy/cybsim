@@ -255,7 +255,7 @@ class Employee(GenericDefender):
             return True
 
     def detect(self, attack, targeted):
-            information = self.parent.old_attacks_list[attack]
+            information = self.parent.get_info(attack)
             security = self.parent.security_budget  #self._get_security()
             is_aware = self.parent.is_aware(attack)
             if not targeted and not is_aware:  # treats aware attacks as targeted attacks
@@ -269,9 +269,11 @@ class Employee(GenericDefender):
             # print("PROB:", prob)
             self.parent.num_attempts += 1
             if random.random() < prob:  # attack is detected, gain information
-                info = self.parent.old_attacks_list[attack]
-                self.parent.new_attacks_list[attack] = \
-                    helpers.get_new_information_detected(prob, info, w=self.model.information_gain_weight)
+                new_info =\
+                    helpers.get_new_information_detected(prob, information, w=self.model.information_gain_weight)
+                attack_list = self.parent.new_attacks_list[attack]
+                if not attack_list.all():
+                    attack_list[np.random.choice(np.arange(0, 1000)[~attack_list], 1)] = True
                 self.parent.num_detect[attack] += 1
                 if not targeted:
                     self.parent.attack_awareness[attack][1] = self.model.schedule.time
