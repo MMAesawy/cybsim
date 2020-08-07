@@ -141,11 +141,11 @@ class Organization(SubNetwork, Agent):
         Agent.__init__(self, address, model)
         self.old_utility = 0
         self.utility = 0
-        self.old_attacks_list = defaultdict(lambda: 0)
-        self.new_attacks_list = defaultdict(lambda: 0)
-        self.attacks_compromised_counts = defaultdict(lambda: 0)
+        self.old_attacks_list = defaultdict(lambda: 0) # dictionary storing attack and known information about it
+        self.new_attacks_list = defaultdict(lambda: 0) # updated dictionary storing attack and known information about it
+        self.attacks_compromised_counts = defaultdict(lambda: 0) # to store attackers and number of devices compromised from organization
         # self.org_out = np.zeros(len(model.organizations))
-        self.org_out = defaultdict(lambda: 0)
+        self.org_out = defaultdict(lambda: 0) # store the amount of info shared with other organizations
 
         # incident start, last update
         self.attack_awareness = defaultdict(lambda: [self.model.schedule.time, self.model.schedule.time])
@@ -155,17 +155,18 @@ class Organization(SubNetwork, Agent):
         self.num_compromised_old = 0  # for getting avg rate of compromised per step
         self.count = 0
         self.risk_of_sharing = 0.3  # TODO: parametrize, possibly update in update_utility_sharing or whatever
-        self.info_in = 0
-        self.info_out = 0
+        self.info_in = 0 # total info gained
+        self.info_out = 0 # total info shared outside
         self.num_detect = defaultdict(lambda: 0)
-        self.num_attempts = 0
+        self.num_attempts = 0 #TODO unused?
         self.security_drop = min(1, max(0, random.gauss(0.75, 0.05)))
-        self.acceptable_freeload = model.acceptable_freeload
+        self.acceptable_freeload = model.acceptable_freeload # freeloading tolerance towards other organizations
 
 
         # <---- Data collection ---->
 
         self.free_loading_ratio = 0  # variable to store freeloading ratio for each organization
+
         # to store changing organization security
         self.total_security = 0  # used for batch runner
         self.avg_security = 0
@@ -192,21 +193,24 @@ class Organization(SubNetwork, Agent):
         self.id = Organization.organization_count
         Organization.organization_count += 1
 
+    # returns the average information known by organization from all attacks
     def get_avg_known_info(self):
         avg = 0
         for attack, info in self.old_attacks_list.items():
             avg += info
         return avg / len(self.old_attacks_list)
 
+    # returns average security across all time steps
     def get_avg_security(self):
         return self.total_security / (self.model.schedule.time + 1)
 
+    # returns the freeloading ratio this organization does across all its interactions
     def get_free_loading_ratio(self):
         return self.info_in / (self.info_in + self.info_out + 1e-5)
 
+    # returns whether or not to share information according to other party
     def share_decision(self, org2, trust):
-        """Returns whether or not to share information according to other party."""
-        self.num_games_played += 1
+        self.num_games_played += 1 # for data collector
         info_out = self.org_out[org2]  # org1 out (org1_info_out)
         info_in = org2.org_out[self]  # org1 in (org2_info_out)
         if info_out > info_in:  # decreases probability to share
@@ -214,17 +218,19 @@ class Organization(SubNetwork, Agent):
         else:
             share = random.random() < trust
         if share:
-            self.total_share += 1
+            self.total_share += 1 # for data collector
         return share
 
+    # returns average times an organization shared across all its played games
     def get_avg_share(self):
         return self.total_share / self.num_games_played
+
 
     def update_budget(self):
         unhandled_attacks = []
         current_time = self.model.schedule.time
         for a, v in self.attack_awareness.items():
-            incident_time = current_time - v[0]
+            incident_time = current_time - v[0] # how long incident lasted so far
             if incident_time > self.model.org_memory:
                 unhandled_attacks.append((self.num_detect[a], incident_time))
 
@@ -260,6 +266,7 @@ class Organization(SubNetwork, Agent):
     def set_avg_incident_time(self):  # for avg incident time
         return self.incident_times / self.incident_times_num
 
+    # remove attacker from awareness array if handled in acceptable time based on org memory
     def clear_awareness(self, attack):
         self.update_incident_times(attack)
         self.incident_times_num += 1  # for avg incident time
@@ -267,6 +274,7 @@ class Organization(SubNetwork, Agent):
         del self.attack_awareness[attack]
         del self.num_detect[attack]
 
+    # return boolean if organization is aware of specific attack
     def is_aware(self, attack):
         return attack in self.attack_awareness
 
@@ -278,6 +286,7 @@ class Organization(SubNetwork, Agent):
             return self.attacks_compromised_counts[attack] / self.num_users
         return self.num_compromised_old / self.num_users
 
+    # return amount of information known given a specific attack
     def get_info(self, attack):
         return self.old_attacks_list[attack]
 
@@ -285,7 +294,7 @@ class Organization(SubNetwork, Agent):
         return self.compromised_per_step_aggregated / (self.model.schedule.time + 1)
 
     def step(self):
-        for c in self.attacks_compromised_counts.values():
+        for c in self.attacks_compromised_counts.values(): #TODO useless?
             self.update_stay_utility(c)
 
         self.count += 1
@@ -293,7 +302,7 @@ class Organization(SubNetwork, Agent):
         if self.count == self.model.security_update_interval:
             self.count = 0
             self.update_budget()
-            self.old_utility = self.utility
+            self.old_utility = self.utility # TODO useless?
             self.update_budget_utility()
         self.model.org_utility += self.utility  # adds organization utility to model's utility of all organizations
         self.model.total_org_utility += self.utility  # adds organization utility to model's total utility of all organizations for the calculation of the average utility for the batchrunner
@@ -306,13 +315,17 @@ class Organization(SubNetwork, Agent):
         self.num_compromised_old = self.num_compromised_new
         # self.num_compromised_new = 0  # reset variable
 
-        self.free_loading_ratio = self.get_free_loading_ratio()
-        self.total_security += self.security_budget  # updating total value to get average
+        self.free_loading_ratio = self.get_free_loading_ratio() # update freeloading ratio variable every step
+
+        # <-- updating security variables to get security averages --->
+        self.total_security += self.security_budget
         self.avg_security = self.get_avg_security()
 
+        # <--- updating average number of times shared when playing a game --->
         if self.num_games_played > 0:
             self.avg_share = self.get_avg_share()
 
+        # <--- updating average information known about all attacks --->
         if len(self.old_attacks_list) > 0:
             self.avg_info =  self.get_avg_known_info()
 

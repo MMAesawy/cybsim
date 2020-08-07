@@ -267,11 +267,10 @@ class Employee(GenericDefender):
             prob = helpers.get_prob_detection_v3(aggregate_security, t,
                                                  stability=self.model.detection_func_stability)
             # print("PROB:", prob)
-            self.parent.num_attempts += 1
+            self.parent.num_attempts += 1 #TODO useless?
             if random.random() < prob:  # attack is detected, gain information
-                info = self.parent.old_attacks_list[attack]
                 self.parent.new_attacks_list[attack] = \
-                    helpers.get_new_information_detected(prob, info, w=self.model.information_gain_weight)
+                    helpers.get_new_information_detected(prob, information, w=self.model.information_gain_weight)
                 self.parent.num_detect[attack] += 1
                 if not targeted:
                     self.parent.attack_awareness[attack][1] = self.model.schedule.time

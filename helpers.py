@@ -65,7 +65,8 @@ def get_defense(total_security, information, information_weight=1):
     return (2 - x**0.5 * y**(0.5*b) - x * y**b) / 2
 
 def get_new_information_selfish(i1, i2):
-    return i1+i2*(1-i1)
+    return max(i1, i2)
+    # return i1+i2*(1-i1)
 
 def get_new_information_cooperative(i1, i2, sp):
     # i2 > i1

@@ -300,6 +300,7 @@ class CybCim(Model):
                             self.trust_matrix[j, i] = decrease_trust(t2, self.trust_factor) # org j will trust org i less
                             #org i will not update its trust
 
+    # given two organization indices, return their closeness
     def get_closeness(self, i, j):
         if i > j:
             j, i = i, j
