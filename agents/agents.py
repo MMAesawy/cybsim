@@ -135,16 +135,11 @@ class GenericAttacker(User):
 
     # only try to communicate with non infilterated organizations
     def _generate_communicators(self):
-        # if self.is_active():
-        # generate list of users to talk with
-        non_infected_orgs = np.arange(len(self.model.organizations), dtype=np.int)[self.compromised_counts == 0]
-
-        # for i in non_infected_orgs:
-        #     user = random.choice(self.model.organizations[i].users)
-        #     self.communicate_to.append(user)
-        if len(non_infected_orgs) > 0:
-            user = random.choice(self.model.organizations[random.choice(non_infected_orgs)].users)
-            self.communicate_to.append(user)
+        for org in self.model.organizations:
+            if random.random() < (1-self.attack_of_choice.effectiveness):
+                user = random.choice(org.users)
+                if user not in self.compromised:
+                    self.communicate_to.append(user)
 
     def infect(self, victim):
         """
