@@ -145,7 +145,7 @@ class OrganizationCardModule{
             .attr("class", "cardtext utilitylabel")
             .attr("dx", OrganizationCardModule.properties.UTIL_LABEL_POS_X)
             .attr("dy", OrganizationCardModule.properties.UTIL_LABEL_POS_Y)
-            .text("Utility");
+            .text("Freeloading");
 
         // add `E` label
         // lots of magic numbers and inappropriate classes here, but it works for now and nobody will change this anyways

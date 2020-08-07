@@ -305,7 +305,7 @@ class CybCim(Model):
         if i > j:
             j, i = i, j
         return self.closeness_matrix[i, j]
-
+    
     def get_attack_effectiveness(self):
         e = []
         for i in range(len(self.attackers)):

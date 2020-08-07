@@ -53,7 +53,7 @@ class OrganizationCardModule(VisualizationElement):
         portrayal['num_organizations'] = len(model.organizations)
         portrayal['nodes'] = [{
                                 'id':      org.id,
-                                'utility': org.utility,
+                                'utility': org.get_free_loading_ratio(),
                                 'sec_bud': org.security_budget,
                                 'frac_compromised': org.get_percent_compromised(),
                                 'attack_data': [{"frac_comp": org.get_percent_compromised(a.attack_of_choice),
