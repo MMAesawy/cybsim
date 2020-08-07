@@ -221,8 +221,8 @@ class Employee(GenericDefender):
         self._security = None  # gets initialized as soon as _get_security is called.
         # do NOT use this variable directly
 
-    def get_tooltip(self):
-        return super().get_tooltip() + ("\nsecurity: %.2f" % self._get_security())
+    # def get_tooltip(self):
+    #     return super().get_tooltip() + ("\nsecurity: %.2f" % self._get_security())
 
     def step(self):
         super().step()
@@ -247,9 +247,9 @@ class Employee(GenericDefender):
             self._send(packet)
         self.communicate_to.clear()
 
-    def _get_security(self):
-        return helpers.get_total_security(
-                self.parent.security_budget, deviation_width=self.model.device_security_deviation_width)
+    # def _get_security(self):
+    #     return helpers.get_total_security(
+    #             self.parent.security_budget, deviation_width=self.model.device_security_deviation_width)
 
     def is_attack_successful(self, attack, targeted):
         if self.detect(attack, targeted):
@@ -270,7 +270,7 @@ class Employee(GenericDefender):
             prob = helpers.get_prob_detection_v3(aggregate_security, t,
                                                  stability=self.model.detection_func_stability)
             # print("PROB:", prob)
-            self.parent.num_attempts += 1
+            self.parent.num_attempts += 1 #TODO useless?
             if random.random() < prob:  # attack is detected, gain information
                 # new_info =\
                 #     helpers.get_new_information_detected(prob, information, w=self.model.information_gain_weight)
