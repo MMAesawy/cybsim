@@ -6,6 +6,11 @@ from mesa.agent import Agent
 from collections import defaultdict
 import random
 import numpy as np
+import globalVariables
+
+if globalVariables.GLOBAL_SEED:
+    np.random.seed(globalVariables.GLOBAL_SEED_VALUE)
+    random.seed(globalVariables.GLOBAL_SEED_VALUE)
 
 
 class SubNetwork(ABC):

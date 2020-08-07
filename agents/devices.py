@@ -1,5 +1,6 @@
 from mesa.agent import Agent
 import model
+import globalVariables
 
 
 class NetworkDevice(Agent):
@@ -47,7 +48,7 @@ class NetworkDevice(Agent):
             else:
                 self._send(packet)
         else:
-            if model.VERBOSE:
+            if globalVariables.VERBOSE:
                 print("Device %s reached its capacity of %d, dropping packet %d..." %
                       (self.address, self.capacity, packet.packet_id))
             packet.drop()
@@ -64,7 +65,7 @@ class NetworkDevice(Agent):
         self.packets_received += 1
         self.occupying_packets.append(packet)
         self.model.total_packets_received += 1
-        if model.VERBOSE:
+        if globalVariables.VERBOSE:
             print("Device %s received packet: %s" % (self.address, packet.payload))
 
     def _send(self, packet):
@@ -87,7 +88,7 @@ class NetworkDevice(Agent):
                     dest_local_address = gateway_address
                     next_device_address = self.routing_table[dest_local_address][1]
                     next_device = self.parent.get_subnetwork_at(next_device_address)
-            if model.VERBOSE:
+            if globalVariables.VERBOSE:
                 print("Device %s sending packet with destination %s to device %s" %
                       (self.address, packet.destination.address, next_device.address))
             self.packets_sent += 1
@@ -101,7 +102,7 @@ class NetworkDevice(Agent):
         else:  # packet reached its maximum amount of hops
             packet.stop_step = self.model.schedule.steps
             self.current_packets.append(packet)
-            if model.VERBOSE:
+            if globalVariables.VERBOSE:
                 print(
                     "Packet %s going to device %s has reached maximum number of %d hops in %d steps and stopped at device %s" %
                     (packet.packet_id, packet.destination.address, packet.max_hops, packet.step, self.address))
@@ -120,7 +121,7 @@ class NetworkDevice(Agent):
             if packet.stop_step < self.model.schedule.steps:
                 self.current_packets.pop(i)
                 packet.step = 0
-                if model.VERBOSE:
+                if globalVariables.VERBOSE:
                     print("Device %s contains packet %s .. continue routing.." % (self.address, packet.packet_id))
                 self.route(packet)
             else:

@@ -1,6 +1,12 @@
 import re
 import networkx as nx
 import random
+import numpy as np
+import globalVariables
+
+if globalVariables.GLOBAL_SEED:
+    np.random.seed(globalVariables.GLOBAL_SEED_VALUE)
+    random.seed(globalVariables.GLOBAL_SEED_VALUE)
 
 def random_string(length = 8):
     return "".join([chr(random.randint(ord("a"), ord("z"))) for _ in range(length)])

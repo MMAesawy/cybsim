@@ -3,11 +3,11 @@ from mesa.space import NetworkGrid
 from mesa.time import SimultaneousActivation
 from mesa.datacollection import DataCollector
 from agents.subnetworks import *
+import globalVariables
 import math
 
 import numpy as np
 
-VERBOSE = True
 
 # Data collector function for total compromised
 def get_total_compromised(model):
@@ -101,9 +101,12 @@ class CybCim(Model):
                  org_memory=5,
                  acceptable_freeload=0.5,
                  attack_awareness_weight=4,
-                 fixed_attack_effectiveness_value=0.5):
+                 fixed_attack_effectiveness_value=0.5,
+                 global_seed=False,
+                 global_seed_value=None):
 
-        global VERBOSE
+        # global globalVariables.VERBOSE
+        # global globalVariables.GLOBAL_SEED
         super().__init__()
 
         self.G = nx.Graph()  # master graph
@@ -111,7 +114,9 @@ class CybCim(Model):
         self.G.graph['fisheye'] = fisheye  # adjustable parameter, affects network visualization
         self.G.graph['visualize'] = visualize  # adjustable parameter, affects network visualization
         self.verbose = verbose  # adjustable parameter
-        VERBOSE = verbose
+        self.global_seed = global_seed  # adjustable parameter
+        globalVariables.GLOBAL_SEED = global_seed
+        globalVariables.VERBOSE = verbose
         self.address_server = AddressServer()
 
         self.num_internet_devices = num_internet_devices  # adjustable parameter, TODO possibly useless?
@@ -137,6 +142,8 @@ class CybCim(Model):
         self.fixed_attack_effectiveness = fixed_attack_effectiveness  # adjustable parameter
         self.fixed_attack_effectiveness_value = fixed_attack_effectiveness_value  # adjustable parameter
         self.attack_awareness_weight = attack_awareness_weight  # adjustable parameter
+        self.global_seed_value = global_seed_value  # adjustable parameter
+        globalVariables.GLOBAL_SEED_VALUE = global_seed_value
 
 
         self.num_users = 0
@@ -145,6 +152,10 @@ class CybCim(Model):
         self.organizations = []
         self.users = []  # keeping track of human users in all networks
         self.attackers = []
+
+        if globalVariables.GLOBAL_SEED:
+            np.random.seed(globalVariables.GLOBAL_SEED_VALUE)
+            random.seed(globalVariables.GLOBAL_SEED_VALUE)
 
         self.incident_times = []
         self.newly_compromised_per_step = []
@@ -203,7 +214,7 @@ class CybCim(Model):
 
         self.running = True
         self.datacollector.collect(self)
-        if VERBOSE:  # TODO: change to use a dedicated logging class/logger
+        if globalVariables.VERBOSE:  # TODO: change to use a dedicated logging class/logger
             print("Starting!")
             print("Number of devices: %d" % len(self.devices))
 

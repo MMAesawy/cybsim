@@ -4,6 +4,11 @@ from collections import defaultdict
 import helpers
 import random
 import numpy as np
+import globalVariables
+
+if globalVariables.GLOBAL_SEED:
+    np.random.seed(globalVariables.GLOBAL_SEED_VALUE)
+    random.seed(globalVariables.GLOBAL_SEED_VALUE)
 
 
 class User(NetworkDevice):
