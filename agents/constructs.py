@@ -1,6 +1,12 @@
 import re
 from helpers import random_string
 import random
+import globalVariables
+import numpy as np
+
+if globalVariables.GLOBAL_SEED:
+    np.random.seed(globalVariables.GLOBAL_SEED_VALUE)
+    random.seed(globalVariables.GLOBAL_SEED_VALUE)
 
 class Attack:
     def __init__(self, original_source, attack_type=None):
