@@ -223,13 +223,12 @@ class Employee(GenericDefender):
     def step(self):
         super().step()
         self._generate_communicators()
-        # for c in self.compromisers:
-        #     detected = self.detect(c.attack_of_choice, targeted=False)
-        #     if detected:
-        #         self.to_clean.append(c)
-                # #self.clean_specific(c)
-                # for u in self.parent.users:
-                #     u.clean_specific(c)
+        for a in self.parent.attack_awareness.keys():
+            attacker = a.original_source
+            if attacker in self.compromisers:
+                detected = self.detect(a, targeted=False)
+                if detected:
+                    self.to_clean.append(attacker)
 
     def advance(self):
         super().advance()
@@ -262,15 +261,15 @@ class Employee(GenericDefender):
                 security *= self.model.passive_detection_weight
             aggregate_security = (security + information)
             t = attack.effectiveness
-            if is_aware:
-                t /= self.model.attack_awareness_weight  # TODO: parametrize or figure out a set sensible value that makes sense?
+            # if is_aware:
+            #     t /= self.model.attack_awareness_weight
             prob = helpers.get_prob_detection_v3(aggregate_security, t,
                                                  stability=self.model.detection_func_stability)
             # print("PROB:", prob)
             self.parent.num_attempts += 1
             if random.random() < prob:  # attack is detected, gain information
-                new_info =\
-                    helpers.get_new_information_detected(prob, information, w=self.model.information_gain_weight)
+                # new_info =\
+                #     helpers.get_new_information_detected(prob, information, w=self.model.information_gain_weight)
                 attack_list = self.parent.new_attacks_list[attack]
                 if not attack_list.all():
                     attack_list[np.random.choice(np.arange(0, 1000)[~attack_list], 1)] = True
