@@ -32,6 +32,10 @@ class SubNetwork(ABC):
         for i in range(len(self.network.nodes)):
             routing_table = self.shortest_paths[i]
             if of == 'subnetworks':  # if this is a subnetwork of subnetworks:
+                if (i <= self.num_users):
+                    random.random() / 10  # dummy, for consistent randomness during branching
+                else:
+                    random.random() / 10  # dummy, for consistent randomness during branching
                 n = SubNetwork(address=self.address + i,
                                parent=self,
                                model=self.model,
@@ -50,6 +54,7 @@ class SubNetwork(ABC):
                                                                model=self.model,
                                                                routing_table=routing_table)
                 else:
+                    random.random()  # dummy, for consistent randomness during branching
                     self.network.nodes[i]['subnetwork'] = NetworkDevice(address=self.address + i,
                                                                         parent=self,
                                                                         model=self.model,
@@ -346,6 +351,7 @@ class Organization(SubNetwork, Agent):
         for i in range(len(self.network.nodes)):
             routing_table = self.shortest_paths[i]
             if i == self.local_gateway_address:  # if this is the gateway
+                random.random()  # dummy, for consistent randomness during branching
                 n = NetworkDevice(address=self.address + i,
                                   parent=self,
                                   model=self.model,
@@ -421,6 +427,7 @@ class Attackers(SubNetwork, Agent):
             # company_security = get_company_security(self.num_devices)
             routing_table = self.shortest_paths[i]
             if i == self.local_gateway_address:  # if this is the gateway
+                random.random()  # dummy, for consistent randomness during branching
                 n = NetworkDevice(address=self.address + i,
                                   parent=self,
                                   model=self.model,

@@ -32,6 +32,8 @@ def random_star_graph(num_nodes, avg_node_degree):
             # if edge does not already exist and edge creation success, create edge.
             if j not in graph[i] and random.random() < prob:
                 graph.add_edge(i, j)
+            else:
+                random.random()  # dummy, for consistent randomness during branching
 
     # the returned graph will be fully connected with a "gateway" hub node,
     # and some random connections between the other nodes.

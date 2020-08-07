@@ -32,17 +32,19 @@ class BatchRunnerNew(BatchRunner):
 
 
 fixed_params = {
-    "num_subnetworks": 10,
+    "num_subnetworks": 20,
     "fixed_attack_effectiveness": False,
     "global_seed": True,
     "global_seed_value": 1987,
-    # "reciprocity": 1,
-    # "initial_closeness": 0,
-    "information_sharing": False,
+    "reciprocity": 1,
+    "initial_closeness": 0,
+    "information_sharing": True,
+    # "information_sharing": False,
     "verbose": False
 }
 
 variable_params = {
+    # "global_seed_value": {1234, 4321}
     # "information_sharing": {True, False},
     # "information_sharing": {False},
 }
@@ -50,26 +52,27 @@ variable_params = {
 batch_run = BatchRunnerNew(CybCim,
                            variable_params,
                            fixed_params,
-                           iterations=5,
+                           iterations=1,
                            max_steps=200,
                            model_reporters={
-                               "Average Utility loss": get_avg_utility_batch,
-                               "Closeness": get_avg_closeness,
-                               "Average freeloading": get_avg_free_loading,
-                               "Average Incident time": get_avg_incident_time,
-                               "Average of newly compromised per step": get_avg_newly_compromised_per_step
+                               # "Average Utility loss": get_avg_utility_batch,
+                               # "Closeness": get_avg_closeness,
+                               # "Average freeloading": get_avg_free_loading,
+                               # "Average Incident time": get_avg_incident_time,
+                               # "Average of newly compromised per step": get_avg_newly_compromised_per_step
                            },
                            agent_reporters={
-                               # "Average incident time per Org.": "avg_incident_times",
-                               # "Free loading per Org.": "free_loading_ratio",
-                               # "Average security per Org.": "avg_security",
-                               # "Avg. num. of compromised per step": "avg_compromised_per_step"
+                               "Average incident time per Org.": "avg_incident_times",
+                               "Free loading per Org.": "free_loading_ratio",
+                               "Average security per Org.": "avg_security",
+                               "Avg. num. of compromised per step": "avg_compromised_per_step",
+                               "Avg. info shared per Org.": "avg_info"
                            },
                            display_progress=True)
 batch_run.run_all()
 
-run_data = batch_run.get_model_vars_dataframe()
-# run_data = batch_run.get_agent_vars_dataframe()
+# run_data = batch_run.get_model_vars_dataframe()
+run_data = batch_run.get_agent_vars_dataframe()
 # run_data.to_csv("D:\Materials\cybsim\Result.csv")
 # run_data.to_csv("Result_1.csv")
 run_data.to_csv("Result_2.csv")

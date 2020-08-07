@@ -35,6 +35,10 @@ class User(NetworkDevice):
             while user is self:
                 user = random.choice(self.parent.users)
             self.communicate_to.append(user)
+        else:  # dummy, for consistent randomness when branching
+            d = random.choice(self.parent.users)
+            while d is self:
+                d = random.choice(self.parent.users)
 
     def get_tooltip(self):
         return super().get_tooltip()
@@ -273,6 +277,8 @@ class Employee(GenericDefender):
                 attack_list = self.parent.new_attacks_list[attack]
                 if not attack_list.all():
                     attack_list[np.random.choice(np.arange(0, 1000)[~attack_list], 1)] = True
+                else:
+                    np.random.choice(np.arange(0, 1000)[~attack_list], 1)  # dummy, for consistent randomness during branching
                 self.parent.num_detect[attack] += 1
                 if not targeted:
                     self.parent.attack_awareness[attack][1] = self.model.schedule.time

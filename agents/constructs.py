@@ -14,10 +14,12 @@ class Attack:
         # self.effectiveness = random.random() / 2 + 0.5  # TODO effectiveness or skill of attacker? weighted sum?
         if self.original_source.model.fixed_attack_effectiveness:
             self.effectiveness = self.original_source.model.fixed_attack_effectiveness_value
+            max(0, min(1, random.gauss(0.5, 1 / 6)))  # dummy, for consistent randomness during branching
         else:
             self.effectiveness = max(0, min(1, random.gauss(0.5, 1/6)))
         if attack_type:
             self.attack_type = attack_type
+            random_string(length=8)  # dummy, for consistent randomness during branching
         else:
             self.attack_type = random_string(length=8)
 

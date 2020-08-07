@@ -287,7 +287,7 @@ class CybCim(Model):
                         share_info_cooperative(self.subnetworks[j], self.subnetworks[i], self.sharing_factor)
 
                         # lose some utility when sharing due to privacy loss etc
-                        self.subnetworks[i].update_information_utility()
+                        self.subnetworks[i].update_information_utility()  #TODO useless
                         self.subnetworks[j].update_information_utility()
 
                     elif sum(choice) == 0:  # both defect
@@ -310,6 +310,9 @@ class CybCim(Model):
                             self.subnetworks[j].update_information_utility()
                             self.trust_matrix[j, i] = decrease_trust(t2, self.trust_factor) # org j will trust org i less
                             #org i will not update its trust
+                else:
+                    random.random()  # dummy, for consistent randomness when branching
+                    random.random()  # dummy, for consistent randomness when branching
 
     def get_closeness(self, i, j):
         if i > j:
@@ -331,6 +334,8 @@ class CybCim(Model):
         self.schedule.step()
         if self.information_sharing:
             self.information_sharing_game()  # TODO: move after agent step???
+        else:
+            self.dummy_fun_1()  # for consistent randomness during branching
 
         # # update correspondences
         # i = 0
@@ -358,4 +363,11 @@ class CybCim(Model):
                 e_data = self.G.get_edge_data(ns_address, nd_address)
                 e_data["active"] = False
                 e_data["malicious"] = False
+
+    def dummy_fun_1(self):
+        for i in range(self.num_subnetworks-1):
+            for j in range(i + 1, self.num_subnetworks-1):
+                r = random.random()
+                r = random.random()
+                r = random.random()
 
