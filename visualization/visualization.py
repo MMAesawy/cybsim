@@ -34,8 +34,8 @@ class NetworkModule(VisualizationElement):
 
 class OrganizationCardModule(VisualizationElement):
     local_includes = [
-        #"./visualization/d3.v5.min.js",
-        "./visualization/d3.v5.js", # for debugging
+        "./visualization/d3.v5.min.js",
+        # "./visualization/d3.v5.js", # for debugging
         "./visualization/OrganizationCardModule.js"]
 
     def __init__(self, canvas_height=500, canvas_width=1000):

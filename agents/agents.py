@@ -165,7 +165,7 @@ class Employee(User):
             if random.random() < prob:  # attack is detected, gain information
                 attack_list = self.parent.new_attacks_list[attacker.id]
                 if not attack_list.all():
-                    self.parent.new_attacks_list[attacker.id][np.random.choice(np.arange(0, 1000)[~attack_list], 1)] = True
+                    self.parent.new_attacks_list[attacker.id, np.random.choice(np.arange(0, 1000)[~attack_list], 1)] = True
                 if not is_aware:
                     self.parent.start_incident(attacker.id)
                 self.parent.attack_awareness[attacker.id, 2] += 1
