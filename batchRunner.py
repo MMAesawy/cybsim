@@ -28,12 +28,12 @@ class BatchRunnerNew(BatchRunnerMP):
 
 def main():
     fixed_params = {
-        "num_firms": 20,
+        "num_firms": 10,
         "fixed_attack_effectiveness": False,
         "global_seed": True,
-        "global_seed_value": 1987,
-        "reciprocity": 1,
-        "initial_closeness": 0,
+        # "global_seed_value": 1987,
+        # "reciprocity": 1,
+        # "initial_closeness": 0,
         "information_sharing": True,
         # "information_sharing": False,
         "verbose": False
@@ -45,7 +45,7 @@ def main():
              4431, 38602, 4389, 80236,
              90884, 22236, 11460, 7905, 18348, 51153, 22630, 79033, 88405, 62153, 84849, 23375, 26388, 33618]
     variable_params = {
-        # "global_seed_value": seeds
+        "global_seed_value": seeds
         # "information_sharing": {True, False},
         # "information_sharing": {False},
     }
@@ -53,8 +53,8 @@ def main():
     batch_run = BatchRunnerNew(CybCim,
                                variable_params,
                                fixed_params,
-                               iterations=5,
-                               max_steps=200,
+                               iterations=1,
+                               max_steps=1000,
                                model_reporters={
                                    # "Average Utility loss": get_avg_utility_batch,
                                    # "Closeness": get_avg_closeness,
@@ -63,11 +63,13 @@ def main():
                                    # "Average of newly compromised per step": get_avg_newly_compromised_per_step
                                },
                                agent_reporters={
-                                   "Average incident time per Org.": "avg_incident_times",
-                                   "Free loading per Org.": "free_loading_ratio",
+                                   # "Average incident time per Org.": "avg_incident_times",
+                                   # "Free loading per Org.": "free_loading_ratio",
                                    "Average security per Org.": "avg_security",
-                                   "Avg. num. of compromised per step": "avg_compromised",
-                                   "Avg. info shared per Org.": "avg_info"
+                                   # "Avg. num. of NEWLY compromised per step": "avg_newly_compromised_per_step",
+                                   "Avg. num. of compromised per step": "avg_compromised_per_step",
+                                   "Avg. num. of unhandled attacks per step": "avg_unhandled_attacks_per_step",
+                                   # "Avg. info shared per Org.": "avg_info"
                                },
                                display_progress=True)
     batch_run.run_all()
