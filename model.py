@@ -6,6 +6,7 @@ from agents.subnetworks import Organization
 from agents.agents import Attacker
 from helpers import *
 import numpy as np
+import time
 
 
 # Data collector function for total compromised
@@ -153,8 +154,9 @@ class CybCim(Model):
         globalVariables.GLOBAL_SEED_VALUE = global_seed_value
 
         if globalVariables.GLOBAL_SEED:
-            np.random.seed(globalVariables.GLOBAL_SEED_VALUE)
-            random.seed(globalVariables.GLOBAL_SEED_VALUE)
+            globalVariables.RNG = np.random.default_rng(globalVariables.GLOBAL_SEED_VALUE)
+        else:
+            globalVariables.RNG = np.random.default_rng(time.time())
 
         self.organizations = []
         self.users = []  # keeping track of human users in all networks
@@ -163,7 +165,7 @@ class CybCim(Model):
         # determine when attacks will be generated in advance:
         self.attack_generation_steps = []
         for i in range(0, int(self.max_num_steps * 0.75)):
-            if random.random() < self.p_attack_generation:
+            if globalVariables.RNG.random() < self.p_attack_generation:
                 self.attack_generation_steps.append(i)
         self.attack_generation_steps.reverse()  # first attack to insert is in last place (for easy access and popping)
         self.num_attackers = self.active_attacker_count + len(self.attack_generation_steps)
@@ -221,7 +223,7 @@ class CybCim(Model):
         # TODO: implement trust factor
         for i in range(self.num_firms):
             for j in range(i + 1, self.num_firms): # only visit top matrix triangle
-                r = random.random()
+                r = globalVariables.RNG.random()
                 if self.closeness_matrix[i, j] > r:  # will interact event
                     t1 = self.trust_matrix[i, j]
                     t2 = self.trust_matrix[j, i]
@@ -263,8 +265,8 @@ class CybCim(Model):
                             self.trust_matrix[j, i] = decrease_trust(t2, self.trust_factor) # org j will trust org i less
                             #org i will not update its trust
                 else:
-                    random.random()  # dummy, for consistent randomness when branching
-                    random.random()  # dummy, for consistent randomness when branching
+                    globalVariables.RNG.random()  # dummy, for consistent randomness when branching
+                    globalVariables.RNG.random()  # dummy, for consistent randomness when branching
 
     # given two organiziation indices, return their closeness
     def get_closeness(self, i, j):
@@ -297,7 +299,7 @@ class CybCim(Model):
     def dummy_fun_1(self):
         for i in range(self.num_firms):
             for j in range(i + 1, self.num_firms):
-                random.random()
-                random.random()
-                random.random()
+                globalVariables.RNG.random()
+                globalVariables.RNG.random()
+                globalVariables.RNG.random()
 

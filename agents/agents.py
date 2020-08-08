@@ -1,12 +1,8 @@
 from mesa.agent import Agent
 import helpers
-import random
 import numpy as np
 import globalVariables
 
-if globalVariables.GLOBAL_SEED:
-    np.random.seed(globalVariables.GLOBAL_SEED_VALUE)
-    random.seed(globalVariables.GLOBAL_SEED_VALUE)
 
 class BetterAgent(Agent):
     id = 0
@@ -23,11 +19,11 @@ class User(BetterAgent):
         self.total_utility = 0
         self.communicate_to = []
         self.parent = parent
-        self.activity = max(0, min(1, random.gauss(0.5, 1 / 6)))
+        self.activity = max(0, min(1, globalVariables.RNG.normal(0.5, 1 / 6)))
         self.model.users.append(self)  # append user into model's user list
 
     def is_active(self):
-        return random.random() < self.activity
+        return globalVariables.RNG.random() < self.activity
 
     def step(self):
         super().step()
@@ -40,17 +36,17 @@ class Attacker(User):
     def __init__(self, attacker_id, model):
         super().__init__(attacker_id, model, model)
         self.id = attacker_id
-        self.effectiveness = max(0.005, min(1, random.gauss(0.5, 1/6)))
+        self.effectiveness = max(0.005, min(1, globalVariables.RNG.normal(0.5, 1/6)))
         self.model = model
 
     def _generate_communicators(self):
         for org in self.model.organizations:
-            if random.random() < (1-self.effectiveness):
-                user = random.choice(org.users)
+            if globalVariables.RNG.random() < (1-self.effectiveness):
+                user = globalVariables.RNG.choice(org.users)
                 if not user.parent.attacks_compromised_counts[self.id]:
                     self.communicate_to.append(user)
             else:
-                random.choice(org.users)  # for randomness
+                globalVariables.RNG.choice(org.users)  # for randomness
 
     def attempt_infect(self, employee):
         if employee.is_attack_successful(attacker=self, targeted=True):
@@ -110,9 +106,9 @@ class Employee(User):
 
     def _generate_communicators(self):
         # generate list of users to talk with
-        user = random.choice(self.parent.users)  # for consistent randomness when branching
+        user = globalVariables.RNG.choice(self.parent.users)  # for consistent randomness when branching
         while user is self:
-            user = random.choice(self.parent.users)
+            user = globalVariables.RNG.choice(self.parent.users)
 
         if self.is_active():
             self.communicate_to.append(user)
@@ -183,7 +179,7 @@ class Employee(User):
         prob = helpers.get_prob_detection_v3(aggregate_security, attacker.effectiveness,
                                              stability=self.model.detection_func_stability)
         # print(security, information, attacker.effectiveness, prob)
-        if random.random() < prob:  # attack is detected, gain information
+        if globalVariables.RNG.random() < prob:  # attack is detected, gain information
             self.information_update(attacker.id)
             self.make_aware(attacker.id, targeted, is_aware)
             return True
