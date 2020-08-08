@@ -61,7 +61,10 @@ class Organization(BetterAgent):
         self.avg_security = 0
 
         self.compromised_per_step_aggregated = 0
-        self.avg_compromised_per_step = 0  # TODO yet to be used
+        self.avg_newly_compromised_per_step = 0  # TODO yet to be used
+
+        self.num_compromised = 0
+        self.avg_compromised = 0
 
         self.incident_times = 0  # for avg incident time
         self.avg_incident_times = 0  # for avg incident time
@@ -79,6 +82,9 @@ class Organization(BetterAgent):
         self.avg_info = 0
 
         # <--- adding organization to model org array and setting unique ID --->
+
+    def get_avg_compromised(self):
+        return self.num_compromised / len(self.users)
 
     # returns the average information known by organization from all attacks
     def get_avg_known_info(self):
@@ -185,7 +191,7 @@ class Organization(BetterAgent):
         # for calculating the average compromised per step
         self.model.newly_compromised_per_step.append(self.num_compromised_new - self.num_compromised_old)
         self.compromised_per_step_aggregated += (self.num_compromised_new - self.num_compromised_old)  # Organization lvl
-        self.avg_compromised_per_step = self.set_avg_compromised_per_step()  # Organization lvl
+        self.avg_newly_compromised_per_step = self.set_avg_compromised_per_step()  # Organization lvl
 
         self.num_compromised_old = self.num_compromised_new
         # self.num_compromised_new = 0  # reset variable
@@ -206,6 +212,8 @@ class Organization(BetterAgent):
 
         if len(self.attack_awareness) > 0:
             self.time_with_incident += 1
+
+        self.avg_compromised = self.get_avg_compromised()
 
     def advance(self):
         self.old_attacks_list = self.new_attacks_list.copy()
