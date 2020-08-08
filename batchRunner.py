@@ -31,7 +31,7 @@ class BatchRunnerNew(BatchRunner):
 
 
 fixed_params = {
-    "num_subnetworks": 20,
+    "num_firms": 20,
     "fixed_attack_effectiveness": False,
     "global_seed": True,
     "global_seed_value": 1987,
