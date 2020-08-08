@@ -20,6 +20,14 @@ class Organization(BetterAgent):
         self.old_attacks_list = np.zeros((self.model.num_attackers, 1000), dtype=np.bool)
         # updated dictionary storing attack and known information about it, row = attack, column = info
         self.new_attacks_list = np.zeros((self.model.num_attackers, 1000), dtype=np.bool)
+
+        # for random seeding
+        self.attacks_list_predetermined = np.zeros((self.model.num_attackers, 1000), dtype=np.int)
+        self.attacks_list_predetermined_idx = np.zeros(self.model.num_attackers, dtype=np.int)
+        for i in range(self.model.num_attackers):
+            self.attacks_list_predetermined[i] = np.arange(1000)
+            np.random.shuffle(self.attacks_list_predetermined[i])
+
         self.attacks_list_mean = np.zeros(self.model.num_attackers)
         # to store attackers and number of devices compromised from organization
         self.attacks_compromised_counts = np.zeros(self.model.num_attackers, dtype=np.int)

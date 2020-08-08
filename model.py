@@ -1,8 +1,9 @@
 from mesa import Model
 from mesa.time import SimultaneousActivation
 from mesa.datacollection import DataCollector
-from agents.subnetworks import *
 import globalVariables
+from agents.subnetworks import Organization
+from agents.agents import Attacker
 from helpers import *
 import numpy as np
 
@@ -151,6 +152,10 @@ class CybCim(Model):
         self.global_seed_value = global_seed_value  # adjustable parameter
         globalVariables.GLOBAL_SEED_VALUE = global_seed_value
 
+        if globalVariables.GLOBAL_SEED:
+            np.random.seed(globalVariables.GLOBAL_SEED_VALUE)
+            random.seed(globalVariables.GLOBAL_SEED_VALUE)
+
         self.organizations = []
         self.users = []  # keeping track of human users in all networks
         self.attackers = []
@@ -162,10 +167,6 @@ class CybCim(Model):
                 self.attack_generation_steps.append(i)
         self.attack_generation_steps.reverse()  # first attack to insert is in last place (for easy access and popping)
         self.num_attackers = self.active_attacker_count + len(self.attack_generation_steps)
-
-        if globalVariables.GLOBAL_SEED:
-            np.random.seed(globalVariables.GLOBAL_SEED_VALUE)
-            random.seed(globalVariables.GLOBAL_SEED_VALUE)
 
         self.incident_times = []
         self.newly_compromised_per_step = []

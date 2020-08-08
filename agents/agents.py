@@ -49,6 +49,8 @@ class Attacker(User):
                 user = random.choice(org.users)
                 if not user.parent.attacks_compromised_counts[self.id]:
                     self.communicate_to.append(user)
+            else:
+                random.choice(org.users)  # for randomness
 
     def attempt_infect(self, employee):
         if employee.is_attack_successful(attacker=self, targeted=True):
@@ -149,6 +151,24 @@ class Employee(User):
         """
         return not self.detect(attacker, targeted)
 
+    def information_update(self, attacker_id):
+        while self.parent.attacks_list_predetermined_idx[attacker_id] < 1000:
+            next_bit = self.parent.attacks_list_predetermined[attacker_id,
+                                                              self.parent.attacks_list_predetermined_idx[attacker_id]]
+            if self.parent.new_attacks_list[attacker_id, next_bit]:
+                self.parent.attacks_list_predetermined_idx[attacker_id] += 1
+            else:
+                self.parent.new_attacks_list[attacker_id, next_bit] = True
+                self.parent.attacks_list_predetermined_idx[attacker_id] += 1
+                break
+
+    def make_aware(self, attacker_id, targeted, already_aware):
+        if not already_aware:
+            self.parent.start_incident(attacker_id)
+        self.parent.attack_awareness[attacker_id, 2] += 1
+        if not targeted:
+            self.parent.attack_awareness[attacker_id, 1] = self.model.schedule.time
+
     def detect(self, attacker, targeted):
             information = self.parent.get_info(attacker.id)
             security = self.parent.security_budget
@@ -162,14 +182,8 @@ class Employee(User):
                                                  stability=self.model.detection_func_stability)
             # print(security, information, attacker.effectiveness, prob)
             if random.random() < prob:  # attack is detected, gain information
-                attack_list = self.parent.new_attacks_list[attacker.id]
-                if not attack_list.all():
-                    self.parent.new_attacks_list[attacker.id, np.random.choice(np.arange(0, 1000)[~attack_list], 1)] = True
-                if not is_aware:
-                    self.parent.start_incident(attacker.id)
-                self.parent.attack_awareness[attacker.id, 2] += 1
-                if not targeted:
-                    self.parent.attack_awareness[attacker.id, 1] = self.model.schedule.time
+                self.information_update(attacker.id)
+                self.make_aware(attacker.id, targeted, is_aware)
                 return True
             else:
                 return False

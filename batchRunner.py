@@ -31,14 +31,14 @@ class BatchRunnerNew(BatchRunner):
 
 
 fixed_params = {
-    "num_subnetworks": 20,
+    "num_firms": 20,
     "fixed_attack_effectiveness": False,
     "global_seed": True,
     "global_seed_value": 1987,
-    "reciprocity": 1,
-    "initial_closeness": 0,
-    "information_sharing": True,
-    # "information_sharing": False,
+    # "reciprocity": 1,
+    # "initial_closeness": 0,
+    # "information_sharing": True,
+    "information_sharing": False,
     "verbose": False
 }
 
