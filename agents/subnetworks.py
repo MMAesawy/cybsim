@@ -1,9 +1,4 @@
-import math
-from helpers import *
 from agents.agents import *
-from abc import ABC, abstractmethod
-from mesa.agent import Agent
-from collections import defaultdict
 import random
 import numpy as np
 import globalVariables
@@ -120,7 +115,7 @@ class Organization(BetterAgent):
             ratio += float(inc[2] / len(self.users) / (inc[1]-inc[0]))
             unhandled_attack_count += 1
         self.unhandled_incidents.clear()
-        
+
         if unhandled_attack_count:  # a security incident happened and wasn't handled in time
             ratio /= unhandled_attack_count
             self.security_budget += (1 - self.security_budget) * ratio

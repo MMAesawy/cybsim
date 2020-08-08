@@ -1,11 +1,9 @@
-from mesa import Agent, Model
-from mesa.space import NetworkGrid
+from mesa import Model
 from mesa.time import SimultaneousActivation
 from mesa.datacollection import DataCollector
 from agents.subnetworks import *
 import globalVariables
-import math
-
+from helpers import *
 import numpy as np
 
 

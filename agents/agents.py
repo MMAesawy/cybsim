@@ -1,5 +1,4 @@
 from mesa.agent import Agent
-from collections import defaultdict
 import helpers
 import random
 import numpy as np

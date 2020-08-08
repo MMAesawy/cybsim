@@ -3,10 +3,7 @@ from mesa.visualization.UserParam import UserSettableParameter
 from mesa.visualization.modules import ChartModule
 from visualization.visualization import *
 from mesa.visualization.ModularVisualization import VisualizationElement
-
-from mesa.visualization.modules import TextElement
 from model import CybCim
-from agents.agents import *
 
 model_params = {
     'verbose': UserSettableParameter(param_type='checkbox', name='Verbose', value=False,
