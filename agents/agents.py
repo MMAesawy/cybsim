@@ -118,7 +118,7 @@ class Employee(User):
         super().step()
         self._generate_communicators()
         for attacker_id in range(self.parent.attack_awareness.shape[0]):
-            if self.parent.attack_awareness[attacker_id, 3] and self.compromisers[attacker_id]:
+            if self.parent.is_aware(attacker_id) and self.compromisers[attacker_id]:
                 detected = self.detect(self.model.attackers[attacker_id], targeted=True)
                 if detected:
                     self.to_clean.append(attacker_id)
