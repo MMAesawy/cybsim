@@ -115,8 +115,8 @@ def share_info_selfish(org1, org2): #org1 only shares
     old_info_o1 = org1.old_attacks_list
     old_info_o2 = org2.old_attacks_list
     new_info = np.logical_or(old_info_o1, old_info_o2)
-
-    o = old_info_o1[:org1.model.active_attacker_count,:].mean()
+    active_attacks = org1.model.active_attacker_count
+    o = old_info_o1[:active_attacks,:].mean(axis=1).sum()
     org2.info_in += o
     org1.info_out += o
     org1.org_out[org2.id] += o
@@ -129,9 +129,10 @@ def share_info_cooperative(org1, org2): #org1 shares with org2
     old_info_o2 = org2.old_attacks_list
     new_info = np.logical_or(old_info_o1, old_info_o2)
 
-    org2.info_in += np.logical_xor(new_info, old_info_o2)[:active_attacks, :].mean()
-    org1.info_out += np.logical_xor(new_info, old_info_o1)[:active_attacks, :].mean()
-    org1.org_out[org2.id] += np.logical_xor(new_info, old_info_o1)[:active_attacks, :].mean()
+    org2.info_in += np.logical_xor(new_info, old_info_o2)[:active_attacks, :].mean(axis=1).sum()
+    o = np.logical_xor(new_info, old_info_o1)[:active_attacks, :].mean(axis=1).sum()
+    org1.info_out += o
+    org1.org_out[org2.id] += o
     org2.new_attacks_list = new_info
 
 def free_loading_ratio_v1(info_in, info_out):
