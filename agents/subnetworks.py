@@ -43,6 +43,7 @@ class Organization(BetterAgent):
         self.info_out = 0  # total info shared outside
         self.security_drop = min(1, max(0, random.gauss(0.75, 0.05)))
         self.acceptable_freeload = self.model.acceptable_freeload  # freeloading tolerance towards other organizations
+        self.unhandled_incidents = []
 
         # create employees
         for i in range(0, self.model.device_count):
@@ -115,7 +116,11 @@ class Organization(BetterAgent):
                 if incident_time > self.model.org_memory:
                     ratio += self.attack_awareness[i, 2] / len(self.users) / incident_time
                     unhandled_attack_count += 1
-
+        for inc in self.unhandled_incidents:
+            ratio += float(inc[2] / len(self.users) / (inc[1]-inc[0]))
+            unhandled_attack_count += 1
+        self.unhandled_incidents.clear()
+        
         if unhandled_attack_count:  # a security incident happened and wasn't handled in time
             ratio /= unhandled_attack_count
             self.security_budget += (1 - self.security_budget) * ratio
@@ -126,6 +131,9 @@ class Organization(BetterAgent):
     def update_incident_times(self, attack_id):
         current_time = self.model.schedule.time
         incident_time = current_time - self.attack_awareness[attack_id, 0] - self.model.org_memory
+        if incident_time > self.model.org_memory:
+            assert self.attack_awareness[attack_id, 3] == 1
+            self.unhandled_incidents.append(self.attack_awareness[attack_id, :].tolist())
         self.model.incident_times.append(incident_time)
         self.incident_times += incident_time  # for avg incident time
 
@@ -202,5 +210,5 @@ class Organization(BetterAgent):
         current_time = self.model.schedule.time
 
         for attack_id in range(self.attack_awareness.shape[0]):
-            if current_time - self.attack_awareness[attack_id, 1] > self.model.org_memory:
+            if self.is_aware(attack_id) and current_time - self.attack_awareness[attack_id, 1] > self.model.org_memory:
                 self.clear_awareness(attack_id)
