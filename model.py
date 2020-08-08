@@ -156,7 +156,7 @@ class CybCim(Model):
         if globalVariables.GLOBAL_SEED:
             globalVariables.RNG = np.random.default_rng(globalVariables.GLOBAL_SEED_VALUE)
         else:
-            globalVariables.RNG = np.random.default_rng(time.time())
+            globalVariables.RNG = np.random.default_rng(int(time.time()))
 
         self.organizations = []
         self.users = []  # keeping track of human users in all networks
