@@ -112,34 +112,27 @@ def get_total_security(security_budget, deviation_width):
     return min(1, max(0, random.gauss(security_budget, deviation_width/6)))
 
 def share_info_selfish(org1, org2): #org1 only shares
-    for attack, info in org1.old_attacks_list.items():
-        new_info = get_new_information_selfish(org2.old_attacks_list[attack], info)
-        old_info_o1 = org1.old_attacks_list[attack]
-        old_info_o2 = org2.old_attacks_list[attack]
+    old_info_o1 = org1.old_attacks_list
+    old_info_o2 = org2.old_attacks_list
+    new_info = np.logical_or(old_info_o1, old_info_o2)
 
-        # org2.info_in += np.logical_xor(new_info, old_info_o2).mean()
-        # # if new_info != 0:
-        # org1.info_out += np.logical_xor(new_info, old_info_o1).mean()
-        # org1.org_out[org2] += np.logical_xor(new_info, old_info_o1).mean()
-        o = old_info_o1.mean()
-        org2.info_in += o
-        org1.info_out += o
-        org1.org_out[org2] += o
-        org2.new_attacks_list[attack] = new_info
+    o = old_info_o1[:org1.model.active_attacker_count,:].mean()
+    org2.info_in += o
+    org1.info_out += o
+    org1.org_out[org2.id] += o
+    org2.new_attacks_list = new_info
 
 
 def share_info_cooperative(org1, org2): #org1 shares with org2
-    for attack, info in org1.old_attacks_list.items():
-        if info.sum() > org2.old_attacks_list[attack].sum():
-            new_info = get_new_information_cooperative(org2.old_attacks_list[attack], info)
-            old_info_o1 = org1.old_attacks_list[attack]
-            old_info_o2 = org2.old_attacks_list[attack]
-            org2.info_in += np.logical_xor(new_info, old_info_o2).mean()
-            # if new_info != 0:
-            org1.info_out += np.logical_xor(new_info, old_info_o1).mean()
-            org1.org_out[org2] += np.logical_xor(new_info, old_info_o1).mean()
+    active_attacks = org1.model.active_attacker_count
+    old_info_o1 = org1.old_attacks_list
+    old_info_o2 = org2.old_attacks_list
+    new_info = np.logical_or(old_info_o1, old_info_o2)
 
-            org2.new_attacks_list[attack] = new_info
+    org2.info_in += np.logical_xor(new_info, old_info_o2)[:active_attacks, :].mean()
+    org1.info_out += np.logical_xor(new_info, old_info_o1)[:active_attacks, :].mean()
+    org1.org_out[org2.id] += np.logical_xor(new_info, old_info_o1)[:active_attacks, :].mean()
+    org2.new_attacks_list = new_info
 
 def free_loading_ratio_v1(info_in, info_out):
     return info_in / (info_in + info_out + 1e-5)

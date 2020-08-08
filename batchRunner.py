@@ -9,7 +9,6 @@ if globalVariables.GLOBAL_SEED:
     np.random.seed(globalVariables.GLOBAL_SEED_VALUE)
     random.seed(globalVariables.GLOBAL_SEED_VALUE)
 
-
 class BatchRunnerNew(BatchRunner):
     def __init__(self, model_cls, variable_parameters=None,
                  fixed_parameters=None, iterations=1, max_steps=1000,

@@ -48,20 +48,21 @@ class OrganizationCardModule(VisualizationElement):
         self.js_code = "elements.push(" + new_element + ");"
 
     def render(self, model):
+        attacker_list = model.attackers[:model.active_attacker_count]
         portrayal = dict()
-        portrayal['num_attackers'] = len(model.attackers)
-        portrayal['num_organizations'] = len(model.organizations)
+        portrayal['num_attackers'] = model.active_attacker_count
+        portrayal['num_organizations'] = model.num_firms
         portrayal['nodes'] = [{
                                 'id':      org.id,
                                 'utility': org.get_free_loading_ratio(),
                                 'sec_bud': org.security_budget,
                                 'frac_compromised': org.get_percent_compromised(),
-                                'attack_data': [{"frac_comp": org.get_percent_compromised(a.attack_of_choice),
-                                                "frac_info": org.get_info(a.attack_of_choice)}
-                                                for a in model.attackers]
+                                'attack_data': [{"frac_comp": org.get_percent_compromised(a.id),
+                                                "frac_info": org.get_info(a.id)}
+                                                for a in attacker_list]
                                }
                               for org in model.organizations]
-        portrayal['attack_effectiveness'] = [a.attack_of_choice.effectiveness for a in model.attackers]
+        portrayal['attack_effectiveness'] = [a.effectiveness for a in attacker_list]
         portrayal['closeness'] = []
         for i in range(1, model.closeness_matrix.shape[0]):
             for j in range(i-1, -1, -1):

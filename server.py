@@ -8,105 +8,20 @@ from mesa.visualization.modules import TextElement
 from model import CybCim
 from agents.agents import *
 
-
-def network_portrayal(G):
-    # The model ensures there is always 1 agent per node
-
-    def node_color(agent):
-        # p = min(255, int(agent.passing_packets / 10 * 255))
-        # r = "#%s00%s" % (hex(p)[2:].zfill(2).upper(), hex(255-p)[2:].zfill(2).upper())
-        # #print(r)
-        # return r
-        if type(agent) is Attacker:
-                return "#FF0000"
-        elif type(agent) is Employee:
-            if not agent.is_compromised():
-                return "#0000FF"
-            else:
-                return "#A83232"
-        else:
-            return "#000000"
-
-
-
-    def edge_color(agent1, agent2):
-        e = G.get_edge_data(agent1.master_address, agent2.master_address)
-        if e["malicious"]:
-            return '#A83232'
-        elif e["active"]:
-            return '#0000FF'
-        # else:
-        #     e = G.get_edge_data(agent2.model_address, agent1.model_address)
-        #     if e["active"]:
-        #         e["active"] = False
-        #         return '#FF0000'
-        return '#909090'
-
-    def edge_width(agent1, agent2):
-        e = G.get_edge_data(agent1.master_address, agent2.master_address)
-        if e["active"]:
-            return 2
-        else:
-            return 2
-
-    def get_agents(source, target):
-        return G.node[source]['agent'][0], G.node[target]['agent'][0]
-
-    portrayal = dict()
-    if G.graph['visualize']:
-        portrayal['nodes'] = [{'size': 6,
-                               'color': node_color(agents[0]),
-                               'tooltip': agents[0].get_tooltip(),
-                               'id': agents[0].master_address,
-                               }
-                              for i, (_, agents) in enumerate(G.nodes.data('agent'))]
-
-        portrayal['edges'] = [{'source': source,
-                               'target': target,
-                               'color': edge_color(*get_agents(source, target)),
-                               'width': edge_width(*get_agents(source, target)),
-                               'id':i,
-                               }
-                              for i, (source, target) in enumerate(G.edges)]
-        portrayal['interactive'] = 1 if G.graph["interactive"] else 0
-        portrayal['fisheye'] = 1 if G.graph["fisheye"] else 0
-    return portrayal
-
-class MyTextElement(TextElement):
-    def render(self, model):
-        text = "Attack Effectiveness "
-        for e in model.get_attack_effectiveness():
-            text += "Attack "
-            text += str(e[0])
-            text += ": "
-            text += str("{:0.2f}".format(e[1]))
-            text += " "
-        text += "\nNumber of users: {}" .format(model.num_users)
-        return text
-        # return "Number of users: {}" .format(model.num_users), "Attacker Effectiveness " , model.get_attack_effectiveness
-
 model_params = {
-    'visualize': UserSettableParameter(param_type='checkbox', name='Enable visualization', value=True,
-                                                  description='Choose whether to visualize the graph'),
     'verbose': UserSettableParameter(param_type='checkbox', name='Verbose', value=False,
                                        description='Choose whether the model is verbose (in the terminal)'),
     'information_sharing': UserSettableParameter(param_type='checkbox', name='Information Sharing', value=True,
                                        description='Choose whether or not information sharing is turned on.'),
-    # 'interactive': UserSettableParameter(param_type='checkbox', name='Interactive graph', value=True,
-    #                                               description='Choose whether the graph is interactive'),
-    # 'fisheye': UserSettableParameter(param_type='checkbox', name='Fisheye effect', value=True,
-    #                                                   description='Choose whether a fisheye effect is enabled'),
-    # 'subgraph_type': UserSettableParameter(param_type='checkbox', name='Subgraph of devices?', value=True,
-    #                                                   description='Choose whether the first level of subgraphs is of devices'),
     'fixed_attack_effectiveness': UserSettableParameter(param_type='checkbox', name='Fixed attack effectiveness', value=False,
                                                       description='Choose whether the attack effectiveness across all attacks are the same value'),
     'global_seed': UserSettableParameter(param_type='checkbox', name='Use global seed?', value=False,
                                                       description='Choose whether or not to use a global seed for the random number generators'),
     "global_seed_value": UserSettableParameter(param_type='number', name='Global seed\'s value', value=1987,
                                                description='Set the value of the global seed'),
-    'num_subnetworks': UserSettableParameter(param_type='slider', name='Number of subnetworks', value=10, min_value=4, max_value=50, step=1,
+    'num_firms': UserSettableParameter(param_type='slider', name='Number of subnetworks', value=10, min_value=4, max_value=50, step=1,
                                                   description='Choose how many subnetworks to have'),
-    'num_attackers': UserSettableParameter(param_type='slider', name='Number of attackers', value=2, min_value=1, max_value=30, step=1,
+    'num_attackers_initial': UserSettableParameter(param_type='slider', name='Number of attackers', value=2, min_value=1, max_value=30, step=1,
                                                   description='Choose how many attackers to have'),
     'device_count': UserSettableParameter(param_type='slider', name='Device count for organization', value=30, min_value=10, max_value=100, step=1,
                                                   description='Choose the number of devices for an organization'),
@@ -129,14 +44,11 @@ model_params = {
                                           step=1,description='Parameter representing organization attack awareness memory'),
     'acceptable_freeload': UserSettableParameter(param_type='slider', name='Acceptable Freeload', value=0.5, max_value=1, min_value=0,
                                           step=0.1,description='Parameter representing organization acceptable freeloading tolerance'),
-    'attack_awareness_weight': UserSettableParameter(param_type='slider', name='Attack awareness weight', value=4, max_value=20, min_value=1,
-                                          step=1,description='Parameter representing how less effective the attack will be, under awareness of the attack'),
     'fixed_attack_effectiveness_value': UserSettableParameter(param_type='slider', name='Fixed attack effectiveness value', value=0.5, max_value=1, min_value=0,
                                           step=0.05,description='Parameter representing the value of the fixed attack effectiveness value across all attacks')
 }
 # NOTE ABOUT WIDTHS: a width of 1000 -> full stretch across the visual elements section
 
-network = NetworkModule(network_portrayal, canvas_width=1000)
 text = VisualizationElement()
 
 chart_1 = ChartModule([{'Label': 'Compromised Devices', 'Color': '#505050', 'PointRadius':0}], canvas_height=200)
@@ -150,10 +62,9 @@ composite_view = TabSelectorView([chart_1, chart_2, chart_3],
                                  width=1000)
 
 card_view = OrganizationCardModule()
-tabbed_view = TabSelectorView([network, card_view], ["Network View", "Organization View"], width=1000)
 
 # required in order to load visualization/modular_template.html
 ModularServer.settings["template_path"] = 'visualization/'
 
-server = ModularServer(CybCim, [tabbed_view, MyTextElement(), composite_view], 'Computer Network', model_params)
+server = ModularServer(CybCim, [card_view, composite_view], 'Computer Network', model_params)
 server.verbose = False
