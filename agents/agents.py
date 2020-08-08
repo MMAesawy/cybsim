@@ -170,20 +170,20 @@ class Employee(User):
             self.parent.attack_awareness[attacker_id, 1] = self.model.schedule.time
 
     def detect(self, attacker, targeted):
-            information = self.parent.get_info(attacker.id)
-            security = self.parent.security_budget
-            is_aware = self.parent.is_aware(attacker.id)
-            #print(information)
-            if not targeted and not is_aware:  # treats aware attacks as targeted attacks
-                security *= self.model.passive_detection_weight
-            aggregate_security = (security + information)
+        information = self.parent.get_info(attacker.id)
+        security = self.parent.security_budget
+        is_aware = self.parent.is_aware(attacker.id)
+        #print(information)
+        if not targeted and not is_aware:  # treats aware attacks as targeted attacks
+            security *= self.model.passive_detection_weight
+        aggregate_security = (security + information)
 
-            prob = helpers.get_prob_detection_v3(aggregate_security, attacker.effectiveness,
-                                                 stability=self.model.detection_func_stability)
-            # print(security, information, attacker.effectiveness, prob)
-            if random.random() < prob:  # attack is detected, gain information
-                self.information_update(attacker.id)
-                self.make_aware(attacker.id, targeted, is_aware)
-                return True
-            else:
-                return False
+        prob = helpers.get_prob_detection_v3(aggregate_security, attacker.effectiveness,
+                                             stability=self.model.detection_func_stability)
+        # print(security, information, attacker.effectiveness, prob)
+        if random.random() < prob:  # attack is detected, gain information
+            self.information_update(attacker.id)
+            self.make_aware(attacker.id, targeted, is_aware)
+            return True
+        else:
+            return False
