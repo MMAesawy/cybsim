@@ -1,14 +1,11 @@
 import networkx as nx
-import random
 import numpy as np
-# import globalVariables
-#
-# if globalVariables.GLOBAL_SEED:
-#     np.random.seed(globalVariables.GLOBAL_SEED_VALUE)
-#     random.seed(globalVariables.GLOBAL_SEED_VALUE)
+import globalVariables
+
+
 
 def random_string(length = 8):
-    return "".join([chr(random.randint(ord("a"), ord("z"))) for _ in range(length)])
+    return "".join([chr(globalVariables.RNG.randint(ord("a"), ord("z"))) for _ in range(length)])
 
 
 def random_star_graph(num_nodes, avg_node_degree):
@@ -19,7 +16,7 @@ def random_star_graph(num_nodes, avg_node_degree):
     graph = nx.Graph()
     for i in range(num_nodes):
         graph.add_node(i)
-    graph.graph['gateway'] = random.choice(range(num_nodes)) # select a random node as the gateway
+    graph.graph['gateway'] = globalVariables.RNG.choice(range(num_nodes)) # select a random node as the gateway
     # connect all nodes to the gateway
     for i in range(num_nodes):
         if i != graph.graph['gateway']:
@@ -29,10 +26,10 @@ def random_star_graph(num_nodes, avg_node_degree):
     for i in range(0, num_nodes):
         for j in range(i+1, num_nodes):
             # if edge does not already exist and edge creation success, create edge.
-            if j not in graph[i] and random.random() < prob:
+            if j not in graph[i] and globalVariables.RNG.random() < prob:
                 graph.add_edge(i, j)
             else:
-                random.random()  # dummy, for consistent randomness during branching
+                globalVariables.RNG.random()  # dummy, for consistent randomness during branching
 
     # the returned graph will be fully connected with a "gateway" hub node,
     # and some random connections between the other nodes.
@@ -41,7 +38,7 @@ def random_star_graph(num_nodes, avg_node_degree):
 
 def random_mesh_graph(num_nodes, m=3):
     g = nx.barabasi_albert_graph(num_nodes, m)
-    g.graph['gateway'] = random.randint(0, num_nodes-1) # pick a random node as the gateway
+    g.graph['gateway'] = globalVariables.RNG.randint(0, num_nodes-1) # pick a random node as the gateway
     return g
 
 
@@ -51,7 +48,7 @@ def get_subnetwork_device_count(model):
 
 
 def get_subnetwork_user_count(devices_count):
-    return random.randint(2, devices_count - int(devices_count/2))
+    return globalVariables.RNG.randint(2, devices_count - int(devices_count/2))
 
 # def get_subnetwork_attacker_count():
 #     return random.randint(2, 10)
@@ -108,7 +105,7 @@ def get_new_information_detected(probability, old_information, w = 0.5):
     return min(1.0, x + y**2 * (1-x)*w)
 
 def get_total_security(security_budget, deviation_width):
-    return min(1, max(0, random.gauss(security_budget, deviation_width/6)))
+    return min(1, max(0, globalVariables.RNG.normal(security_budget, deviation_width/6)))
 
 def share_info_selfish(org1, org2): #org1 only shares
     old_info_o1 = org1.old_attacks_list
