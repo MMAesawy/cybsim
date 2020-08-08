@@ -84,7 +84,7 @@ class Organization(BetterAgent):
         # <--- adding organization to model org array and setting unique ID --->
 
     def get_avg_compromised(self):
-        return self.num_compromised / len(self.users)
+        return self.num_compromised / (self.model.schedule.time + 1)
 
     # returns the average information known by organization from all attacks
     def get_avg_known_info(self):
@@ -150,7 +150,7 @@ class Organization(BetterAgent):
         return self.incident_times / self.incident_times_num
 
     def set_avg_time_with_incident(self):
-        return self.time_with_incident / self.model.schedule.time
+        return self.time_with_incident / (self.model.schedule.time + 1)
 
     def start_incident(self, attack_id):
         self.attack_awareness[attack_id] = [self.model.schedule.time, self.model.schedule.time, 0, 1]
@@ -213,7 +213,11 @@ class Organization(BetterAgent):
         if len(self.attack_awareness) > 0:
             self.time_with_incident += 1
 
+        self.avg_time_with_incident = self.set_avg_time_with_incident()
+
         self.avg_compromised = self.get_avg_compromised()
+
+
 
     def advance(self):
         self.old_attacks_list = self.new_attacks_list.copy()

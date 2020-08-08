@@ -94,7 +94,7 @@ class Employee(User):
         if not self.is_compromised():  # if not compromised any more
             self.model.total_compromised -= 1
             self.parent.num_compromised_new -= 1
-            self.parent.num_compromised -= 1
+            # self.parent.num_compromised -= 1
 
     def notify_infection(self, attacker):
         """

@@ -39,14 +39,15 @@ fixed_params = {
     # "initial_closeness": 0,
     # "information_sharing": True,
     "information_sharing": False,
-    "verbose": False
+    "verbose": False,
+    "num_attackers_initial": 5
 }
 
-seeds = [29233, 36213, 28448, 16157, 38804, 67989,91932,6015,33792,65966,97525,72606,96381,52185,54486,80911,14489,
-         42883,3124,61385,25115,22852,23201,46375,48165,75589,22349,2732,26187,28052,18973,26854,4431,38602,4389,80236,
-         90884,22236,11460,7905,18348,51153,22630,79033,88405,62153,84849,23375,26388,33618]
+seeds = [29233, 36213, 28448, 16157, 38804, 67989,91932,6015,33792,65966,97525,72606]#96381,52185,54486,80911,14489,
+         # 42883,3124,61385,25115,22852,23201,46375,48165,75589,22349,2732,26187,28052,18973,26854,4431,38602,4389,80236,
+         # 90884,22236,11460,7905,18348,51153,22630,79033,88405,62153,84849,23375,26388,33618]
 variable_params = {
-    "global_seed_value": seeds
+    # "global_seed_value": seeds
     # "information_sharing": {True, False},
     # "information_sharing": {False},
 }
@@ -54,7 +55,7 @@ variable_params = {
 batch_run = BatchRunnerNew(CybCim,
                            variable_params,
                            fixed_params,
-                           iterations=50,
+                           iterations=1,
                            max_steps=1000,
                            model_reporters={
                                # "Average Utility loss": get_avg_utility_batch,
@@ -68,6 +69,7 @@ batch_run = BatchRunnerNew(CybCim,
                                # "Free loading per Org.": "free_loading_ratio",
                                "Average security per Org.": "avg_security",
                                "Avg. num. of compromised per step": "avg_compromised",
+                               "Avg. time with incident": "avg_time_with_incident"
                                # "Avg. info shared per Org.": "avg_info"
                            },
                            display_progress=True)
@@ -75,7 +77,7 @@ batch_run.run_all()
 
 # run_data = batch_run.get_model_vars_dataframe()
 run_data = batch_run.get_agent_vars_dataframe()
-run_data.to_csv("D:\Materials\cybsim\_newResult.csv")
+run_data.to_csv("D:\Materials\cybsim\_newResult5.csv")
 # run_data.to_csv("Result_1.csv")
 # run_data.to_csv("Result_2.csv")
 
