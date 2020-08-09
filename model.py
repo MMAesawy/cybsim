@@ -98,6 +98,8 @@ def get_total_avg_security(model):
     return total_avg_sec / len(model.organizations)
     # return sum(model.avg_security_per_org) / len(model.organizations)
 
+def get_num_attackers(model):
+    return len(model.attackers)
 
 class RandomCallCounter:
     def __init__(self, generator):
@@ -222,7 +224,8 @@ class CybCim(Model):
                 "Closeness": get_avg_closeness,
                 "Average Trust": get_avg_trust,
                 "Free loading": get_free_loading,
-                "total avg sec": get_total_avg_security
+                "total avg sec": get_total_avg_security,
+                "num attackers": get_num_attackers
             }
         )
 
