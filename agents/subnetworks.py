@@ -21,7 +21,7 @@ class Organization(BetterAgent):
         self.attacks_list_predetermined_idx = np.zeros(self.model.num_attackers, dtype=np.int)
         for i in range(self.model.num_attackers):
             self.attacks_list_predetermined[i] = np.arange(1000)
-            globalVariables.RNG.shuffle(self.attacks_list_predetermined[i])
+            globalVariables.RNG().shuffle(self.attacks_list_predetermined[i])
 
         self.attacks_list_mean = np.zeros(self.model.num_attackers)
         # to store attackers and number of devices compromised from organization
@@ -32,7 +32,7 @@ class Organization(BetterAgent):
         # incident start, last update
         self.attack_awareness = np.zeros(self.model.num_attackers, dtype=np.bool) # inc_start, last_update, num_detected, active
         self.detection_counts = np.zeros(self.model.num_attackers, dtype=np.int)
-        self.security_budget = max(0.005, min(1, globalVariables.RNG.normal(0.5, 1 / 6)))
+        self.security_budget = max(0.005, min(1, globalVariables.RNG().normal(0.5, 1 / 6)))
         self.security_change = 0
         self.num_detects_new = 0
         # self.security_budget = 0.005
@@ -42,7 +42,7 @@ class Organization(BetterAgent):
         self.risk_of_sharing = 0.3  # TODO: parametrize, possibly update in update_utility_sharing or whatever
         self.info_in = 0  # total info gained
         self.info_out = 0  # total info shared outside
-        self.security_drop = min(1, max(0, globalVariables.RNG.normal(0.75, 0.05)))
+        self.security_drop = min(1, max(0, globalVariables.RNG().normal(0.75, 0.05)))
         self.acceptable_freeload = self.model.acceptable_freeload  # freeloading tolerance towards other organizations
         self.unhandled_incidents = []
 
@@ -102,9 +102,9 @@ class Organization(BetterAgent):
         info_out = self.org_out[org2.id]  # org1 out (org1_info_out)
         info_in = org2.org_out[self.id]  # org1 in (org2_info_out)
         if info_out > info_in:  # decreases probability to share
-            share = globalVariables.RNG.random() < trust * min(1, self.acceptable_freeload + (info_in / info_out))
+            share = globalVariables.RNG().random() < trust * min(1, self.acceptable_freeload + (info_in / info_out))
         else:
-            share = globalVariables.RNG.random() < trust
+            share = globalVariables.RNG().random() < trust
         if share:
             self.total_share += 1  # for data collector
         return share

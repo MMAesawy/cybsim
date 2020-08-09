@@ -19,11 +19,11 @@ class User(BetterAgent):
         self.total_utility = 0
         self.communicate_to = []
         self.parent = parent
-        self.activity = max(0, min(1, globalVariables.RNG.normal(0.5, 1 / 6)))
+        self.activity = max(0, min(1, globalVariables.RNG().normal(0.5, 1 / 6)))
         self.model.users.append(self)  # append user into model's user list
 
     def is_active(self):
-        return globalVariables.RNG.random() < self.activity
+        return globalVariables.RNG().random() < self.activity
 
     def step(self):
         super().step()
@@ -36,18 +36,18 @@ class Attacker(User):
     def __init__(self, attacker_id, model):
         super().__init__(attacker_id, model, model)
         self.id = attacker_id
-        self.effectiveness = max(0.005, min(1, globalVariables.RNG.normal(0.5, 1/6)))
+        self.effectiveness = max(0.005, min(1, globalVariables.RNG().normal(0.5, 1/6)))
         self.model = model
         self.predetermined_detection = np.zeros(self.model.num_firms, dtype=np.bool)
 
     def _generate_communicators(self):
         for org in self.model.organizations:
-            if globalVariables.RNG.random() < (1-self.effectiveness):
-                user = globalVariables.RNG.choice(org.users)
+            if globalVariables.RNG().random() < (1-self.effectiveness):
+                user = globalVariables.RNG().choice(org.users)
                 if not user.parent.attacks_compromised_counts[self.id]:
                     self.communicate_to.append(user)
             else:
-                globalVariables.RNG.choice(org.users)  # for randomness
+                globalVariables.RNG().choice(org.users)  # for randomness
 
     def attempt_infect(self, employee):
         if self.predetermined_detection[employee.parent.id]:
@@ -115,9 +115,9 @@ class Employee(User):
 
     def _generate_communicators(self):
         # generate list of users to talk with
-        user = globalVariables.RNG.choice(self.parent.users)  # for consistent randomness when branching
+        user = globalVariables.RNG().choice(self.parent.users)  # for consistent randomness when branching
         while user is self:
-            user = globalVariables.RNG.choice(self.parent.users)
+            user = globalVariables.RNG().choice(self.parent.users)
 
         if self.is_active():
             self.communicate_to.append(user)
@@ -183,5 +183,5 @@ class Employee(User):
         prob = helpers.get_prob_detection_v3(aggregate_security, attacker.effectiveness,
                                              stability=self.model.detection_func_stability)
         # print(security, information, attacker.effectiveness, prob)
-        return globalVariables.RNG.random() < prob  # attack is detected, gain information
+        return globalVariables.RNG().random() < prob  # attack is detected, gain information
 
