@@ -59,7 +59,6 @@ class Organization(BetterAgent):
         self.avg_newly_compromised_per_step = 0  # TODO yet to be used
 
         self.num_compromised = 0
-        self.avg_compromised = 0
         self.avg_compromised_per_step = 0
 
         self.incident_times = 0  # for avg incident time

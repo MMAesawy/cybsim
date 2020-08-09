@@ -1,12 +1,12 @@
 from mesa import Model
 from mesa.time import SimultaneousActivation
 from mesa.datacollection import DataCollector
-import globalVariables
 from agents.subnetworks import Organization
 from agents.agents import Attacker
 from helpers import *
 import numpy as np
 import time
+import globalVariables
 
 
 # Data collector function for total compromised
