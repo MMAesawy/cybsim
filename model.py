@@ -99,6 +99,16 @@ def get_total_avg_security(model):
     # return sum(model.avg_security_per_org) / len(model.organizations)
 
 
+class RandomCallCounter:
+    def __init__(self, generator):
+        self.generator = generator
+        self.call_count = 0
+
+    def __call__(self):
+        self.call_count += 1
+        return self.generator
+
+
 class CybCim(Model):
 
     def __init__(self,
@@ -154,9 +164,9 @@ class CybCim(Model):
         globalVariables.GLOBAL_SEED_VALUE = global_seed_value
 
         if globalVariables.GLOBAL_SEED:
-            globalVariables.RNG = np.random.default_rng(globalVariables.GLOBAL_SEED_VALUE)
+            globalVariables.RNG = RandomCallCounter(np.random.default_rng(globalVariables.GLOBAL_SEED_VALUE))
         else:
-            globalVariables.RNG = np.random.default_rng(int(time.time()))
+            globalVariables.RNG = RandomCallCounter(np.random.default_rng(int(time.time())))
 
         self.organizations = []
         self.users = []  # keeping track of human users in all networks
@@ -165,7 +175,7 @@ class CybCim(Model):
         # determine when attacks will be generated in advance:
         self.attack_generation_steps = []
         for i in range(0, int(self.max_num_steps * 0.75)):
-            if globalVariables.RNG.random() < self.p_attack_generation:
+            if globalVariables.RNG().random() < self.p_attack_generation:
                 self.attack_generation_steps.append(i)
         self.attack_generation_steps.reverse()  # first attack to insert is in last place (for easy access and popping)
         self.num_attackers = self.active_attacker_count + len(self.attack_generation_steps)
@@ -223,7 +233,7 @@ class CybCim(Model):
         # TODO: implement trust factor
         for i in range(self.num_firms):
             for j in range(i + 1, self.num_firms): # only visit top matrix triangle
-                r = globalVariables.RNG.random()
+                r = globalVariables.RNG().random()
                 if self.closeness_matrix[i, j] > r:  # will interact event
                     t1 = self.trust_matrix[i, j]
                     t2 = self.trust_matrix[j, i]
@@ -265,8 +275,8 @@ class CybCim(Model):
                             self.trust_matrix[j, i] = decrease_trust(t2, self.trust_factor) # org j will trust org i less
                             #org i will not update its trust
                 else:
-                    globalVariables.RNG.random()  # dummy, for consistent randomness when branching
-                    globalVariables.RNG.random()  # dummy, for consistent randomness when branching
+                    globalVariables.RNG().random()  # dummy, for consistent randomness when branching
+                    globalVariables.RNG().random()  # dummy, for consistent randomness when branching
 
     # given two organiziation indices, return their closeness
     def get_closeness(self, i, j):
@@ -295,11 +305,13 @@ class CybCim(Model):
         # update agents
         self.schedule.step()
         self.datacollector.collect(self)
+        # print(globalVariables.RNG.call_count)
+        # globalVariables.RNG.call_count = 0
 
     def dummy_fun_1(self):
         for i in range(self.num_firms):
             for j in range(i + 1, self.num_firms):
-                globalVariables.RNG.random()
-                globalVariables.RNG.random()
-                globalVariables.RNG.random()
+                globalVariables.RNG().random()
+                globalVariables.RNG().random()
+                globalVariables.RNG().random()
 
