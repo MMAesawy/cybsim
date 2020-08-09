@@ -62,9 +62,6 @@ class Organization(BetterAgent):
         self.avg_compromised = 0
         self.avg_compromised_per_step = 0
 
-        # to calculate the avg compromised per step
-        self.compromised_per_step_aggregate = 0
-
         self.incident_times = 0  # for avg incident time
         self.avg_incident_times = 0  # for avg incident time
         self.incident_times_num = 0  # for avg incident time
@@ -80,17 +77,21 @@ class Organization(BetterAgent):
         # to store average known info
         self.avg_info = 0
 
-        # to calculate avg number of unhandled attacks per step
-        self.unhandled_attacks_aggregate = 0
-        self.avg_unhandled_attacks_per_step = 0
+        # to calculate avg number of unhandled incidents
+        self.unhandled_incidents_aggregate = 0
+        self.avg_unhandled_incidents = 0
+        self.num_incidents = 0
+
+        # Extra data
+        self.is_sharing_info = self.model.information_sharing
 
         # <--- adding organization to model org array and setting unique ID --->
 
-    def get_avg_compromised(self):
-        return self.num_compromised / (self.model.schedule.time + 1)
+    # def get_avg_compromised(self):
+    #     return self.num_compromised / len(self.users)
 
     def get_avg_compromised_per_step(self):
-        return self.compromised_per_step_aggregate / (self.model.schedule.time + 1)
+        return self.num_compromised / (self.model.schedule.time + 1)
 
     # returns the average information known by organization from all attacks
     def get_avg_known_info(self):
@@ -131,11 +132,11 @@ class Organization(BetterAgent):
                 if incident_time > self.model.org_memory:
                     ratio += self.attack_awareness[i, 2] / len(self.users) / incident_time
                     unhandled_attack_count += 1
-                    self.unhandled_attacks_aggregate += 1
+                    self.unhandled_incidents_aggregate += 1
         for inc in self.unhandled_incidents:
             ratio += float(inc[2] / len(self.users) / (inc[1]-inc[0]))
             unhandled_attack_count += 1
-            self.unhandled_attacks_aggregate += 1
+            self.unhandled_incidents_aggregate += 1
         self.unhandled_incidents.clear()
 
         if unhandled_attack_count:  # a security incident happened and wasn't handled in time
@@ -161,6 +162,7 @@ class Organization(BetterAgent):
         return self.time_with_incident / (self.model.schedule.time + 1)
 
     def start_incident(self, attack_id):
+        self.num_incidents += 1
         self.attack_awareness[attack_id] = [self.model.schedule.time, self.model.schedule.time, 0, 1]
 
     # remove attacker from awareness array if handled in acceptable time based on org memory
@@ -169,6 +171,9 @@ class Organization(BetterAgent):
         self.incident_times_num += 1  # for avg incident time
         self.avg_incident_times = self.set_avg_incident_time()
         self.attack_awareness[attack_id] = [0, 0, 0, 0]
+
+        # <--- Updating average unhandled attacks per step --->
+        self.avg_unhandled_incidents = self.get_avg_unhandled_incidents()
 
     # return boolean if organization is aware of specific attack
     def is_aware(self, attack_id):
@@ -187,8 +192,8 @@ class Organization(BetterAgent):
     def get_info(self, attack_id):
         return self.attacks_list_mean[attack_id]
 
-    def get_avg_unhandled_attacks_per_step(self):
-        return self.unhandled_attacks_aggregate / (self.model.schedule.time + 1)
+    def get_avg_unhandled_incidents(self):
+        return self.unhandled_incidents_aggregate / self.num_incidents
 
     def step(self):
         self.count += 1
@@ -205,8 +210,6 @@ class Organization(BetterAgent):
         self.avg_newly_compromised_per_step = self.set_avg_newly_compromised_per_step()  # Organization lvl
         self.num_compromised_old = self.num_compromised_new
         # self.num_compromised_new = 0  # reset variable
-
-        self.compromised_per_step_aggregate += self.num_compromised
 
         self.free_loading_ratio = self.get_free_loading_ratio() # update freeloading ratio variable every step
 
@@ -227,13 +230,11 @@ class Organization(BetterAgent):
 
         self.avg_time_with_incident = self.set_avg_time_with_incident()
 
-        self.avg_compromised = self.get_avg_compromised()
+        # self.avg_compromised = self.get_avg_compromised()
 
         # <--- Updating average compromised per step --->
         self.avg_compromised_per_step = self.get_avg_compromised_per_step()
 
-        # <--- Updating average unhandled attacks per step --->
-        self.avg_unhandled_attacks_per_step = self.get_avg_unhandled_attacks_per_step()
 
     def advance(self):
         self.old_attacks_list = self.new_attacks_list.copy()
