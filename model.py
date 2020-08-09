@@ -99,7 +99,7 @@ def get_total_avg_security(model):
     # return sum(model.avg_security_per_org) / len(model.organizations)
 
 def get_num_attackers(model):
-    return len(model.attackers)
+    return model.num_attackers
 
 class RandomCallCounter:
     def __init__(self, generator):
@@ -118,7 +118,7 @@ class CybCim(Model):
                  information_sharing=True,
                  # fixed_attack_effectiveness=False,
                  max_num_steps=1000,
-                 num_firms=10,
+                 num_firms=12,
                  num_attackers_initial=5,
                  num_attackers_total = 10,
                  device_count=30,
