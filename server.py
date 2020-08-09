@@ -35,7 +35,7 @@ model_params = {
                                           step=0.1,description='Parameter representing how much organizations are initially trusting of each other to share information'),
     'initial_closeness': UserSettableParameter(param_type='slider', name='Initial closeness', value=0.2, max_value=1, min_value=0,
                                           step=0.1,description='Parameter representing how much organizations are initially close with each other representing their likelihood to interact'),
-    'security_update_interval': UserSettableParameter(param_type='slider', name='Security Update Interval', value=10, max_value=50, min_value=1,
+    'security_update_interval': UserSettableParameter(param_type='slider', name='Security Update Interval', value=7, max_value=50, min_value=1,
                                           step=1,description='Parameter representing interval at which organizations update their security'),
     'org_memory': UserSettableParameter(param_type='slider', name='Organization Memory', value=3, max_value=20, min_value=1,
                                           step=1,description='Parameter representing organization attack awareness memory'),

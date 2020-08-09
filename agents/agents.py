@@ -86,6 +86,8 @@ class Employee(User):
         """
         self.compromisers[attacker_id] = False
         self.parent.attacks_compromised_counts[attacker_id] -= 1
+        if self.parent.attacks_compromised_counts[attacker_id] == 0:
+            self.parent.attack_awareness[attacker_id] = False
 
         if not self.is_compromised():  # if not compromised any more
             self.model.total_compromised -= 1
@@ -118,7 +120,7 @@ class Employee(User):
         self._generate_communicators()
         for attacker_id in range(self.parent.attack_awareness.shape[0]):
             if self.parent.is_aware(attacker_id) and self.compromisers[attacker_id]:
-                detected = self.detect(self.model.attackers[attacker_id], targeted=True)
+                detected = self.detect(self.model.attackers[attacker_id], targeted=False)
                 if detected:
                     self.to_clean.append(attacker_id)
 
@@ -160,12 +162,10 @@ class Employee(User):
                 self.parent.attacks_list_predetermined_idx[attacker_id] += 1
                 break
 
-    def make_aware(self, attacker_id, targeted, already_aware):
-        if not already_aware:
-            self.parent.start_incident(attacker_id)
-        self.parent.attack_awareness[attacker_id, 2] += 1
-        if not targeted:
-            self.parent.attack_awareness[attacker_id, 1] = self.model.schedule.time
+    def make_aware(self, attacker_id):
+        self.parent.attack_awareness[attacker_id] = True
+        self.parent.detection_counts[attacker_id] += 1
+        self.parent.num_detects_new += 1
 
     def detect(self, attacker, targeted):
         information = self.parent.get_info(attacker.id)
@@ -173,15 +173,18 @@ class Employee(User):
         is_aware = self.parent.is_aware(attacker.id)
         #print(information)
         if not targeted and not is_aware:  # treats aware attacks as targeted attacks
-            security *= self.model.passive_detection_weight
-        aggregate_security = (security + information)
+            aggregate_security = (security + information + security*information)
+        else:
+            aggregate_security = information + 0.001
 
-        prob = helpers.get_prob_detection_v3(aggregate_security, attacker.effectiveness,
+
+        prob = helpers.get_prob_detection_v3(aggregate_security, attacker.effectiveness/2,
                                              stability=self.model.detection_func_stability)
         # print(security, information, attacker.effectiveness, prob)
         if globalVariables.RNG.random() < prob:  # attack is detected, gain information
             self.information_update(attacker.id)
-            self.make_aware(attacker.id, targeted, is_aware)
+            if not targeted:
+                self.make_aware(attacker.id)
             return True
         else:
             return False
