@@ -177,7 +177,7 @@ class Employee(User):
         if not targeted and not is_aware:  # treats aware attacks as targeted attacks
             aggregate_security = (security + information + security*information)
         else:
-            aggregate_security = information + 0.001
+            aggregate_security = information + 0.001 + security*information
 
         prob = helpers.get_prob_detection_v3(aggregate_security, attacker.effectiveness)
         # print(security, information, attacker.effectiveness, prob)
