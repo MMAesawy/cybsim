@@ -306,7 +306,7 @@ class CybCim(Model):
         self.schedule.step()
         self.datacollector.collect(self)
         # print(globalVariables.RNG.call_count)
-        # globalVariables.RNG.call_count = 0
+        globalVariables.RNG.call_count = 0
 
     def dummy_fun_1(self):
         for i in range(self.num_firms):

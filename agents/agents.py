@@ -42,12 +42,10 @@ class Attacker(User):
 
     def _generate_communicators(self):
         for org in self.model.organizations:
+            user = globalVariables.RNG().choice(org.users)
             if globalVariables.RNG().random() < (1-self.effectiveness):
-                user = globalVariables.RNG().choice(org.users)
                 if not user.parent.attacks_compromised_counts[self.id]:
                     self.communicate_to.append(user)
-            else:
-                globalVariables.RNG().choice(org.users)  # for randomness
 
     def attempt_infect(self, employee):
         if self.predetermined_detection[employee.parent.id]:
@@ -115,12 +113,12 @@ class Employee(User):
 
     def _generate_communicators(self):
         # generate list of users to talk with
-        user = globalVariables.RNG().choice(self.parent.users)  # for consistent randomness when branching
-        while user is self:
-            user = globalVariables.RNG().choice(self.parent.users)
+        user_id = globalVariables.RNG().choice(np.arange(1, self.model.device_count))  # for consistent randomness when branching
+        if user_id <= self.id:
+            user_id -= 1
 
-        if self.is_active():
-            self.communicate_to.append(user)
+        assert user_id != self.id
+        self.communicate_to.append(self.parent.users[user_id])
 
     def step(self):
         super().step()
@@ -141,10 +139,11 @@ class Employee(User):
         self.to_clean.clear()
 
         # talk with other users if infected
+        active = self.is_active()
         for c in self.communicate_to:
             for attacker in self.model.attackers:
                 detected = c.detect(attacker, False)
-                if self.compromisers[attacker.id]:
+                if active and self.compromisers[attacker.id]:
                     if detected:
                         self.information_update(attacker.id)
                         self.make_aware(attacker.id)

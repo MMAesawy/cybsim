@@ -101,10 +101,11 @@ class Organization(BetterAgent):
         self.num_games_played += 1  # for data collector
         info_out = self.org_out[org2.id]  # org1 out (org1_info_out)
         info_in = org2.org_out[self.id]  # org1 in (org2_info_out)
+        r = globalVariables.RNG().random()
         if info_out > info_in:  # decreases probability to share
-            share = globalVariables.RNG().random() < trust * min(1, self.acceptable_freeload + (info_in / info_out))
+            share = r < trust * min(1, self.acceptable_freeload + (info_in / info_out))
         else:
-            share = globalVariables.RNG().random() < trust
+            share = r < trust
         if share:
             self.total_share += 1  # for data collector
         return share
@@ -209,7 +210,7 @@ class Organization(BetterAgent):
     def advance(self):
         self.old_attacks_list = self.new_attacks_list.copy()
         self.attacks_list_mean = self.old_attacks_list.mean(axis=1)
-        current_time = self.model.schedule.time
+        # current_time = self.model.schedule.time
 
         # for attack_id in range(self.attack_awareness.shape[0]):
         #     if self.is_aware(attack_id) and current_time - self.attack_awareness[attack_id, 1] > self.model.org_memory:
