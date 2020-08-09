@@ -179,8 +179,7 @@ class Employee(User):
         else:
             aggregate_security = information + 0.001
 
-        prob = helpers.get_prob_detection_v3(aggregate_security, attacker.effectiveness,
-                                             stability=self.model.detection_func_stability)
+        prob = helpers.get_prob_detection_v3(aggregate_security, attacker.effectiveness)
         # print(security, information, attacker.effectiveness, prob)
         return globalVariables.RNG().random() < prob  # attack is detected, gain information
 

@@ -116,22 +116,23 @@ class CybCim(Model):
     def __init__(self,
                  verbose=False,
                  information_sharing=True,
-                 fixed_attack_effectiveness=False,
+                 # fixed_attack_effectiveness=False,
                  max_num_steps=1000,
                  num_firms=10,
                  num_attackers_initial=5,
+                 num_attackers_total = 10,
                  device_count=30,
-                 avg_time_to_new_attack=50,
-                 detection_func_stability=4,
-                 passive_detection_weight=0.25,
+                 # avg_time_to_new_attack=50,
+                 # detection_func_stability=4,
+                 # passive_detection_weight=0.25,
                  reciprocity=2,
                  trust_factor=2,
                  initial_closeness=0.2,
                  initial_trust=0.5,
                  security_update_interval=10,
-                 org_memory=3,
+                 # org_memory=3,
                  acceptable_freeload=0.5,
-                 fixed_attack_effectiveness_value=0.5,
+                 # fixed_attack_effectiveness_value=0.5,
                  global_seed=True,
                  global_seed_value=1987):
 
@@ -148,20 +149,20 @@ class CybCim(Model):
         self.num_firms = num_firms  # adjustable parameter
         self.active_attacker_count = num_attackers_initial  # adjustable parameter
         self.device_count = device_count  # adjustable parameter
-        self.p_attack_generation = 1 / (avg_time_to_new_attack + 1)  # adjustable parameter
+        # self.p_attack_generation = 1 / (avg_time_to_new_attack + 1)  # adjustable parameter
         # self.information_importance = information_importance  # adjustable parameter
-        self.detection_func_stability = 10**(-detection_func_stability)  # adjustable parameter
-        self.passive_detection_weight = passive_detection_weight  # adjustable parameter
+        # self.detection_func_stability = 10**(-detection_func_stability)  # adjustable parameter
+        # self.passive_detection_weight = passive_detection_weight  # adjustable parameter
         self.reciprocity = reciprocity  # adjustable parameter
         self.trust_factor = trust_factor  # adjustable parameter
         self.initial_closeness = initial_closeness  # adjustable parameter
         self.initial_trust = initial_trust  # adjustable parameter
         self.information_sharing = information_sharing  # adjustable parameter
         self.security_update_interval = security_update_interval  # adjustable parameter
-        self.org_memory = org_memory  # adjustable parameter
+        # self.org_memory = org_memory  # adjustable parameter
         self.acceptable_freeload = acceptable_freeload
-        self.fixed_attack_effectiveness = fixed_attack_effectiveness  # adjustable parameter
-        self.fixed_attack_effectiveness_value = fixed_attack_effectiveness_value  # adjustable parameter
+        # self.fixed_attack_effectiveness = fixed_attack_effectiveness  # adjustable parameter
+        # self.fixed_attack_effectiveness_value = fixed_attack_effectiveness_value  # adjustable parameter
         self.global_seed_value = global_seed_value  # adjustable parameter
         globalVariables.GLOBAL_SEED_VALUE = global_seed_value
 
@@ -175,12 +176,12 @@ class CybCim(Model):
         self.attackers = []
 
         # determine when attacks will be generated in advance:
-        self.attack_generation_steps = []
-        for i in range(0, int(self.max_num_steps * 0.75)):
-            if globalVariables.RNG().random() < self.p_attack_generation:
-                self.attack_generation_steps.append(i)
-        self.attack_generation_steps.reverse()  # first attack to insert is in last place (for easy access and popping)
-        self.num_attackers = self.active_attacker_count + len(self.attack_generation_steps)
+        entering_attackers = num_attackers_total - num_attackers_initial
+        self.attack_generation_steps = globalVariables.RNG().choice(np.arange(0, int(self.max_num_steps * 0.75)),
+                                                                    size=entering_attackers, replace=False).tolist()
+        self.attack_generation_steps.sort(reverse=True) # first attack to insert is in last place (for easy access and popping)
+        # print(self.attack_generation_steps)
+        self.num_attackers = num_attackers_total  # adjustable parameter
 
         self.incident_times = []
         self.newly_compromised_per_step = []
@@ -299,7 +300,7 @@ class CybCim(Model):
         else:
             self.dummy_fun_1()  # for consistent randomness during branching
 
-        current_step = self.schedule.time
+        current_step = self.schedule.steps
         if self.attack_generation_steps and current_step >= self.attack_generation_steps[-1]:
             self.attack_generation_steps.pop()
             self.schedule.add(self.attackers[self.active_attacker_count])
