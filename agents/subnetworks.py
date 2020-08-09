@@ -30,8 +30,11 @@ class Organization(BetterAgent):
         self.org_out = np.zeros(self.model.num_firms)  # store the amount of info shared with other organizations
 
         # incident start, last update
-        self.attack_awareness = np.zeros((self.model.num_attackers, 4), dtype=np.int) # inc_start, last_update, num_detected, active
+        self.attack_awareness = np.zeros(self.model.num_attackers, dtype=np.bool) # inc_start, last_update, num_detected, active
+        self.detection_counts = np.zeros(self.model.num_attackers, dtype=np.int)
         self.security_budget = max(0.005, min(1, globalVariables.RNG.normal(0.5, 1 / 6)))
+        self.security_change = 0
+        self.num_detects_new = 0
         # self.security_budget = 0.005
         self.num_compromised_new = 0  # for getting avg rate of compromised per step
         self.num_compromised_old = 0  # for getting avg rate of compromised per step
@@ -111,26 +114,13 @@ class Organization(BetterAgent):
         return self.total_share / self.num_games_played
 
     def update_budget(self):
-        ratio = 0
-        unhandled_attack_count = 0
-        current_time = self.model.schedule.time
-        for i in range(self.attack_awareness.shape[0]):
-            if self.attack_awareness[i, 3]:
-                incident_time = current_time - self.attack_awareness[i, 0]  # how long incident lasted so far
-                if incident_time > self.model.org_memory:
-                    ratio += self.attack_awareness[i, 2] / len(self.users) / incident_time
-                    unhandled_attack_count += 1
-        for inc in self.unhandled_incidents:
-            ratio += float(inc[2] / len(self.users) / (inc[1]-inc[0]))
-            unhandled_attack_count += 1
-        self.unhandled_incidents.clear()
-
-        if unhandled_attack_count:  # a security incident happened and wasn't handled in time
-            ratio /= unhandled_attack_count
-            self.security_budget += (1 - self.security_budget) * ratio
-        else:
-            self.security_budget *= self.security_drop
+        total_detections = self.detection_counts.max()
+        if total_detections:  # a security incident happened and wasn't handled in time
+            self.security_change += (1 - self.security_budget) * (total_detections/self.model.device_count)
+        self.security_budget += self.security_change
         self.security_budget = max(0.005, min(1.0, self.security_budget))
+        self.security_change = 0
+        self.detection_counts = np.zeros(self.model.num_attackers, dtype=np.int)
 
     def update_incident_times(self, attack_id):
         current_time = self.model.schedule.time
@@ -159,7 +149,7 @@ class Organization(BetterAgent):
 
     # return boolean if organization is aware of specific attack
     def is_aware(self, attack_id):
-        return self.attack_awareness[attack_id, 3] == 1
+        return self.attack_awareness[attack_id]
 
     def get_percent_compromised(self, attack_id=None):
         """Returns the percentage of users compromised for each attack (or the total if `attack` is None)"""
@@ -180,6 +170,12 @@ class Organization(BetterAgent):
         if self.count == self.model.security_update_interval:
             self.count = 0
             self.update_budget()
+        # self.security_budget += self.security_change
+        # self.security_change = max(0, self.security_change - 0.005)
+        if self.num_detects_new == 0:
+            self.security_change -= (1-self.security_drop) * self.security_budget /self.model.security_update_interval
+        self.num_detects_new = 0
+
         self.model.org_utility += self.utility  # adds organization utility to model's utility of all organizations
         self.model.total_org_utility += self.utility  # adds organization utility to model's total utility of all organizations for the calculation of the average utility for the batchrunner
 
@@ -215,6 +211,6 @@ class Organization(BetterAgent):
         self.attacks_list_mean = self.old_attacks_list.mean(axis=1)
         current_time = self.model.schedule.time
 
-        for attack_id in range(self.attack_awareness.shape[0]):
-            if self.is_aware(attack_id) and current_time - self.attack_awareness[attack_id, 1] > self.model.org_memory:
-                self.clear_awareness(attack_id)
+        # for attack_id in range(self.attack_awareness.shape[0]):
+        #     if self.is_aware(attack_id) and current_time - self.attack_awareness[attack_id, 1] > self.model.org_memory:
+        #         self.clear_awareness(attack_id)
