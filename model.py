@@ -1,12 +1,12 @@
 from mesa import Model
 from mesa.time import SimultaneousActivation
 from mesa.datacollection import DataCollector
-import globalVariables
 from agents.subnetworks import Organization
 from agents.agents import Attacker
 from helpers import *
 import numpy as np
 import time
+import globalVariables
 
 
 # Data collector function for total compromised
@@ -98,6 +98,8 @@ def get_total_avg_security(model):
     return total_avg_sec / len(model.organizations)
     # return sum(model.avg_security_per_org) / len(model.organizations)
 
+def get_num_attackers(model):
+    return len(model.attackers)
 
 class RandomCallCounter:
     def __init__(self, generator):
@@ -112,11 +114,11 @@ class RandomCallCounter:
 class CybCim(Model):
 
     def __init__(self,
-                 verbose=True,
+                 verbose=False,
                  information_sharing=True,
                  fixed_attack_effectiveness=False,
                  max_num_steps=1000,
-                 num_firms=15,
+                 num_firms=10,
                  num_attackers_initial=5,
                  device_count=30,
                  avg_time_to_new_attack=50,
@@ -130,8 +132,8 @@ class CybCim(Model):
                  org_memory=3,
                  acceptable_freeload=0.5,
                  fixed_attack_effectiveness_value=0.5,
-                 global_seed=False,
-                 global_seed_value=None):
+                 global_seed=True,
+                 global_seed_value=1987):
 
         # global globalVariables.VERBOSE
         # global globalVariables.GLOBAL_SEED
@@ -222,7 +224,8 @@ class CybCim(Model):
                 "Closeness": get_avg_closeness,
                 "Average Trust": get_avg_trust,
                 "Free loading": get_free_loading,
-                "total avg sec": get_total_avg_security
+                "total avg sec": get_total_avg_security,
+                "num attackers": get_num_attackers
             }
         )
 
