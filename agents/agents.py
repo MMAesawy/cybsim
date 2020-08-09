@@ -38,6 +38,7 @@ class Attacker(User):
         self.id = attacker_id
         self.effectiveness = max(0.005, min(1, globalVariables.RNG.normal(0.5, 1/6)))
         self.model = model
+        self.predetermined_detection = np.zeros(self.model.num_firms, dtype=np.bool)
 
     def _generate_communicators(self):
         for org in self.model.organizations:
@@ -49,7 +50,11 @@ class Attacker(User):
                 globalVariables.RNG.choice(org.users)  # for randomness
 
     def attempt_infect(self, employee):
-        if employee.is_attack_successful(attacker=self, targeted=True):
+        if self.predetermined_detection[employee.parent.id]:
+            employee.information_update(self.id)
+            if employee.compromisers[self.id]:
+                employee.clean_specific(self.id)
+        else:
             if not employee.compromisers[self.id]:
                 employee.notify_infection(self)
 
@@ -58,6 +63,8 @@ class Attacker(User):
 
     def step(self):
         super().step()
+        for i in range(self.predetermined_detection.shape[0]):
+            self.predetermined_detection[i] = self.model.organizations[i].users[0].detect(self, True)
         self._generate_communicators()
 
     def advance(self):
@@ -119,9 +126,11 @@ class Employee(User):
         super().step()
         self._generate_communicators()
         for attacker_id in range(self.parent.attack_awareness.shape[0]):
+            detected = self.detect(self.model.attackers[attacker_id], targeted=False)
             if self.parent.is_aware(attacker_id) and self.compromisers[attacker_id]:
-                detected = self.detect(self.model.attackers[attacker_id], targeted=False)
                 if detected:
+                    self.information_update(attacker_id)
+                    self.make_aware(attacker_id)
                     self.to_clean.append(attacker_id)
 
     def advance(self):
@@ -134,22 +143,16 @@ class Employee(User):
         # talk with other users if infected
         for c in self.communicate_to:
             for attacker in self.model.attackers:
+                detected = c.detect(attacker, False)
                 if self.compromisers[attacker.id]:
-                    if c.is_attack_successful(attacker, False):
+                    if detected:
+                        self.information_update(attacker.id)
+                        self.make_aware(attacker.id)
+                        self.clean_specific(attacker.id)
+                    else:
                         if not c.compromisers[attacker.id]:
                             c.notify_infection(attacker)
-                    else:
-                        self.clean_specific(attacker.id)
         self.communicate_to.clear()
-
-    def is_attack_successful(self, attacker, targeted):
-        """
-        Tests whether the attack was successful or not against this user
-        :param attacker: the attack being performed
-        :param targeted: whether or not the attack comes directly from an attacker
-        :return: Boolean - whether or not the attack was successful
-        """
-        return not self.detect(attacker, targeted)
 
     def information_update(self, attacker_id):
         while self.parent.attacks_list_predetermined_idx[attacker_id] < 1000:
@@ -177,14 +180,8 @@ class Employee(User):
         else:
             aggregate_security = information + 0.001
 
-
         prob = helpers.get_prob_detection_v3(aggregate_security, attacker.effectiveness,
                                              stability=self.model.detection_func_stability)
         # print(security, information, attacker.effectiveness, prob)
-        if globalVariables.RNG.random() < prob:  # attack is detected, gain information
-            self.information_update(attacker.id)
-            if not targeted:
-                self.make_aware(attacker.id)
-            return True
-        else:
-            return False
+        return globalVariables.RNG.random() < prob  # attack is detected, gain information
+
