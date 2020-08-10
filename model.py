@@ -193,10 +193,11 @@ class CybCim(Model):
         for i in range(0, self.num_firms):  # initialize orgs and add them to user list
             org = Organization(i, self)
             self.schedule.add(org)
+            self.organizations.append(org)
+        for org in self.organizations:
             for user in org.users:
                 self.users.append(user)
                 self.schedule.add(user)
-            self.organizations.append(org)
         for i in range(0, self.num_attackers):
             attacker = Attacker(i, self)
             self.attackers.append(attacker)
