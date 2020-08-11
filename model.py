@@ -1,248 +1,322 @@
-from mesa import Agent, Model
-from mesa.space import NetworkGrid
+from mesa import Model
 from mesa.time import SimultaneousActivation
 from mesa.datacollection import DataCollector
-from agents.subnetworks import *
-
+from agents.subnetworks import Organization
+from agents.agents import Attacker
+from helpers import *
 import numpy as np
+import time
+import globalVariables
 
-VERBOSE = True
 
-
+# Data collector function for total compromised
 def get_total_compromised(model):
     return model.total_compromised
 
-def get_share(model):
-    # np.mean(model.closeness_matrix)
+
+# return average number of newly compromised devices for each organization
+def get_avg_compromised_per_org(model):
+    for i, o in enumerate(model.organizations):
+        model.avg_newly_compromised_per_org[i] += model.avg_newly_compromised_per_org[i]
+    return model.avg_newly_compromised_per_org / (model.schedule.time + 1)
+
+
+# return the average number of newly compromised devcies among all organizations
+def get_avg_newly_compromised_per_step(model):  #TODO to be called somewhere (called in batchrunner)
+    return sum(model.newly_compromised_per_step) / len(model.newly_compromised_per_step)
+
+
+# Data collector function for closeness between organization
+def get_avg_closeness(model):
     avg = 0
-    for i in range(model.num_subnetworks - 1):
-        for j in range(i + 1, model.num_subnetworks - 1):
-            avg += model.closeness_matrix[i][j]
-    return avg / ((model.num_subnetworks - 1)**2 - (model.num_subnetworks - 1)) / 2 
+    for i in range(model.num_firms):
+        for j in range(i + 1, model.num_firms):
+            avg += model.closeness_matrix[i, j]
+    n = model.num_firms
+    return avg / (n * (n-1) / 2)  # avg / n choose 2
+
+
+# return number of organizations that achieve closeness >= 0.5 at teh end of run
+def get_number_min_closeness(model):
+    count = 0
+    for i in range(model.num_firms):
+        for j in range(i + 1, model.num_firms):
+            if model.closeness_matrix[i, j] >= 0.5:
+                count += 1
+    return count
+
+
+def get_avg_trust(model):
+    return model.trust_matrix.mean()
+
+
+def get_avg_utility(model): # TODO redundant code
+    avg = model.org_utility / (model.num_firms)
+    model.org_utility = 0
+    return avg
+
+
+def get_avg_utility_batch(model):  # TODO redundant code
+    avg = model.total_org_utility / (model.num_firms)
+    return avg
+
+
+# returns freeloading ratio for each organization
+def get_free_loading(model):
+    freq = []
+    for o in model.organizations:
+        # freq.append(o.get_free_loading_ratio())
+        freq.append(free_loading_ratio_v1(o.info_in, o.info_out))
+    return freq
+
+
+# return average freeloading ratio across al organizations
+def get_avg_free_loading(model):
+    return sum(get_free_loading(model)) / len(get_free_loading(model))
+
+
+def get_avg_incident_time(model):  #TODO to be called somewhere (called in batchrunner)
+    return sum(model.incident_times)/len(model.incident_times)
+
+
+def get_security_per_org(model): # TODO used in subnetworks instead
+    security = []
+    for o in model.organizations:
+        security.append(o.security_budget)
+    return security
+
+# def get_avg_security_per_org(model): # useless now
+#     for i, o in enumerate(model.organizations):
+#         model.avg_security_per_org[i] += o.security_budget
+#     return  model.avg_security_per_org / (model.schedule.time + 1)
+
+# returns average security among all organizations
+def get_total_avg_security(model):
+    total_avg_sec = 0
+    for o in model.organizations:
+        total_avg_sec += o.avg_security
+    return total_avg_sec / len(model.organizations)
+    # return sum(model.avg_security_per_org) / len(model.organizations)
+
+def get_num_attackers(model):
+    return model.num_attackers
+
+class RandomCallCounter:
+    def __init__(self, generator):
+        self.generator = generator
+        self.call_count = 0
+
+    def __call__(self):
+        self.call_count += 1
+        return self.generator
+
 
 class CybCim(Model):
 
     def __init__(self,
-                 num_internet_devices=100,
-                 num_subnetworks=15,
-                 num_attackers=5,
-                 # max_hops=3,
-                 # min_capacity=10,
-                 # max_capacity=20,
-                 min_device_count=5,
-                 max_device_count=50,
-                 avg_time_to_new_attack=50,
-                 information_importance=2,
-                 device_security_deviation_width=0.25,
-                 information_gain_weight=0.5,
-                 passive_detection_weight=0.125,
-                 spread_detection_weight=0.25,
-                 target_detection_weight=1.0,
-                 interactive=True,
-                 fisheye=True,
-                 subgraph_type=True,
-                 visualize=True,
-                 verbose=True,
+                 verbose=False,
+                 information_sharing=True,
+                 # fixed_attack_effectiveness=False,
+                 max_num_steps=1000,
+                 num_firms=12,
+                 num_attackers_initial=5,
+                 num_attackers_total = 10,
+                 device_count=30,
+                 # avg_time_to_new_attack=50,
+                 # detection_func_stability=4,
+                 # passive_detection_weight=0.25,
                  reciprocity=2,
-                 transitivity=2):
-        global VERBOSE
+                 trust_factor=2,
+                 initial_closeness=0.2,
+                 initial_trust=0.5,
+                 security_update_interval=10,
+                 # org_memory=3,
+                 acceptable_freeload=0.5,
+                 # fixed_attack_effectiveness_value=0.5,
+                 global_seed=True,
+                 global_seed_value=1987):
+
+        # global globalVariables.VERBOSE
+        # global globalVariables.GLOBAL_SEED
         super().__init__()
 
-        self.G = nx.Graph()  # master graph
-        self.G.graph['interactive'] = interactive
-        self.G.graph['fisheye'] = fisheye
-        self.G.graph['visualize'] = visualize
+        self.verbose = verbose  # adjustable parameter
+        self.global_seed = global_seed  # adjustable parameter
+        globalVariables.GLOBAL_SEED = global_seed
+        globalVariables.VERBOSE = verbose
 
-        self.address_server = AddressServer()
+        self.max_num_steps = max_num_steps
+        self.num_firms = num_firms  # adjustable parameter
+        self.active_attacker_count = num_attackers_initial  # adjustable parameter
+        self.device_count = device_count  # adjustable parameter
+        # self.p_attack_generation = 1 / (avg_time_to_new_attack + 1)  # adjustable parameter
+        # self.information_importance = information_importance  # adjustable parameter
+        # self.detection_func_stability = 10**(-detection_func_stability)  # adjustable parameter
+        # self.passive_detection_weight = passive_detection_weight  # adjustable parameter
+        self.reciprocity = reciprocity  # adjustable parameter
+        self.trust_factor = trust_factor  # adjustable parameter
+        self.initial_closeness = initial_closeness  # adjustable parameter
+        self.initial_trust = initial_trust  # adjustable parameter
+        self.information_sharing = information_sharing  # adjustable parameter
+        self.security_update_interval = security_update_interval  # adjustable parameter
+        # self.org_memory = org_memory  # adjustable parameter
+        self.acceptable_freeload = acceptable_freeload
+        # self.fixed_attack_effectiveness = fixed_attack_effectiveness  # adjustable parameter
+        # self.fixed_attack_effectiveness_value = fixed_attack_effectiveness_value  # adjustable parameter
+        self.global_seed_value = global_seed_value  # adjustable parameter
+        globalVariables.GLOBAL_SEED_VALUE = global_seed_value
 
-        self.num_internet_devices = num_internet_devices
-        self.num_subnetworks = num_subnetworks
-        self.num_attackers = num_attackers
-        # self.subnetworks = []
+        if globalVariables.GLOBAL_SEED:
+            globalVariables.RNG = RandomCallCounter(np.random.default_rng(globalVariables.GLOBAL_SEED_VALUE))
+        else:
+            globalVariables.RNG = RandomCallCounter(np.random.default_rng(int(time.time())))
 
-        self.information_importance = information_importance
-        self.device_security_deviation_width = device_security_deviation_width
-        self.information_gain_weight = information_gain_weight
-        self.passive_detection_weight = passive_detection_weight
-        self.spread_detection_weight = spread_detection_weight
-        self.target_detection_weight = target_detection_weight
-
-        # self.max_hops = max_hops
-        # self.min_capacity = min_capacity
-        # self.max_capacity = max_capacity
-        self.num_users = 0
-        self.avg_time_to_new_attack = avg_time_to_new_attack
-        self.min_device_count = min_device_count
-        self.max_device_count = max_device_count
-        self.verbose = verbose
-        VERBOSE = verbose
-
-        # avg_node_degree = 3
-        self.devices = []
-        self.subnetworks = []
+        self.organizations = []
         self.users = []  # keeping track of human users in all networks
-        # self.active_correspondences = []
+        self.attackers = []
 
-        # create graph and compute pairwise shortest paths
-        self._create_graph()
+        # determine when attacks will be generated in advance:
+        entering_attackers = num_attackers_total - num_attackers_initial
+        self.attack_generation_steps = globalVariables.RNG().choice(np.arange(0, int(self.max_num_steps * 0.75)),
+                                                                    size=entering_attackers, replace=False).tolist()
+        self.attack_generation_steps.sort(reverse=True) # first attack to insert is in last place (for easy access and popping)
+        # print(self.attack_generation_steps)
+        self.num_attackers = num_attackers_total  # adjustable parameter
 
-        self.shortest_paths = dict(nx.all_pairs_shortest_path(self.network))
-
-        # construct subnetworks that compose the main network
-        self._create_devices(subgraph_type)
-
-        # add nodes to master graph
-        self.merge_with_master_graph()
-
-        self.reset_edge_data()
+        self.incident_times = []
+        self.newly_compromised_per_step = []
+        # self.avg_security_per_org = np.zeros(num_subnetworks - 1) # storing averages for data collection # useless
+        self.avg_newly_compromised_per_org = np.zeros(num_firms)  # storing averages for data collection
 
         # initialize agents
-        self.grid = NetworkGrid(self.G)
         self.schedule = SimultaneousActivation(self)
-        for d in self.devices:
-            self.grid.place_agent(d, self.address_server[d.address])
-            self.schedule.add(d)
-        for o in self.subnetworks:
-            self.schedule.add(o)
-        self.total_packets_received = 0
-        self.total_failure_count = 0
+        for i in range(0, self.num_firms):  # initialize orgs and add them to user list
+            org = Organization(i, self)
+            self.schedule.add(org)
+            self.organizations.append(org)
+        for org in self.organizations:
+            for user in org.users:
+                self.users.append(user)
+                self.schedule.add(user)
+        for i in range(0, self.num_attackers):
+            attacker = Attacker(i, self)
+            self.attackers.append(attacker)
+            if i < self.active_attacker_count:
+                self.schedule.add(attacker)
+
         self.total_compromised = 0
-        self.packet_count = 1
-        self.initial_closeness = 0.5 # initial closeness between organizations
-        # can be parameterized
-        self.reciprocity = reciprocity
-        self.transitivity = transitivity
+        self.org_utility = 0
+        self.total_org_utility = 0  # TODO byproduct of the redundant average utility function
+        Organization.organization_count = 0  # reset organization count
 
-        #initialize a n*n matrix to store sharing decision disregarding attacker subnetwork
-        self.closeness_matrix = np.full((self.num_subnetworks - 1, self.num_subnetworks - 1), 0.5)
+        # TODO possibly move to own function
+        # initialize a n*n matrix to store organization closeness disregarding attacker subnetwork
+        self.closeness_matrix = np.full((self.num_firms, self.num_firms), self.initial_closeness, dtype=np.float)
 
+        # initialize a n*n matrix to store organization's trust towards each other disregarding attacker subnetwork
+        self.trust_matrix = np.full((self.num_firms, self.num_firms), self.initial_trust, dtype=np.float)
+
+        # makes the trust factor between an organization and itself zero in order to avoid any average calculation errors
+        np.fill_diagonal(self.trust_matrix, 0)
+
+        # data needed for making any graphs
         self.datacollector = DataCollector(
             {
-             "Compromised Devices": get_total_compromised,
-            "Closeness": get_share #testing
+                "Compromised Devices": get_total_compromised,
+                "Closeness": get_avg_closeness,
+                "Average Trust": get_avg_trust,
+                "Free loading": get_free_loading,
+                "total avg sec": get_total_avg_security,
+                "num attackers": get_num_attackers
             }
         )
 
         self.running = True
         self.datacollector.collect(self)
-        if VERBOSE:
-            print("Starting!")
-            print("Number of devices: %d" % len(self.devices))
 
-    def _create_graph(self):
-        self.network = random_mesh_graph(self.num_subnetworks)
-
-    def _create_devices(self, subgraph_type):
-        for i in range(len(self.network.nodes)):
-            routing_table = self.shortest_paths[i]
-
-            n = get_subnetwork_device_count(self)
-            of = 'devices' if subgraph_type else 'subnetworks'
-
-            if len(self.network.nodes) == i + 1:  # the last node of the network is always an attackers subnetwork
-                self.network.nodes[i]['subnetwork'] = Attackers(address=Address(i),
-                                                                parent=self,
-                                                                model=self,
-                                                                routing_table=routing_table,
-                                                                initial_attack_count=self.num_attackers,
-                                                                of='devices',
-                                                                avg_time_to_attack_gen=self.avg_time_to_new_attack)
-            else:
-                self.network.nodes[i]['subnetwork'] = Organization(address=Address(i),
-                                                                   parent=self,
-                                                                   model=self,
-                                                                   routing_table=routing_table,
-                                                                   num_devices=n,
-                                                                   of=of)
-
-    def get_subnetwork_at(self, at):
-        return self.network.nodes[at]['subnetwork']
-
-    def reset_edge_data(self):
-        # deactivate all edges
-        for edge in self.G.edges(data=True):
-            edge[2]["active"] = False
-            edge[2]["malicious"] = False
-
-    def update_closeness(self):
-        # n = random.randint(0, self.num_subnetworks - 1)
-        # m = random.randint(0, self.num_subnetworks - 1)
-        # while (n != m):
-        #     m = random.randint(0, self.num_subnetworks - 1)
-
-        for i in range(self.num_subnetworks - 1):
-            for j in range(i + 1, self.num_subnetworks - 1): # only visit top matrix triangle
-                # if i == j: # or type(self.subnetworks[i]) is Attackers or type(self.subnetworks[j]) is Attackers:
-                #     continue
-                # else:
-                r = random.random()
-                if (self.closeness_matrix[i][j] > r): #will interact
+    def information_sharing_game(self):
+        # TODO: implement trust factor
+        for i in range(self.num_firms):
+            for j in range(i + 1, self.num_firms): # only visit top matrix triangle
+                r = globalVariables.RNG().random()
+                if self.closeness_matrix[i, j] > r:  # will interact event
+                    t1 = self.trust_matrix[i, j]
+                    t2 = self.trust_matrix[j, i]
                     closeness = self.closeness_matrix[i][j]
-                    r1, r2 = self.subnetworks[i].share_information(closeness), self.subnetworks[j].share_information(closeness)
-                    choice = [int(r1 > closeness), int(r2 > closeness)]
-                    if sum(choice) == 2:  # both cooperate
-                        self.closeness_matrix[i][j] = 1 - ((1 - closeness) / self.reciprocity)
-                        self.closeness_matrix[j][i] = 1 - ((1 - closeness) / self.reciprocity)
-                        self.adjust_closeness(i, j)
-                        for attack, info in self.subnetworks[i].attacks_list.items():
-                            self.subnetworks[j].attacks_list[attack] = get_new_information_cooperative(self.subnetworks[j].attacks_list[attack], info)
+                    # get each organization's decision to share or not based on its trust towards the other
+                    r1 = self.organizations[i].share_decision(self.organizations[j], t1)
+                    r2 = self.organizations[j].share_decision(self.organizations[i], t2)
+                    choice = [r1, r2]
+                    if sum(choice) == 2:  # both cooperate/share
+                        # come closer to each other for both orgs (symmetric matrix)
+                        self.closeness_matrix[i, j] = get_reciprocity(sum(choice), closeness, self.reciprocity)
+                        self.closeness_matrix[j, i] = get_reciprocity(sum(choice), closeness, self.reciprocity)
 
-                        for attack, info in self.subnetworks[j].attacks_list.items():
-                            self.subnetworks[i].attacks_list[attack] = get_new_information_cooperative(self.subnetworks[i].attacks_list[attack], info)
+                        # trust will increase for both organizations
+                        self.trust_matrix[i, j] = increase_trust(t1, self.trust_factor)
+                        self.trust_matrix[j, i] = increase_trust(t2, self.trust_factor)
+
+
+                        # actually gain information for both organizations
+                        share_info_cooperative(self.organizations[i], self.organizations[j])
+                        share_info_cooperative(self.organizations[j], self.organizations[i])
 
                     elif sum(choice) == 0:  # both defect
-                        self.closeness_matrix[i][j] = closeness / self.reciprocity
-                        self.closeness_matrix[j][i] = closeness / self.reciprocity
-                    else:  # one defects and one cooperates #no change in closeness #TODO implement different behaviour?
-                        if choice[0] == 1:
-                            for attack, info in self.subnetworks[i].attacks_list.items():
-                                self.subnetworks[j].attacks_list[attack] = get_new_information_selfish(self.subnetworks[j].attacks_list[attack], info)
-                        else:
-                            for attack, info in self.subnetworks[j].attacks_list.items():
-                                self.subnetworks[i].attacks_list[attack] = get_new_information_selfish(self.subnetworks[i].attacks_list[attack], info)
+                        # grow further away from each other for both orgs (symmetric matrix)
+                        self.closeness_matrix[i, j] = get_reciprocity(sum(choice), closeness, self.reciprocity)
+                        self.closeness_matrix[j, i] = get_reciprocity(sum(choice), closeness, self.reciprocity)
 
+                        # trust will not be affected in this case
 
-    def adjust_closeness(self, org1, org2):
-        for i in range(self.num_subnetworks - 1):
-            if i == org1 or i == org2:
-                continue
-            else:
-                if abs(0.5 - self.closeness_matrix[org1][i]) > abs(0.5 - self.closeness_matrix[org2][i]):
-                    self.closeness_matrix[org2][i] /= self.transitivity
+                    # one defects and one cooperates #no change in closeness #TODO implement different behaviour?
+                    elif sum(choice) == 1:
+                        if choice[0] == 1: # only org i shares
+                            share_info_selfish(self.organizations[i], self.organizations[j])
+                            self.trust_matrix[i, j] = decrease_trust(t1, self.trust_factor) # org i will trust org j less
+                            # org j will nto update its trust
+
+                        else: # org j shares
+                            share_info_selfish(self.organizations[j], self.organizations[i])
+                            self.trust_matrix[j, i] = decrease_trust(t2, self.trust_factor) # org j will trust org i less
+                            #org i will not update its trust
                 else:
-                    self.closeness_matrix[org1][i] /= self.transitivity
+                    globalVariables.RNG().random()  # dummy, for consistent randomness when branching
+                    globalVariables.RNG().random()  # dummy, for consistent randomness when branching
 
+    # given two organiziation indices, return their closeness
+    def get_closeness(self, i, j):
+        if i > j:
+            j, i = i, j
+        return self.closeness_matrix[i, j]
+
+    def get_attack_effectiveness(self):
+        e = []
+        for i in range(len(self.attackers)):
+            e.append((i + 1, self.attackers[i].get_effectiveness()))
+        return e
 
     def step(self):
-        self.update_closeness()
-        self.reset_edge_data()
+        if self.information_sharing:
+            self.information_sharing_game()  # TODO: move after agent step???
+        else:
+            self.dummy_fun_1()  # for consistent randomness during branching
+
+        current_step = self.schedule.steps
+        if self.attack_generation_steps and current_step >= self.attack_generation_steps[-1]:
+            self.attack_generation_steps.pop()
+            self.schedule.add(self.attackers[self.active_attacker_count])
+            self.active_attacker_count += 1
 
         # update agents
         self.schedule.step()
-
-        # # update correspondences
-        # i = 0
-        # while True:
-        #     c = self.active_correspondences[i]
-        #     if not c.active:
-        #         self.active_correspondences.pop(i)
-        #     else:
-        #         c.step()
-        #         i += 1
-        #     if i >= len(self.active_correspondences):
-        #         break
         self.datacollector.collect(self)
+        # print(globalVariables.RNG.call_count)
+        globalVariables.RNG.call_count = 0
 
-    def merge_with_master_graph(self):
-        """Merges the abstract hierarchical graph with the 'master graph' for visualization purposes."""
-        # add nodes to master graph
-        for s, d in self.network.edges:
-            ns = self.get_subnetwork_at(s).gateway_device()
-            nd = self.get_subnetwork_at(d).gateway_device()
-            ns_address = self.address_server[ns.address]  # creates address entry if it does not exist
-            nd_address = self.address_server[nd.address]  # creates address entry if it does not exist
-            if not self.G.get_edge_data(ns_address, nd_address):
-                self.G.add_edge(ns_address, nd_address)
-                e_data = self.G.get_edge_data(ns_address, nd_address)
-                e_data["active"] = False
-                e_data["malicious"] = False
+    def dummy_fun_1(self):
+        for i in range(self.num_firms):
+            for j in range(i + 1, self.num_firms):
+                globalVariables.RNG().random()
+                globalVariables.RNG().random()
+                globalVariables.RNG().random()
+

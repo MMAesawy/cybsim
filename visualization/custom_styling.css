@@ -1,0 +1,97 @@
+/* Controls width of the main interface (parameter controls + visual elements) */
+.container{
+    width: 1400px;
+}
+
+/* Controls width of the paramater controls section. */
+#sidebar{
+    width: 300px;
+    float: left;
+}
+
+/* Controls width of the visual elements section. */
+#elements{
+    width: 1000px;
+    float: right;
+}
+
+/*styling for card text*/
+.cardtext{
+    text-anchor:middle;
+    font-family: Verdana;
+    font-size: 18px;
+    fill: #505050;
+}
+
+/*styling for card box*/
+.cardbox{
+    stroke: #505050;
+    stroke-width: 2px;
+    fill:white;
+}
+
+.arc{
+    fill:#f2540c;
+}
+.arc-outline{
+    fill:white;
+    stroke: #505050;
+    stroke-width: 1px;
+    fill-opacity: 0;
+}
+
+.bar-graph-information{
+    fill: #f2c80c;
+    stroke: black;
+    stroke-width: 0.5px;
+    stroke-opacity: 50%;
+}
+.bar-graph-attack{
+    fill: #f2540c;
+    stroke: black;
+    stroke-width: 0.5px;
+    stroke-opacity: 50%;
+}
+
+.gridline{
+    stroke: #505050;
+    opacity: 60%;
+    stroke-width: 1px;
+}
+
+.texttopyaxis{
+    text-anchor: start;
+    font-weight: bold;
+    font-size: 10px;
+}
+
+.cardline{
+    stroke: #606060;
+    stroke-width: 1px;
+}
+
+.cardlinemajor{
+    stroke: #505050;
+    stroke-width: 2px;
+}
+
+.utilitytext{
+    font-size:12px;
+}
+
+.securitytext{
+    font-size:12px;
+}
+
+.utilitylabel{
+    font-size:10px;
+}
+
+.securitylabel{
+    font-size:10px;
+}
+
+/*.graphlink{*/
+    /*!*stroke-width: 1px;*!*/
+    /*stroke: black;*/
+/*}*/

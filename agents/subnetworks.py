@@ -1,286 +1,238 @@
-from helpers import *
 from agents.agents import *
-from abc import ABC, abstractmethod
-from mesa.agent import Agent
-from collections import defaultdict
-import random
 import numpy as np
+import globalVariables
 
 
-class SubNetwork(ABC):
+class Organization(BetterAgent):
+    def __init__(self, org_id, model):
+        super().__init__(model)
 
-    @abstractmethod
-    def _create_graph(self):
-        avg_node_degree = 1
-        # create graph and compute pairwise shortest paths
-        self.network = random_star_graph(self.num_devices, avg_node_degree)
-        # self.network = nx.barabasi_albert_graph(self.num_devices, min(1, self.num_devices-1))
-        # self.network.graph['gateway'] = np.argmax([self.network.degree(i) for i in self.network.nodes])
-
-    @abstractmethod
-    def _create_devices(self):
-        of = self.of  # 'devices'
-        self.children = []
-        self.num_users = 0
-        # create objects to be stored within the graph
-        for i in range(len(self.network.nodes)):
-            routing_table = self.shortest_paths[i]
-            if of == 'subnetworks':  # if this is a subnetwork of subnetworks:
-                n = SubNetwork(address=self.address + i,
-                               parent=self,
-                               model=self.model,
-                               routing_table=routing_table,
-                               num_devices=get_subnetwork_device_count(self.model),
-                               of='devices')
-                self.num_users += n.num_users
-                self.network.nodes[i]['subnetwork'] = n
-            elif of == 'devices':  # if this is a subnetwork of devices
-                self.num_users = get_subnetwork_user_count(self.num_devices)
-                if (i <= self.num_users):
-                    activity = random.random() / 10
-                    self.network.nodes[i]['subnetwork'] = User(activity=activity,
-                                                               address=self.address + i,
-                                                               parent=self,
-                                                               model=self.model,
-                                                               routing_table=routing_table)
-                else:
-                    self.network.nodes[i]['subnetwork'] = NetworkDevice(address=self.address + i,
-                                                                        parent=self,
-                                                                        model=self.model,
-                                                                        routing_table=routing_table)
-                self.children.append(self.network.nodes[i]['subnetwork'])
-
-    def __init__(self, address, parent, model, routing_table, num_devices, of='subnetworks'):
-        self.address = address
-        self.parent = parent
-        self.model = model
-        self.routing_table = routing_table
-        self.of = of
-        self.num_devices = num_devices
-        self.current_packets = []
-
-        self._create_graph()
-
-        self.shortest_paths = dict(nx.all_pairs_shortest_path(self.network))
-        self.local_gateway_address = self.network.graph['gateway']
-
-        self._create_devices()
-
-        # add nodes to master graph
-        self.merge_with_master_graph()
-
-    def get_next_gateway(self, packet):
-        """
-        Logic for sending a network packet.
-        :param packet: the packet to send
-        """
-        if self.address.is_share_subnetwork(packet.destination.address):  # device is in the local network
-            dest_local_address = packet.destination.address[len(self.address) - 1]
-            next_device_address = self.routing_table[dest_local_address][1]
-            next_device = self.parent.get_subnetwork_at(next_device_address).gateway_device()
-        else:  # device is outside the local network, send to gateway:
-            gateway_address = self.parent.gateway_local_address()
-            # if this is the gateway device: (propagate upwards)
-            if self.address[-1] == gateway_address:
-                next_device = self.parent.get_next_gateway(packet)
-            else:  # this is not the gateway device:
-                dest_local_address = gateway_address
-                next_device_address = self.routing_table[dest_local_address][1]
-                next_device = self.parent.get_subnetwork_at(next_device_address).gateway_device()
-
-        return next_device
-
-    def gateway_device(self):
-        """
-        Use this function to get the physical device at the gateway of this subnetwork.
-        Recursive. Will always return a NetworkDevice object.
-        :return: returns the physical NetworkDevice object which acts as a gateway
-        """
-        gateway_subnetwork = self.get_subnetwork_at(self.local_gateway_address)
-        return gateway_subnetwork.gateway_device()
-
-    def gateway_local_address(self):
-        """
-        Convenience method for returning the local address of this network's gateway
-        :return: this subnetwork's gateway node address/number
-        """
-        return self.network.graph['gateway']
-
-    def get_subnetwork_at(self, at):
-        return self.network.nodes[at]['subnetwork']
-
-    def _activate_edge_to(self, other):
-        self.model.G.get_edge_data(self.gateway_device().master_address,
-                                   other.gateway_device().master_address)["active"] = True
-
-    def merge_with_master_graph(self):
-        """Merges the abstract hierarchical graph with the 'master graph' for visualization purposes."""
-        for s, d in self.network.edges:
-            ns = self.network.nodes[s]['subnetwork'].gateway_device()
-            nd = self.network.nodes[d]['subnetwork'].gateway_device()
-            ns_address = self.model.address_server[ns.address]
-            nd_address = self.model.address_server[nd.address]
-            if not self.model.G.get_edge_data(ns_address, nd_address):
-                self.model.G.add_edge(ns_address, nd_address)
-                e_data = self.model.G.get_edge_data(ns_address, nd_address)
-                e_data["active"] = False
-                e_data["malicious"] = False
-
-    def get_device_count(self):
-        return self.num_devices
-
-
-class Organization(SubNetwork, Agent):
-    def __init__(self, address, parent, model, routing_table, num_devices, of='subnetworks'):
-        SubNetwork.__init__(self, address, parent, model, routing_table, num_devices, of)
-        Agent.__init__(self, address, model)
-
-        self.attacks_list = defaultdict(lambda: 0)
-        # self.compromised_detected = 0
-        # self.security_budget = random.random()  # This budget in percentage of total budget of company
-        self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
+        self.id = org_id
+        self.users = []
+        self.old_utility = 0
         self.utility = 0
-        self.util_buffer = 0
-        self.count = 0
-        # self.company_security = get_company_security(num_devices) / 2
-        model.subnetworks.append(self)
+        # dictionary storing attack and known information about it, row = attack, column = info
+        self.old_attacks_list = np.zeros((self.model.num_attackers, 1000), dtype=np.bool)
+        # updated dictionary storing attack and known information about it, row = attack, column = info
+        self.new_attacks_list = np.zeros((self.model.num_attackers, 1000), dtype=np.bool)
 
-    #TODO fix this
+        # for random seeding
+        self.attacks_list_predetermined = np.zeros((self.model.num_attackers, 1000), dtype=np.int)
+        self.attacks_list_predetermined_idx = np.zeros(self.model.num_attackers, dtype=np.int)
+        for i in range(self.model.num_attackers):
+            self.attacks_list_predetermined[i] = np.arange(1000)
+            globalVariables.RNG().shuffle(self.attacks_list_predetermined[i])
+
+        self.attacks_list_mean = np.zeros(self.model.num_attackers)
+        # to store attackers and number of devices compromised from organization
+        self.attacks_compromised_counts = np.zeros(self.model.num_attackers, dtype=np.int)
+        # self.org_out = np.zeros(len(model.organizations))
+        self.org_out = np.zeros(self.model.num_firms)  # store the amount of info shared with other organizations
+
+        # incident start, last update
+        self.attack_awareness = np.zeros(self.model.num_attackers, dtype=np.bool) # inc_start, last_update, num_detected, active
+        self.detection_counts = np.zeros(self.model.num_attackers, dtype=np.int)
+        self.security_budget = max(0.005, min(1, globalVariables.RNG().normal(0.5, 1 / 6)))
+        self.security_change = 0
+        self.num_detects_new = 0
+        # self.security_budget = 0.005
+        self.num_compromised_new = 0  # for getting avg rate of compromised per step
+        self.num_compromised_old = 0  # for getting avg rate of compromised per step
+        self.count = 0
+        self.risk_of_sharing = 0.3  # TODO: parametrize, possibly update in update_utility_sharing or whatever
+        self.info_in = 0  # total info gained
+        self.info_out = 0  # total info shared outside
+        self.security_drop = min(1, max(0, globalVariables.RNG().normal(0.75, 0.05)))
+        self.acceptable_freeload = self.model.acceptable_freeload  # freeloading tolerance towards other organizations
+        self.unhandled_incidents = []
+
+        # create employees
+        for i in range(0, self.model.device_count):
+            self.users.append(Employee(i, self, self.model))
+
+        # <---- Data collection ---->
+
+        self.free_loading_ratio = 0  # variable to store freeloading ratio for each organization
+
+        # to store changing organization security
+        self.total_security = 0  # used for batch runner
+        self.avg_security = 0
+
+        self.newly_compromised_per_step_aggregated = 0
+        self.avg_newly_compromised_per_step = 0  # TODO yet to be used
+
+        self.num_compromised = 0
+        self.avg_compromised_per_step = 0
+
+        self.incident_times = 0  # for avg incident time
+        self.avg_incident_times = 0  # for avg incident time
+        self.incident_times_num = 0  # for avg incident time
+
+        self.time_with_incident = 0
+        self.avg_time_with_incident = 0
+
+        # to store times organization shares when it enters a game
+        self.total_share = 0
+        self.avg_share = 0
+        self.num_games_played = 0
+
+        # to store average known info
+        self.avg_info = 0
+
+        # to calculate avg number of unhandled incidents
+        self.unhandled_incidents_aggregate = 0
+        self.avg_unhandled_incidents = 0
+        self.num_incidents = 0
+
+        # Extra data
+        self.is_sharing_info = self.model.information_sharing
+
+        # <--- adding organization to model org array and setting unique ID --->
+
+
+    def get_avg_compromised_per_step(self):
+        return self.num_compromised / (self.model.schedule.time + 1)
+
+    # returns the average information known by organization from all attacks
+    def get_avg_known_info(self):
+        return self.old_attacks_list[:self.model.active_attacker_count, :].mean()
+
+    # returns average security across all time steps
+    def get_avg_security(self):
+        return self.total_security / (self.model.schedule.time + 1)
+
+    # returns the freeloading ratio this organization does across all its interactions
+    def get_free_loading_ratio(self):
+        return self.info_in / (self.info_in + self.info_out + 1e-5)
+
+    # returns whether or not to share information according to other party
+    def share_decision(self, org2, trust):
+        self.num_games_played += 1  # for data collector
+        info_out = self.org_out[org2.id]  # org1 out (org1_info_out)
+        info_in = org2.org_out[self.id]  # org1 in (org2_info_out)
+        r = globalVariables.RNG().random()
+        if info_out > info_in:  # decreases probability to share
+            share = r < trust * min(1, self.acceptable_freeload + (info_in / info_out))
+        else:
+            share = r < trust
+        if share:
+            self.total_share += 1  # for data collector
+        return share
+
+    # returns average times an organization shared across all its played games
+    def get_avg_share(self):
+        return self.total_share / self.num_games_played
+
+    def update_budget(self):
+        total_detections = self.detection_counts.max()
+        if total_detections:  # a security incident happened and wasn't handled in time
+            self.security_change += (1 - self.security_budget) * (total_detections/self.model.device_count)
+        self.security_budget += self.security_change
+        self.security_budget = max(0.005, min(1.0, self.security_budget))
+        self.security_change = 0
+        self.detection_counts = np.zeros(self.model.num_attackers, dtype=np.int)
+
+    def update_incident_times(self, attack_id):
+        current_time = self.model.schedule.time
+        incident_time = current_time - self.attack_awareness[attack_id, 0] - self.model.org_memory
+        if incident_time > self.model.org_memory:
+            assert self.attack_awareness[attack_id, 3] == 1
+            self.unhandled_incidents.append(self.attack_awareness[attack_id, :].tolist())
+        self.model.incident_times.append(incident_time)
+        self.incident_times += incident_time  # for avg incident time
+
+    def set_avg_incident_time(self):  # for avg incident time
+        return self.incident_times / self.incident_times_num
+
+    def set_avg_time_with_incident(self):
+        return self.time_with_incident / (self.model.schedule.time + 1)
+
+    def start_incident(self, attack_id):
+        self.num_incidents += 1
+        self.attack_awareness[attack_id] = [self.model.schedule.time, self.model.schedule.time, 0, 1]
+
+    # remove attacker from awareness array if handled in acceptable time based on org memory
+    def clear_awareness(self, attack_id):
+        self.update_incident_times(attack_id)
+        self.incident_times_num += 1  # for avg incident time
+        self.avg_incident_times = self.set_avg_incident_time()
+        self.attack_awareness[attack_id] = [0, 0, 0, 0]
+
+        # <--- Updating average unhandled attacks per step --->
+        self.avg_unhandled_incidents = self.get_avg_unhandled_incidents()
+
+    # return boolean if organization is aware of specific attack
+    def is_aware(self, attack_id):
+        return self.attack_awareness[attack_id]
+
+    def get_percent_compromised(self, attack_id=None):
+        """Returns the percentage of users compromised for each attack (or the total if `attack` is None)"""
+        if attack_id is not None:
+            return self.attacks_compromised_counts[attack_id] / len(self.users)
+        return self.num_compromised_old / len(self.users)
+
+    def set_avg_newly_compromised_per_step(self):
+        return self.newly_compromised_per_step_aggregated / (self.model.schedule.time + 1)
+
+    # return amount of information known given a specific attack
+    def get_info(self, attack_id):
+        return self.attacks_list_mean[attack_id]
+
+    def get_avg_unhandled_incidents(self):
+        return self.unhandled_incidents_aggregate / self.num_incidents
+
     def step(self):
         self.count += 1
-        # self.set_utility()
-        if self.count == 10:
+        # organization updates its security budget every n steps based on previous step utility in order to improve its utility
+        if self.count == self.model.security_update_interval:
             self.count = 0
             self.update_budget()
-            self.utility -= len(self.children) * self.security_budget ** 2
-            # self.compromised_detected = 0
-        else:
-            pass
-        # if self.compromised_detected/len(self.children) >= 0.1:
-        #     self.update_budget()
-        # else:
-        #     pass
+        # self.security_budget += self.security_change
+        # self.security_change = max(0, self.security_change - 0.005)
+        if self.num_detects_new == 0:
+            self.security_change -= (1-self.security_drop) * self.security_budget /self.model.security_update_interval
+        self.num_detects_new = 0
+
+        self.model.org_utility += self.utility  # adds organization utility to model's utility of all organizations
+        self.model.total_org_utility += self.utility  # adds organization utility to model's total utility of all organizations for the calculation of the average utility for the batchrunner
+
+        # for calculating the average NEWLY compromised per step
+        self.model.newly_compromised_per_step.append(self.num_compromised_new - self.num_compromised_old)
+        self.newly_compromised_per_step_aggregated += (self.num_compromised_new - self.num_compromised_old)  # Organization lvl
+        self.avg_newly_compromised_per_step = self.set_avg_newly_compromised_per_step()  # Organization lvl
+        self.num_compromised_old = self.num_compromised_new
+        # self.num_compromised_new = 0  # reset variable
+
+        self.free_loading_ratio = self.get_free_loading_ratio() # update freeloading ratio variable every step
+
+        # <-- updating security variables to get security averages --->
+        self.total_security += self.security_budget
+        self.avg_security = self.get_avg_security()
+
+        # <--- updating average number of times shared when playing a game --->
+        if self.num_games_played > 0:
+            self.avg_share = self.get_avg_share()
+
+        # <--- updating average information known about all attacks --->
+        if len(self.old_attacks_list) > 0:
+            self.avg_info = self.get_avg_known_info()
+
+        if len(self.attack_awareness) > 0:
+            self.time_with_incident += 1
+
+        self.avg_time_with_incident = self.set_avg_time_with_incident()
+
+        # self.avg_compromised = self.get_avg_compromised()
+
+        # <--- Updating average compromised per step --->
+        self.avg_compromised_per_step = self.get_avg_compromised_per_step()
+
 
     def advance(self):
-        pass
+        self.old_attacks_list = self.new_attacks_list.copy()
+        self.attacks_list_mean = self.old_attacks_list.mean(axis=1)
+        # current_time = self.model.schedule.time
 
-    def share_information(self, closeness):  # TODO make decision based on trust factor
-        return int(random.random() > closeness)
-
-    #TODO Fix this function
-    def update_budget(self):
-        # self.util_buffer = self.utility
-        # if self.utility < 0:
-        #     self.security_budget += 0.05
-        #     # self.set_utility()
-        # elif self.util_buffer >= self.utility:
-        #     self.security_budget -= 0.05
-        # elif self.util_buffer == 0:
-        #     pass
-        self.security_budget = max(0, min(1, random.gauss(0.5, 1 / 6)))
-
-    # def set_utility(self):  # TODO testing (cap 0 or not)
-    #     # self.utility = -(self.compromised_detected / len(self.children)) - self.security_budget
-    #     # self.utility = -(self.security_budget**2) - (self.compromised_detected / len(self.children)) + 1 #TODO not correct # #TODO add sliders for serurity budget for testing
-    #     self.utility = random.random()
-
-    def _create_graph(self):
-        self.network = random_star_graph(self.num_devices, 0)
-
-    def _create_devices(self):
-        self.children = []
-        self.users_on_subnetwork = []  # keeping track of human users on subnetwork
-        self.num_users = len(self.network.nodes) - 1  # TODO num users thing
-        self.num_compromised = 0
-        self.model.num_users += self.num_users
-        # create objects to be stored within the graph
-        for i in range(len(self.network.nodes)):
-            routing_table = self.shortest_paths[i]
-            if i == self.local_gateway_address:  # if this is the gateway
-                n = NetworkDevice(address=self.address + i,
-                                  parent=self,
-                                  model=self.model,
-                                  routing_table=routing_table)
-                self.network.nodes[i]['subnetwork'] = n
-            else:  # the rest of the devices are users.
-                activity = random.random() / 10  # TODO think about the media presence role in determining who to attack.
-
-                self.network.nodes[i]['subnetwork'] = Employee(activity=activity,
-                                                               address=self.address + i,
-                                                               parent=self,
-                                                               model=self.model,
-                                                               routing_table=routing_table)
-
-                self.users_on_subnetwork.append(self.network.nodes[i]['subnetwork'])
-            self.children.append(self.network.nodes[i]['subnetwork'])
-
-
-class Attackers(SubNetwork, Agent):
-
-    def __init__(self, address, parent, model, routing_table, initial_attack_count, of='devices',
-                 avg_time_to_attack_gen=0):
-        SubNetwork.__init__(self, address, parent, model, routing_table, initial_attack_count, of)
-        Agent.__init__(self, address, model)
-        self._p_attack_generation = 1 / (avg_time_to_attack_gen + 1) if avg_time_to_attack_gen else 0.0
-        self._is_generate_new_attack = False
-        model.subnetworks.append(self)
-
-    def step(self):
-        super().step()
-        self._is_generate_new_attack = random.random() < self._p_attack_generation
-
-    def advance(self):
-        if self._is_generate_new_attack:
-            self._generate_new_attacker()
-            self._is_generate_new_attack = False
-
-    def _generate_new_attacker(self):
-        new_node_local_address = self.network.number_of_nodes()
-        self.network.add_node(new_node_local_address)
-        self.network.add_edge(self.network.graph['gateway'], new_node_local_address)
-        self.shortest_paths = dict(nx.all_pairs_shortest_path(self.network))
-        # print(len(self.shortest_paths[0]))
-        activity = random.random()
-        attacker = Attacker(activity=activity,
-                            address=self.address + new_node_local_address,
-                            parent=self,
-                            model=self.model,
-                            routing_table=self.shortest_paths[new_node_local_address])
-        # print(attacker.address)
-        for i in range(self.network.number_of_nodes() - 1):
-            self.network.nodes[i]['subnetwork'].routing_table = self.shortest_paths[i]
-        self.network.nodes[new_node_local_address]['subnetwork'] = attacker
-        self.children.append(attacker)
-        self.merge_with_master_graph()
-        self.model.merge_with_master_graph()
-        self.model.grid.G.node[attacker.master_address]['agent'] = list()  # necessary evil
-        self.model.grid.place_agent(attacker, attacker.master_address)
-        self.model.schedule.add(attacker)
-        # print("SUCCESSFULLY ADDED A NEW ATTACKER %d!" % attacker.master_address)
-
-    def _create_graph(self):
-        self.network = random_star_graph(self.model.num_attackers + 1, 0)
-
-    def _create_devices(self):
-        self.children = []
-        self.num_users = self.model.num_attackers  # TODO num users thing
-        # create objects to be stored within the graph
-        for i in range(len(self.network.nodes)):
-            # company_security = get_company_security(self.num_devices)
-            routing_table = self.shortest_paths[i]
-            if i == self.local_gateway_address:  # if this is the gateway
-                n = NetworkDevice(address=self.address + i,
-                                  parent=self,
-                                  model=self.model,
-                                  routing_table=routing_table)
-                self.network.nodes[i]['subnetwork'] = n
-            else:  # the rest of the devices are users.
-                activity = random.random()
-
-                self.network.nodes[i]['subnetwork'] = Attacker(activity=activity,
-                                                               address=self.address + i,
-                                                               parent=self,
-                                                               model=self.model,
-                                                               routing_table=routing_table)
-
-            self.children.append(self.network.nodes[i]['subnetwork'])
+        # for attack_id in range(self.attack_awareness.shape[0]):
+        #     if self.is_aware(attack_id) and current_time - self.attack_awareness[attack_id, 1] > self.model.org_memory:
+        #         self.clear_awareness(attack_id)
