@@ -54,14 +54,15 @@ class OrganizationCardModule(VisualizationElement):
         portrayal['num_organizations'] = model.num_firms
         portrayal['nodes'] = [{
                                 'id':      org.id,
-                                'utility': org.get_free_loading_ratio(),
+                                #'utility': org.get_free_loading_ratio(),
+                                'utility': 0,
                                 'sec_bud': org.security_budget,
                                 'frac_compromised': org.get_percent_compromised(),
                                 'attack_data': [{"frac_comp": org.get_percent_compromised(a.id),
-                                                "frac_info": org.get_info(a.id)}
+                                                "frac_info": org.get_info_proportion(a.id)}
                                                 for a in attacker_list]
                                }
-                              for org in model.organizations]
+                              for org in model.firms]
         portrayal['attack_effectiveness'] = [a.effectiveness for a in attacker_list]
         portrayal['closeness'] = []
         for i in range(1, model.closeness_matrix.shape[0]):

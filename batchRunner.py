@@ -2,7 +2,6 @@ from model import *
 from agents import subnetworks
 from mesa.batchrunner import BatchRunner, BatchRunnerMP
 import numpy as np
-import globalVariables
 
 
 class BatchRunnerNew(BatchRunnerMP):

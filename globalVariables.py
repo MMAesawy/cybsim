@@ -1,6 +1,0 @@
-
-VERBOSE = True
-GLOBAL_SEED = False
-GLOBAL_SEED_VALUE = None
-
-RNG = None

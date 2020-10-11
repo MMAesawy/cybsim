@@ -1,29 +1,33 @@
 from mesa.agent import Agent
-import helpers
 import numpy as np
-import globalVariables
 
 
 class BetterAgent(Agent):
     id = 0
 
     def __init__(self, model):
+        """
+            Simple improvement upon agent as it automatically deals with setting the global agent ID.
+
+            Global agent ID is required for some Mesa functions but are not used within the model, instead
+            opting for separate ID pools for each agent type.
+        """
         super().__init__(BetterAgent.id, model)
         BetterAgent.id += 1
 
-class User(BetterAgent):
 
+class User(BetterAgent):
     def __init__(self, user_id, parent, model):
         super().__init__(model)
         self.user_id = user_id
         self.total_utility = 0
         self.communicate_to = []
         self.parent = parent
-        self.activity = max(0, min(1, globalVariables.RNG().normal(0.5, 1 / 6)))
-        self.model.users.append(self)  # append user into model's user list
+        self.activity = max(0, min(1, self.model.RNG().normal(0.5, 1 / 6)))
+#        self.model.users.append(self)  # append user into model's user list
 
     def is_active(self):
-        return globalVariables.RNG().random() < self.activity
+        return self.model.RNG().random() < self.activity
 
     def step(self):
         super().step()
@@ -36,25 +40,23 @@ class Attacker(User):
     def __init__(self, attacker_id, model):
         super().__init__(attacker_id, model, model)
         self.id = attacker_id
-        self.effectiveness = max(0.005, min(1, globalVariables.RNG().normal(0.5, 1/6)))
+        self.effectiveness = max(0.005, min(1, self.model.RNG().normal(0.5, 1/6)))
         self.model = model
         self.predetermined_detection = np.zeros(self.model.num_firms, dtype=np.bool)
 
     def _generate_communicators(self):
-        for org in self.model.organizations:
-            user = globalVariables.RNG().choice(org.users)
-            if globalVariables.RNG().random() < (1-self.effectiveness):
+        for firm in self.model.firms:
+            user = self.model.RNG().choice(firm.devices)
+            if self.model.RNG().random() < (1-self.effectiveness):
                 if not user.parent.attacks_compromised_counts[self.id]:
                     self.communicate_to.append(user)
 
-    def attempt_infect(self, employee):
-        if self.predetermined_detection[employee.parent.id]:
-            employee.information_update(self.id)
-            if employee.compromisers[self.id]:
-                employee.clean_specific(self.id)
+    def attempt_infect(self, device):
+        if self.predetermined_detection[device.parent.id]:
+            device.parent.information_update(self.id)
         else:
-            if not employee.compromisers[self.id]:
-                employee.notify_infection(self)
+            if not device.compromisers[self.id]:
+                device.get_infected(self.id)
 
     def get_effectiveness(self):
         return self.effectiveness
@@ -62,7 +64,7 @@ class Attacker(User):
     def step(self):
         super().step()
         for i in range(self.predetermined_detection.shape[0]):
-            self.predetermined_detection[i] = self.model.organizations[i].users[0].detect(self, True)
+            self.predetermined_detection[i] = self.model.firms[i].devices[0].detection_trial_opt(self, True)
         self._generate_communicators()
 
     def advance(self):
@@ -74,11 +76,12 @@ class Attacker(User):
         self.communicate_to.clear()
 
 
-class Employee(User):
+class Device(User):
     def __init__(self, user_id, parent, model):
         super().__init__(user_id, parent, model)
         self.compromisers = np.zeros(self.model.num_attackers, dtype=np.bool)
-        self.to_clean = []
+        self.to_clean = np.zeros(self.model.num_attackers, dtype=np.bool)
+        self.to_compromise = np.zeros(self.model.num_attackers, dtype=np.bool)
 
     def is_compromised(self):
         """Returns whether or not the defender is compromised"""
@@ -89,97 +92,106 @@ class Employee(User):
         Cleans the user from a specific attacker. Notifies the attacker.
         :param attacker_id: the attacker to clean
         """
-        self.compromisers[attacker_id] = False
-        self.parent.attacks_compromised_counts[attacker_id] -= 1
-        if self.parent.attacks_compromised_counts[attacker_id] == 0:
-            self.parent.attack_awareness[attacker_id] = False
+        if self.compromisers[attacker_id]:
+            self.parent.attacker_detected_listener(device_id=self.id, attacker_id=attacker_id)
+            self.compromisers[attacker_id] = False
 
-        if not self.is_compromised():  # if not compromised any more
-            self.model.total_compromised -= 1
-            self.parent.num_compromised_new -= 1
-            # self.parent.num_compromised -= 1
-
-    def notify_infection(self, attacker):
+    def get_infected(self, attacker_id):
         """
         Notifies this user that it has been infected.
-        :param attacker: the attacker infecting this device
+        :param attacker_id: id of the attacker infecting this device
         """
-        if not self.is_compromised():
-            self.model.total_compromised += 1
-            self.parent.num_compromised_new += 1
-            self.parent.num_compromised += 1
-        self.parent.attacks_compromised_counts[attacker.id] += 1
-        self.compromisers[attacker.id] = True
+        if not self.compromisers[attacker_id]:
+            self.parent.device_infected_listener(device_id=self.id, attacker_id=attacker_id)
+            self.compromisers[attacker_id] = True
 
     def _generate_communicators(self):
-        # generate list of users to talk with
-        user_id = globalVariables.RNG().choice(np.arange(1, self.model.device_count))  # for consistent randomness when branching
+        """
+        Generate list of devices for this device to talk with. Devices are added to self.communicate_to.
+        :return:
+        """
+        # choose a random device id.
+        # zero not included in range as to not select self. see code below
+        user_id = self.model.RNG().choice(np.arange(1, len(self.parent.devices)))
         if user_id <= self.id:
-            user_id -= 1
+            user_id -= 1  # adjust id pool as to not select self.
 
-        assert user_id != self.id
-        self.communicate_to.append(self.parent.users[user_id])
+        self.communicate_to.append(self.parent.devices[user_id])
 
     def step(self):
         super().step()
         self._generate_communicators()
-        for attacker_id in range(self.parent.attack_awareness.shape[0]):
-            detected = self.detect(self.model.attackers[attacker_id], targeted=False)
+
+        # perform a detection trial for each attacker
+        for attacker_id in range(self.model.num_attackers):
+            detected = self.detection_trial_opt(self.model.attackers[attacker_id], targeted=False)
             if self.parent.is_aware(attacker_id) and self.compromisers[attacker_id]:
                 if detected:
-                    self.information_update(attacker_id)
-                    self.make_aware(attacker_id)
-                    self.to_clean.append(attacker_id)
+                    self.to_clean[attacker_id] = True
+                    self.parent.information_update(attacker_id)
+
+        # talk with other devices if infected
+        active = self.is_active()
+        for attacker_id in range(self.model.num_attackers):
+            already_detected = self.to_clean[attacker_id]
+            for other_device in self.communicate_to:  # typically one other device
+                detected = self.detection_trial_opt(self.model.attackers[attacker_id], targeted=False)
+                # if this device is compromised
+                # and the attacker is not already detected in this device
+                # and the other device isn't already compromised by this attacker
+                # #EDIT nevermind, causes attacks to never get detected once everyone in the firm is infected
+                if active and self.compromisers[attacker_id] and not already_detected: #\
+                        #and not other_device.compromisers[attacker_id]:
+                    if detected:
+                        self.to_clean[attacker_id] = True
+                        self.parent.information_update(attacker_id)
+                    else:
+                        other_device.to_compromise[attacker_id] = True
 
     def advance(self):
         super().advance()
 
-        for c in self.to_clean:
-            self.clean_specific(c)
-        self.to_clean.clear()
+        for attacker_id in range(self.model.num_attackers):
+            # cleaning takes precedence over infection.
+            if self.to_clean[attacker_id]:
+                self.clean_specific(attacker_id)
+            elif self.to_compromise[attacker_id]:
+                self.get_infected(attacker_id)
 
-        # talk with other users if infected
-        active = self.is_active()
-        for c in self.communicate_to:
-            for attacker in self.model.attackers:
-                detected = c.detect(attacker, False)
-                if active and self.compromisers[attacker.id]:
-                    if detected:
-                        self.information_update(attacker.id)
-                        self.make_aware(attacker.id)
-                        self.clean_specific(attacker.id)
-                    else:
-                        if not c.compromisers[attacker.id]:
-                            c.notify_infection(attacker)
+        self.to_clean = np.zeros(self.model.num_attackers, dtype=np.bool)
+        self.to_compromise = np.zeros(self.model.num_attackers, dtype=np.bool)
         self.communicate_to.clear()
 
-    def information_update(self, attacker_id):
-        while self.parent.attacks_list_predetermined_idx[attacker_id] < 1000:
-            next_bit = self.parent.attacks_list_predetermined[attacker_id,
-                                                              self.parent.attacks_list_predetermined_idx[attacker_id]]
-            if self.parent.new_attacks_list[attacker_id, next_bit]:
-                self.parent.attacks_list_predetermined_idx[attacker_id] += 1
-            else:
-                self.parent.new_attacks_list[attacker_id, next_bit] = True
-                self.parent.attacks_list_predetermined_idx[attacker_id] += 1
-                break
+    def detection_trial_opt(self, attacker, targeted):
+        """
+        Attempts to detect the attacker by running an attack detection trial. Optimized version that makes
+        use of the firm's precomputed probability of detection arrays.
+        :param attacker: The attacker object (not attacker ID)
+        :param targeted: Whether or not the attack is `targeted` i.e. comes directly from the attacker.
+        :return: Boolean representing whether or not the attacker was detected.
+        """
+        r = self.model.RNG().random()
+        if targeted or self.parent.is_aware(attacker.id):  # elevated state
+            return r < self.parent.prob_detection_elevated[attacker.id]
+        return r < self.parent.prob_detection_normal[attacker.id]  # non-elevated state
 
-    def make_aware(self, attacker_id):
-        self.parent.attack_awareness[attacker_id] = True
-        self.parent.detection_counts[attacker_id] += 1
-        self.parent.num_detects_new += 1
-
-    def detect(self, attacker, targeted):
-        information = self.parent.get_info(attacker.id)
+    def detection_trial_full(self, attacker, targeted):
+        """
+        Attempts to detect the attacker by running an attack detection trial.
+        :param attacker: The attacker object (not attacker ID)
+        :param targeted: Whether or not the attack is `targeted` i.e. comes directly from the attacker.
+        :return: Boolean representing whether or not the attacker was detected.
+        """
+        information = self.parent.get_info_proportion(attacker.id)
         security = self.parent.security_budget
-        is_aware = self.parent.is_aware(attacker.id)
-        #print(information)
-        if not targeted and not is_aware:  # treats aware attacks as targeted attacks
-            aggregate_security = (security + information + security*information)
-        else:
-            aggregate_security = information + 0.001 + security*information
+        elevated_state = targeted or self.parent.is_aware(attacker.id)
 
-        prob = helpers.get_prob_detection_v3(aggregate_security, attacker.effectiveness)
-        # print(security, information, attacker.effectiveness, prob)
-        return globalVariables.RNG().random() < prob  # attack is detected, gain information
+        if elevated_state:
+            aggregate_security = security + information + security * information
+        else:
+            aggregate_security = information + security * information + 0.001
+
+        prob_detect = aggregate_security / (aggregate_security + attacker.effectiveness + 1e-5)
+
+        return self.model.RNG().random() < prob_detect
 

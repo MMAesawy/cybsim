@@ -1,129 +1,108 @@
 from agents.agents import *
 import numpy as np
-import globalVariables
+from collections import defaultdict
 
 
-class Organization(BetterAgent):
+class Firm(BetterAgent):
+    @staticmethod
+    def get_probability_detection(aggregate_security, attacker_effectiveness, stability=1e-5):
+        """
+        1D function that computes the probability of detection.
+        :param aggregate_security: Array containing the aggregate security of the firm against each attacker
+        :param attacker_effectiveness: Array containing the effectiveness of each attacker
+        :param stability: Value to be added to denominator for numerical stability
+        :return: Array containing the probability that each attacker is detected.
+        """
+        return aggregate_security / (aggregate_security + attacker_effectiveness + stability)
+
     def __init__(self, org_id, model):
         super().__init__(model)
 
         self.id = org_id
-        self.users = []
-        self.old_utility = 0
-        self.utility = 0
-        # dictionary storing attack and known information about it, row = attack, column = info
-        self.old_attacks_list = np.zeros((self.model.num_attackers, 1000), dtype=np.bool)
-        # updated dictionary storing attack and known information about it, row = attack, column = info
-        self.new_attacks_list = np.zeros((self.model.num_attackers, 1000), dtype=np.bool)
+        self.devices = []
+
+        # matrix storing attack and known information about it, row = attack, column = info bit
+        self.old_info_array = np.zeros((self.model.num_attackers, 1000), dtype=np.bool)
+        # updated matrix storing attack and known information about it, row = attack, column = info bit
+        self.new_info_array = np.zeros((self.model.num_attackers, 1000), dtype=np.bool)
 
         # for random seeding
-        self.attacks_list_predetermined = np.zeros((self.model.num_attackers, 1000), dtype=np.int)
-        self.attacks_list_predetermined_idx = np.zeros(self.model.num_attackers, dtype=np.int)
+        # stores a sequence of bits to reveal for each attacker
+        self.info_array_predetermined = np.zeros((self.model.num_attackers, 1000), dtype=np.int)
+        self.info_array_predetermined_next = np.zeros(self.model.num_attackers, dtype=np.int)
         for i in range(self.model.num_attackers):
-            self.attacks_list_predetermined[i] = np.arange(1000)
-            globalVariables.RNG().shuffle(self.attacks_list_predetermined[i])
+            self.info_array_predetermined[i] = np.arange(1000)
+            self.model.RNG().shuffle(self.info_array_predetermined[i])
 
-        self.attacks_list_mean = np.zeros(self.model.num_attackers)
+        self.info_proportions = np.zeros(self.model.num_attackers)
         # to store attackers and number of devices compromised from organization
         self.attacks_compromised_counts = np.zeros(self.model.num_attackers, dtype=np.int)
-        # self.org_out = np.zeros(len(model.organizations))
-        self.org_out = np.zeros(self.model.num_firms)  # store the amount of info shared with other organizations
+        # self.org_out = np.zeros(len(model.firms))
+        self.org_out = np.zeros(self.model.num_firms)  # store the amount of info shared with other firms
 
-        # incident start, last update
-        self.attack_awareness = np.zeros(self.model.num_attackers, dtype=np.bool) # inc_start, last_update, num_detected, active
+        self.attack_awareness = np.zeros(self.model.num_attackers, dtype=np.bool)
         self.detection_counts = np.zeros(self.model.num_attackers, dtype=np.int)
-        self.security_budget = max(0.005, min(1, globalVariables.RNG().normal(0.5, 1 / 6)))
+        self.security_budget = max(0.005, min(1, self.model.RNG().normal(0.5, 1 / 6)))
         self.security_change = 0
         self.num_detects_new = 0
-        # self.security_budget = 0.005
-        self.num_compromised_new = 0  # for getting avg rate of compromised per step
-        self.num_compromised_old = 0  # for getting avg rate of compromised per step
-        self.count = 0
-        self.risk_of_sharing = 0.3  # TODO: parametrize, possibly update in update_utility_sharing or whatever
-        self.info_in = 0  # total info gained
-        self.info_out = 0  # total info shared outside
-        self.security_drop = min(1, max(0, globalVariables.RNG().normal(0.75, 0.05)))
-        self.acceptable_freeload = self.model.acceptable_freeload  # freeloading tolerance towards other organizations
-        self.unhandled_incidents = []
+
+        self.info_in = 0
+        self.info_out = 0
+
+        self.data = defaultdict(lambda: [])
+        self.create_step_datapoints()
+
+        self.prob_detection_elevated = np.zeros(self.model.num_attackers)
+        self.prob_detection_normal = np.zeros(self.model.num_attackers)
+
+        self.step_count = 0
+        self.security_drop = min(1, max(0, self.model.RNG().normal(0.75, 0.05)))
+        self.acceptable_freeload = self.model.acceptable_freeload  # freeloading tolerance towards other firms
 
         # create employees
         for i in range(0, self.model.device_count):
-            self.users.append(Employee(i, self, self.model))
-
-        # <---- Data collection ---->
-
-        self.free_loading_ratio = 0  # variable to store freeloading ratio for each organization
-
-        # to store changing organization security
-        self.total_security = 0  # used for batch runner
-        self.avg_security = 0
-
-        self.newly_compromised_per_step_aggregated = 0
-        self.avg_newly_compromised_per_step = 0  # TODO yet to be used
-
-        self.num_compromised = 0
-        self.avg_compromised_per_step = 0
-
-        self.incident_times = 0  # for avg incident time
-        self.avg_incident_times = 0  # for avg incident time
-        self.incident_times_num = 0  # for avg incident time
-
-        self.time_with_incident = 0
-        self.avg_time_with_incident = 0
-
-        # to store times organization shares when it enters a game
-        self.total_share = 0
-        self.avg_share = 0
-        self.num_games_played = 0
-
-        # to store average known info
-        self.avg_info = 0
-
-        # to calculate avg number of unhandled incidents
-        self.unhandled_incidents_aggregate = 0
-        self.avg_unhandled_incidents = 0
-        self.num_incidents = 0
-
-        # Extra data
-        self.is_sharing_info = self.model.information_sharing
-
-        # <--- adding organization to model org array and setting unique ID --->
-
-
-    def get_avg_compromised_per_step(self):
-        return self.num_compromised / (self.model.schedule.time + 1)
-
-    # returns the average information known by organization from all attacks
-    def get_avg_known_info(self):
-        return self.old_attacks_list[:self.model.active_attacker_count, :].mean()
-
-    # returns average security across all time steps
-    def get_avg_security(self):
-        return self.total_security / (self.model.schedule.time + 1)
-
-    # returns the freeloading ratio this organization does across all its interactions
-    def get_free_loading_ratio(self):
-        return self.info_in / (self.info_in + self.info_out + 1e-5)
+            self.devices.append(Device(i, self, self.model))
 
     # returns whether or not to share information according to other party
-    def share_decision(self, org2, trust):
-        self.num_games_played += 1  # for data collector
-        info_out = self.org_out[org2.id]  # org1 out (org1_info_out)
-        info_in = org2.org_out[self.id]  # org1 in (org2_info_out)
-        r = globalVariables.RNG().random()
+    def get_share_decision(self, other_firm_id, random_value=None):
+        info_out = self.model.info_exchange_matrix[self.id, other_firm_id]
+        info_in = self.model.info_exchange_matrix[other_firm_id, self.id]
+        trust = self.model.trust_matrix[self.id, other_firm_id]
+
+        if random_value is None:
+            random_value = self.model.RNG().random()
+
         if info_out > info_in:  # decreases probability to share
-            share = r < trust * min(1, self.acceptable_freeload + (info_in / info_out))
+            share = random_value < trust * min(1, self.acceptable_freeload + (info_in / info_out))
         else:
-            share = r < trust
-        if share:
-            self.total_share += 1  # for data collector
+            share = random_value < trust
         return share
 
-    # returns average times an organization shared across all its played games
-    def get_avg_share(self):
-        return self.total_share / self.num_games_played
+    def get_aggregate_security_array(self, elevated):
+        """
+        Computes and returns an array of aggregate security values against all attackers.
+        :param elevated: Whether or not it's a `elevated` detection.
+        :return: Returns a 1D array of aggregate securities for each attacker.
+        """
+        agg_sec = np.ones(self.model.num_attackers) * (self.security_budget + 1) * self.info_proportions #+ 1e-4
+        if elevated:
+            agg_sec += self.security_budget
+        else:
+            agg_sec += 1e-4
+        return agg_sec
+
+    def update_prob_detection_arrays(self):
+        """Compute and update the probability of detection arrays for all attackers."""
+        agg_sec_elevated = self.get_aggregate_security_array(elevated=True)
+        agg_sec_normal = self.get_aggregate_security_array(elevated=False)
+
+        self.prob_detection_elevated = Firm.get_probability_detection(agg_sec_elevated,
+                                                                      self.model.attacker_effectiveness_array)
+        self.prob_detection_normal = Firm.get_probability_detection(agg_sec_normal,
+                                                                    self.model.attacker_effectiveness_array)
 
     def update_budget(self):
+        """Compute and update the security budget of the firm."""
         total_detections = self.detection_counts.max()
         if total_detections:  # a security incident happened and wasn't handled in time
             self.security_change += (1 - self.security_budget) * (total_detections/self.model.device_count)
@@ -132,107 +111,72 @@ class Organization(BetterAgent):
         self.security_change = 0
         self.detection_counts = np.zeros(self.model.num_attackers, dtype=np.int)
 
-    def update_incident_times(self, attack_id):
-        current_time = self.model.schedule.time
-        incident_time = current_time - self.attack_awareness[attack_id, 0] - self.model.org_memory
-        if incident_time > self.model.org_memory:
-            assert self.attack_awareness[attack_id, 3] == 1
-            self.unhandled_incidents.append(self.attack_awareness[attack_id, :].tolist())
-        self.model.incident_times.append(incident_time)
-        self.incident_times += incident_time  # for avg incident time
+    def information_update(self, attacker_id):
+        """Gain new information for a specific attacker."""
+        # loop over indices till the next available one is found
+        while self.info_array_predetermined_next[attacker_id] < 1000:
+            next_bit_idx = self.info_array_predetermined[attacker_id, self.info_array_predetermined_next[attacker_id]]
+            self.info_array_predetermined_next[attacker_id] += 1
 
-    def set_avg_incident_time(self):  # for avg incident time
-        return self.incident_times / self.incident_times_num
+            if not self.new_info_array[attacker_id, next_bit_idx]:  # if next bit is not already revealed
+                self.new_info_array[attacker_id, next_bit_idx] = True  # reveal the bit
+                break
 
-    def set_avg_time_with_incident(self):
-        return self.time_with_incident / (self.model.schedule.time + 1)
+    def device_infected_listener(self, device_id, attacker_id):  # TODO
+        self.attacks_compromised_counts[attacker_id] += 1
+        self.data["infection_count"][-1] += 1
 
-    def start_incident(self, attack_id):
-        self.num_incidents += 1
-        self.attack_awareness[attack_id] = [self.model.schedule.time, self.model.schedule.time, 0, 1]
-
-    # remove attacker from awareness array if handled in acceptable time based on org memory
-    def clear_awareness(self, attack_id):
-        self.update_incident_times(attack_id)
-        self.incident_times_num += 1  # for avg incident time
-        self.avg_incident_times = self.set_avg_incident_time()
-        self.attack_awareness[attack_id] = [0, 0, 0, 0]
-
-        # <--- Updating average unhandled attacks per step --->
-        self.avg_unhandled_incidents = self.get_avg_unhandled_incidents()
+    def attacker_detected_listener(self, device_id, attacker_id):  # TODO
+        self.attack_awareness[attacker_id] = True
+        self.attacks_compromised_counts[attacker_id] -= 1
+        self.attack_awareness[attacker_id] = (self.attacks_compromised_counts[attacker_id] != 0)
+        self.detection_counts[attacker_id] += 1
+        self.data["detection_count"][-1] += 1
 
     # return boolean if organization is aware of specific attack
     def is_aware(self, attack_id):
         return self.attack_awareness[attack_id]
 
     def get_percent_compromised(self, attack_id=None):
-        """Returns the percentage of users compromised for each attack (or the total if `attack` is None)"""
-        if attack_id is not None:
-            return self.attacks_compromised_counts[attack_id] / len(self.users)
-        return self.num_compromised_old / len(self.users)
+        """Returns the percentage of devices compromised for each attack (or the total if `attack` is None)"""
+        return self.get_total_compromised(attack_id) / len(self.devices)
 
-    def set_avg_newly_compromised_per_step(self):
-        return self.newly_compromised_per_step_aggregated / (self.model.schedule.time + 1)
+    def get_total_compromised(self, attack_id=None):
+        """Returns the total count of devices compromised for each attack (or the total if `attack` is None)"""
+        if attack_id is not None:
+            return self.attacks_compromised_counts[attack_id]
+        return sum([d.is_compromised() for d in self.devices])
 
     # return amount of information known given a specific attack
-    def get_info(self, attack_id):
-        return self.attacks_list_mean[attack_id]
+    def get_info_proportion(self, attack_id):
+        return self.info_proportions[attack_id]
 
-    def get_avg_unhandled_incidents(self):
-        return self.unhandled_incidents_aggregate / self.num_incidents
+    def create_step_datapoints(self):
+        self.data["detection_count"].append(0)
+        self.data["info_in"].append(0)
+        self.data["info_out"].append(0)
+        self.data["infection_count"].append(0)
+        self.data["security_budget"].append(self.security_budget)
+        self.data["info_total"].append(self.old_info_array.sum())
+        self.data["compromised_count"].append(self.get_total_compromised())
+        # self.data["num_devices"].append(len(self.devices))
+        # self.data["num_attackers"].append(len(self.model.num_attackers))
 
     def step(self):
-        self.count += 1
-        # organization updates its security budget every n steps based on previous step utility in order to improve its utility
-        if self.count == self.model.security_update_interval:
-            self.count = 0
-            self.update_budget()
-        # self.security_budget += self.security_change
-        # self.security_change = max(0, self.security_change - 0.005)
+        self.create_step_datapoints()
+        self.update_prob_detection_arrays()
+
         if self.num_detects_new == 0:
-            self.security_change -= (1-self.security_drop) * self.security_budget /self.model.security_update_interval
+            self.security_change -= (1-self.security_drop) * self.security_budget / self.model.security_update_interval
         self.num_detects_new = 0
 
-        self.model.org_utility += self.utility  # adds organization utility to model's utility of all organizations
-        self.model.total_org_utility += self.utility  # adds organization utility to model's total utility of all organizations for the calculation of the average utility for the batchrunner
-
-        # for calculating the average NEWLY compromised per step
-        self.model.newly_compromised_per_step.append(self.num_compromised_new - self.num_compromised_old)
-        self.newly_compromised_per_step_aggregated += (self.num_compromised_new - self.num_compromised_old)  # Organization lvl
-        self.avg_newly_compromised_per_step = self.set_avg_newly_compromised_per_step()  # Organization lvl
-        self.num_compromised_old = self.num_compromised_new
-        # self.num_compromised_new = 0  # reset variable
-
-        self.free_loading_ratio = self.get_free_loading_ratio() # update freeloading ratio variable every step
-
-        # <-- updating security variables to get security averages --->
-        self.total_security += self.security_budget
-        self.avg_security = self.get_avg_security()
-
-        # <--- updating average number of times shared when playing a game --->
-        if self.num_games_played > 0:
-            self.avg_share = self.get_avg_share()
-
-        # <--- updating average information known about all attacks --->
-        if len(self.old_attacks_list) > 0:
-            self.avg_info = self.get_avg_known_info()
-
-        if len(self.attack_awareness) > 0:
-            self.time_with_incident += 1
-
-        self.avg_time_with_incident = self.set_avg_time_with_incident()
-
-        # self.avg_compromised = self.get_avg_compromised()
-
-        # <--- Updating average compromised per step --->
-        self.avg_compromised_per_step = self.get_avg_compromised_per_step()
-
-
     def advance(self):
-        self.old_attacks_list = self.new_attacks_list.copy()
-        self.attacks_list_mean = self.old_attacks_list.mean(axis=1)
-        # current_time = self.model.schedule.time
+        # organization updates its security budget every n steps
+        # based on previous step utility in order to improve its utility
+        self.step_count += 1
+        if self.step_count == self.model.security_update_interval:
+            self.step_count = 0
+            self.update_budget()
 
-        # for attack_id in range(self.attack_awareness.shape[0]):
-        #     if self.is_aware(attack_id) and current_time - self.attack_awareness[attack_id, 1] > self.model.org_memory:
-        #         self.clear_awareness(attack_id)
+        self.old_info_array = self.new_info_array.copy()
+        self.info_proportions = self.old_info_array.mean(axis=1)
